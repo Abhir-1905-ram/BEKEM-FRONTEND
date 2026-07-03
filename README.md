@@ -51,6 +51,14 @@ Password for all: `Bekem@Demo2026!`
 | Coordinator | coordinator@bekem.com |
 | Chairman | chairman@bekem.com |
 
+## Backend
+
+Production API: https://bekem-backend-production.up.railway.app  
+
+Backend source: https://github.com/Akhilesh2006s/BEKEM-BACKEND
+
+On Railway, set `CORS_ORIGIN` to your frontend URL (e.g. `http://localhost:5173` or your Vercel/Netlify domain).
+
 ## Note
 
-This repository is **frontend only**. The API lives in a separate backend repo / monorepo `apps/api`.
+This repository is **frontend only** (React app + `packages/shared`).
