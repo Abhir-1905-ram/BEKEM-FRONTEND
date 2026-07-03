@@ -19,7 +19,16 @@ npm run dev
 
 App: http://localhost:5173
 
-API is expected at http://localhost:4000 (proxied via `/api`). Set `VITE_API_PROXY_TARGET` if your API runs elsewhere.
+API defaults to production Railway:
+
+`https://bekem-backend-production.up.railway.app/api`
+
+Copy `.env.example` to `.env` to override. For a local API:
+
+```bash
+VITE_API_URL=http://localhost:4000/api
+VITE_SOCKET_URL=http://localhost:4000
+```
 
 ## Scripts
 

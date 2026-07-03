@@ -8,7 +8,8 @@ export function connectSocket() {
   const token = useAuthStore.getState().accessToken;
   if (!token || socket?.connected) return socket;
 
-  const url = import.meta.env.VITE_SOCKET_URL || 'http://localhost:4000';
+  const url =
+    import.meta.env.VITE_SOCKET_URL || 'https://bekem-backend-production.up.railway.app';
   socket = io(url, {
     auth: { token },
     transports: ['websocket', 'polling'],
