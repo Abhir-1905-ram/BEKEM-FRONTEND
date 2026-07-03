@@ -128,7 +128,7 @@ function hasFullInventoryAccess(role?: string | null) {
   );
 }
 
-function fmtDate(iso: string | null) {
+function fmtDate(iso: string | null | undefined) {
   if (!iso) return '—';
   try {
     return formatDate(iso);
@@ -137,12 +137,12 @@ function fmtDate(iso: string | null) {
   }
 }
 
-function fmtNum(n: number) {
-  if (!n) return '—';
+function fmtNum(n: number | null | undefined) {
+  if (n == null || n === 0) return '—';
   return n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
 }
 
-function toDateInput(iso: string | null) {
+function toDateInput(iso: string | null | undefined) {
   if (!iso) return '';
   return iso.slice(0, 10);
 }
