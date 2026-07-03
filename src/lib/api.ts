@@ -3,8 +3,8 @@ import { toast } from 'sonner';
 import type { ApiErrorDto } from '@afios/shared';
 import { useAuthStore } from '@/stores/authStore';
 
-const API_BASE =
-  import.meta.env.VITE_API_URL || 'https://bekem-backend-production.up.railway.app/api';
+// Dev: /api (Vite proxy → localhost:4000). Prod: set in .env.production (Railway).
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 export const api = axios.create({
   baseURL: API_BASE,
