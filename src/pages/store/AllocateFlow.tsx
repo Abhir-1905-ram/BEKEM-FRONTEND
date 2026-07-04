@@ -75,13 +75,26 @@ export function AllocateFlowPage() {
 
   const forwardMutation = useMutation({
     mutationFn: async () => {
-      await api.post(`/material-requests/${id}/forward`, { reason: forwardReason });
+      const res = await api.post<{ data: unknown; message?: string }>(
+        `/material-requests/${id}/forward`,
+        { reason: forwardReason }
+      );
+      return res.data;
     },
-    onSuccess: () => {
-      toast.success('Forwarded to PM');
+    onSuccess: (data) => {
+      toast.success(data?.message || 'Forwarded to PM');
       setPhase('done');
     },
-    onError: () => toast.error('Forward failed'),
+    onError: (err: Error & { response?: { data?: { message?: string }; status?: number } }) => {
+      const msg = err.response?.data?.message || 'Forward failed';
+      // If already with PM, treat as success (idempotent server)
+      if (err.response?.status === 400 && /forwarded|With PM|FORWARDED/i.test(msg)) {
+        toast.success('Already forwarded to PM');
+        setPhase('done');
+        return;
+      }
+      toast.error(msg);
+    },
   });
 
   if (phase === 'done') {

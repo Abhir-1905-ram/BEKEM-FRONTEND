@@ -356,7 +356,7 @@ export function StockPage() {
               </>
             )}{' '}
             New POs use format{' '}
-            <span className="font-mono text-xs">BEKEM -CHITR /SRE /0004-1 /25-26</span>.
+            <span className="font-mono text-xs">BEKEM-CHITR/SRE/0004-1/25-26</span>.
             {meta?.importedAt && (
               <>
                 {' '}

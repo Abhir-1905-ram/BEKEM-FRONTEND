@@ -46,7 +46,7 @@ export function IncidentsPage() {
         subtitle={
           isSite
             ? 'Your material requests raised from site'
-            : 'Site incharge material requests across projects'
+            : 'Site Manager material requests across projects'
         }
         action={
           isSite ? (

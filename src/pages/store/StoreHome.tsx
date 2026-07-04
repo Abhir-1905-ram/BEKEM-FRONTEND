@@ -88,7 +88,7 @@ export function StoreHomePage() {
       <PageHeader
         eyebrow={getGreeting()}
         title={getFirstName(user.name)}
-        subtitle={`Inventory coordinator · ${site?.chainageLabel || 'Loading site…'}`}
+        subtitle={`Store Manager · ${site?.chainageLabel || 'Loading site…'}`}
         action={
           waiting > 0 ? (
             <Button onClick={() => navigate('/store/requests')}>

@@ -55,6 +55,8 @@ export function POWizardPage() {
   const [selectedMr, setSelectedMr] = useState<MaterialRequestDto | null>(null);
   const [selectedPr, setSelectedPr] = useState<PurchaseRequestDto | null>(null);
   const [lineVendorByIndex, setLineVendorByIndex] = useState<Record<number, string>>({});
+  /** Lines skipped because no vendor (custom products) — PO proceeds for the rest. */
+  const [skippedLines, setSkippedLines] = useState<Record<number, boolean>>({});
   const [vendorRows, setVendorRows] = useState<LineVendorRow[]>([]);
   const [quotations, setQuotations] = useState<QuotationDto[]>([]);
   const [lineItems, setLineItems] = useState<PoLineItemDto[]>([]);
@@ -69,10 +71,12 @@ export function POWizardPage() {
   const [selectingPr, setSelectingPr] = useState(false);
 
   const { data: purchaseRequests, isLoading: prLoading, isError: prError } = useQuery({
-    queryKey: ['purchase-requests'],
+    queryKey: ['purchase-requests', 'ready-for-po'],
     queryFn: async () => {
-      const res = await api.get<{ data: PurchaseRequestDto[] }>('/purchase-requests');
-      return res.data.data.filter((pr) => pr.status === 'OPEN');
+      const res = await api.get<{ data: PurchaseRequestDto[] }>('/purchase-requests', {
+        params: { status: 'OPEN', readyForPo: 'true' },
+      });
+      return res.data.data;
     },
   });
 
@@ -215,14 +219,21 @@ export function POWizardPage() {
     return vendorRows.find((r) => r.materialId === materialId)?.vendors ?? [];
   };
 
-  const assignedVendorIds = [...new Set(Object.values(lineVendorByIndex).filter(Boolean))];
-  const allLinesHaveVendor =
-    lineItems.length > 0 && lineItems.every((_, i) => !!lineVendorByIndex[i]);
+  const activeLineIndexes = lineItems
+    .map((_, i) => i)
+    .filter((i) => !skippedLines[i]);
+  const assignedVendorIds = [
+    ...new Set(activeLineIndexes.map((i) => lineVendorByIndex[i]).filter(Boolean)),
+  ];
+  const allActiveLinesHaveVendor =
+    activeLineIndexes.length > 0 &&
+    activeLineIndexes.every((i) => !!lineVendorByIndex[i]);
 
   const selectPurchaseRequest = async (pr: PurchaseRequestDto) => {
     setSelectingPr(true);
     setSelectedPr(pr);
     setLineVendorByIndex({});
+    setSkippedLines({});
     setQuotations([]);
     setLineItems([]);
     try {
@@ -257,6 +268,7 @@ export function POWizardPage() {
     setSelectingPr(true);
     setSelectedMr(mr);
     setLineVendorByIndex({});
+    setSkippedLines({});
     setQuotations([]);
     setLineItems([]);
     try {
@@ -282,13 +294,28 @@ export function POWizardPage() {
   };
 
   const continueFromVendorAssign = () => {
-    if (!allLinesHaveVendor) {
-      toast.error('Select a vendor for every line item');
+    if (!allActiveLinesHaveVendor) {
+      toast.error('Select a vendor for each line you are ordering (or skip lines with no vendor)');
       return;
     }
-    const firstVendorId = lineVendorByIndex[0];
+    const firstVendorId = lineVendorByIndex[activeLineIndexes[0]];
     const quote = quotations.find((q) => q.vendorId === firstVendorId);
     if (quote?.terms) setPaymentTerms(quote.terms);
+    const skipped = Object.values(skippedLines).filter(Boolean).length;
+    if (skipped > 0) {
+      toast.info(
+        `${skipped} line(s) skipped — order the rest; add vendors in Vendors admin for skipped items`
+      );
+    }
+    // Compact to only lines being ordered
+    const keptItems = activeLineIndexes.map((i) => lineItems[i]);
+    const keptVendors: Record<number, string> = {};
+    activeLineIndexes.forEach((oldIdx, newIdx) => {
+      keptVendors[newIdx] = lineVendorByIndex[oldIdx];
+    });
+    setLineItems(keptItems);
+    setLineVendorByIndex(keptVendors);
+    setSkippedLines({});
     setStep(2);
   };
 
@@ -405,32 +432,66 @@ export function POWizardPage() {
                 {lineItems.map((row, i) => {
                   const options = vendorsForLineIndex(i);
                   const selectedId = lineVendorByIndex[i] || '';
+                  const isSkipped = !!skippedLines[i];
                   return (
-                    <Card key={i} className="space-y-2">
+                    <Card
+                      key={i}
+                      className={cn('space-y-2', isSkipped && 'opacity-60 border-dashed')}
+                    >
                       <p className="font-medium text-sm">{row.description}</p>
                       <p className="text-xs text-ink-muted">
                         Qty {row.quantity}
-                        {options.length === 0 && (
+                        {options.length === 0 && !isSkipped && (
                           <span className="text-danger ml-2">
-                            No vendor assigned for this product — add in Vendors admin
+                            No vendor for this product — skip this line or add in Vendors admin
                           </span>
                         )}
+                        {isSkipped && (
+                          <span className="text-amber-700 ml-2 font-medium">Skipped for this PO</span>
+                        )}
                       </p>
-                      <select
-                        className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-white"
-                        value={selectedId}
-                        onChange={(e) =>
-                          setLineVendorByIndex((prev) => ({ ...prev, [i]: e.target.value }))
-                        }
-                      >
-                        <option value="">Select vendor…</option>
-                        {options.map((v) => (
-                          <option key={v.id} value={v.id}>
-                            {v.name}
-                            {v.gstNumber ? ` · GST ${v.gstNumber}` : ''}
-                          </option>
-                        ))}
-                      </select>
+                      {!isSkipped && (
+                        <select
+                          className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-white"
+                          value={selectedId}
+                          onChange={(e) =>
+                            setLineVendorByIndex((prev) => ({ ...prev, [i]: e.target.value }))
+                          }
+                        >
+                          <option value="">Select vendor…</option>
+                          {options.map((v) => (
+                            <option key={v.id} value={v.id}>
+                              {v.name}
+                              {v.gstNumber ? ` · GST ${v.gstNumber}` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      {(options.length === 0 || isSkipped) && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            setSkippedLines((prev) => {
+                              const next = { ...prev };
+                              if (next[i]) {
+                                delete next[i];
+                              } else {
+                                next[i] = true;
+                                setLineVendorByIndex((v) => {
+                                  const nv = { ...v };
+                                  delete nv[i];
+                                  return nv;
+                                });
+                              }
+                              return next;
+                            });
+                          }}
+                        >
+                          {isSkipped ? 'Include this line again' : 'Skip this line / order separately'}
+                        </Button>
+                      )}
                     </Card>
                   );
                 })}
@@ -440,7 +501,7 @@ export function POWizardPage() {
                 variant="accent"
                 size="lg"
                 accentColor={accent}
-                disabled={!allLinesHaveVendor}
+                disabled={!allActiveLinesHaveVendor}
                 onClick={continueFromVendorAssign}
               >
                 Continue
@@ -658,7 +719,7 @@ export function POWizardPage() {
             </motion.div>
           )}
 
-          {step === 5 && selectedMr && allLinesHaveVendor && (
+          {step === 5 && selectedMr && allActiveLinesHaveVendor && (
             <motion.div key="s5" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}>
               <Card className="space-y-3 mb-4">
                 <div>

@@ -107,7 +107,10 @@ export function PMHomePage() {
           <p className="font-semibold text-lg text-ink">{selected.name}</p>
           <p className="text-sm text-ink-secondary mt-1">
             Health {selected.healthScore}% · Budget{' '}
-            {Math.round((selected.budgetSpent / selected.budgetTotal) * 100)}% deployed
+            {selected.budgetTotal > 0
+              ? `${Math.round((selected.budgetSpent / selected.budgetTotal) * 100)}%`
+              : '0%'}{' '}
+            deployed
           </p>
         </div>
       )}

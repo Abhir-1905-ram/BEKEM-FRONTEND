@@ -39,7 +39,7 @@ export function VerifyDeliveryPage() {
       });
     },
     onSuccess: () => {
-      toast.success('Physical delivery verified — inventory coordinator can create GRN');
+      toast.success('Physical delivery verified — GRN can be created next');
       setSelectedPo(null);
       setRemarks('');
       setReceivedByLine({});

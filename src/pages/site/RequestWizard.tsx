@@ -183,7 +183,7 @@ export function RequestWizardPage() {
     return (
       <div className="page-container max-w-2xl">
         <PageHeader
-          eyebrow="Site incharge · Step 1 of 2"
+          eyebrow="Site Manager · Step 1 of 2"
           title="Select project"
           subtitle="Confirm which project and site this material indent is for before adding items."
         />
@@ -268,7 +268,7 @@ export function RequestWizardPage() {
   return (
     <div className="page-container max-w-5xl">
       <PageHeader
-        eyebrow="Site incharge · Step 2 of 2"
+        eyebrow="Site Manager · Step 2 of 2"
         title="Raise material indent"
         subtitle="Search the catalog, or add a product name if it is not listed yet."
         action={

@@ -154,7 +154,7 @@ export function GrnReceivePage() {
     <div className="page-container max-w-lg">
       <PageHeader
         title="Material receipt (GRN)"
-        subtitle="Inventory coordinator — create GRN after store verifies physical delivery"
+        subtitle="Store Manager / Coordinator — create GRN after physical delivery is verified"
       />
 
       {!selectedPo ? (
