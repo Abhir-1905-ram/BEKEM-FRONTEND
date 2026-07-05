@@ -505,7 +505,7 @@ export default function App() {
               <Route
                 path="/coordinator/finance"
                 element={
-                  <RoleGuard roles={[UserRole.COORDINATOR]}>
+                  <RoleGuard capability="VIEW_FINANCE">
                     <FinancePage />
                   </RoleGuard>
                 }
@@ -514,7 +514,25 @@ export default function App() {
               <Route
                 path="/chairman/finance"
                 element={
-                  <RoleGuard roles={[UserRole.CHAIRMAN]}>
+                  <RoleGuard capability="VIEW_FINANCE">
+                    <FinancePage />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/pm/finance"
+                element={
+                  <RoleGuard capability="VIEW_FINANCE">
+                    <FinancePage />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/store/finance"
+                element={
+                  <RoleGuard capability="VIEW_FINANCE">
                     <FinancePage />
                   </RoleGuard>
                 }

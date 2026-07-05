@@ -470,6 +470,20 @@ export function PODetailPage() {
       {po.status === 'APPROVED' && grnData && (
         <div className="mt-6 space-y-3">
           <h2 className="font-semibold text-sm">Goods receipt notes</h2>
+          {grnData.paymentSummary && grnData.paymentSummary.billCount > 0 && (
+            <div className="rounded-xl border border-surface-border bg-surface-muted/40 p-3 text-sm grid sm:grid-cols-2 gap-2">
+              <span>
+                Invoiced: {formatCurrency(grnData.paymentSummary.totalInvoiced)}
+              </span>
+              <span>Paid: {formatCurrency(grnData.paymentSummary.totalPaid)}</span>
+              <span>
+                Outstanding: {formatCurrency(grnData.paymentSummary.totalOutstanding)}
+              </span>
+              <span className="capitalize">
+                Payment: {grnData.paymentSummary.paymentStatus.toLowerCase()}
+              </span>
+            </div>
+          )}
           {!(grnData.grns?.length) ? (
             <p className="text-sm text-ink-muted">No GRNs recorded yet.</p>
           ) : (
@@ -482,12 +496,21 @@ export function PODetailPage() {
                       <p className="text-xs text-ink-muted">
                         {g.receivedAt ? new Date(g.receivedAt).toLocaleDateString('en-IN') : '—'}
                         {g.invoiceNo ? ` · Inv ${g.invoiceNo}` : ''}
+                        {g.billNumber ? ` · ${g.billNumber}` : ''}
                       </p>
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <StatusBadge status={g.status} />
                       {g.isPartialGrn && (
                         <span className="text-[10px] font-bold text-red-600 uppercase">Partial GRN</span>
+                      )}
+                      {g.paymentStatus && (
+                        <span className="text-[10px] font-semibold uppercase text-ink-secondary">
+                          {g.paymentStatus}
+                          {g.outstandingAmount != null
+                            ? ` · ${formatCurrency(g.outstandingAmount)} due`
+                            : ''}
+                        </span>
                       )}
                     </div>
                   </div>

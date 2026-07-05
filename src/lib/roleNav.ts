@@ -112,6 +112,8 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
 
         { id: 'stock', label: 'Stock Inventory', href: '/store/stock', icon: Package },
 
+        { id: 'finance', label: 'Finance & Tally', href: '/store/finance', icon: BarChart3 },
+
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass },
 
       ];
@@ -137,6 +139,8 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
         { id: 'approve-wos', label: 'Approve work orders', href: '/pm/approve-wos', icon: HardHat },
 
         { id: 'stock', label: 'Stock Inventory', href: '/store/stock', icon: Package },
+
+        { id: 'finance', label: 'Finance & Tally', href: '/pm/finance', icon: BarChart3 },
 
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass },
 
