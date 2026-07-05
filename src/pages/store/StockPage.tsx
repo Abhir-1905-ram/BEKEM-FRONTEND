@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { formatDate, UserRole } from '@afios/shared';
 import { EmptyState } from '@/components/EmptyState';
+import { CrossProjectStockPanel } from '@/components/CrossProjectStockPanel';
 import { ListQueryBoundary } from '@/components/ListQueryBoundary';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -206,6 +207,7 @@ export function StockPage() {
     role === UserRole.EXECUTIVE;
   const [search, setSearch] = useState('');
   const [project, setProject] = useState('');
+  const [materialCompare, setMaterialCompare] = useState('Panel Board');
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<InventoryRow | null>(null);
   const [form, setForm] = useState<EditForm | null>(null);
@@ -250,6 +252,26 @@ export function StockPage() {
         },
       });
       return res.data;
+    },
+  });
+
+  const { data: crossProjectRows } = useQuery({
+    queryKey: ['pm-cross-stock', materialCompare],
+    enabled: isPm && materialCompare.trim().length >= 2,
+    queryFn: async () => {
+      const res = await api.get<{
+        data: Array<{
+          materialId: string;
+          materialName?: string;
+          projects: Array<{
+            projectId: string;
+            projectCode: string;
+            projectName: string;
+            availableQty: number;
+          }>;
+        }>;
+      }>('/stock/cross-project', { params: { search: materialCompare } });
+      return res.data.data;
     },
   });
 
@@ -312,6 +334,10 @@ export function StockPage() {
 
   const rows = data?.data ?? [];
   const meta = data?.meta;
+  const projectFilterOptions =
+    isPm && meta?.assignedProjects?.length
+      ? meta.assignedProjects.map((p) => ({ id: p.name, label: p.name }))
+      : (meta?.projects ?? []).map((p) => ({ id: p, label: p }));
   const pageTitle = isEnterprise
     ? 'Enterprise Stock Inventory'
     : 'Stock Inventory';
@@ -361,14 +387,30 @@ export function StockPage() {
                 setProject(id);
                 setPage(1);
               }}
-              options={(meta?.projects ?? []).map((p) => ({ id: p, label: p }))}
+              options={projectFilterOptions}
               placeholder={isEnterprise ? 'Search all projects…' : 'Search assigned projects…'}
               emptyMessage="No projects in index"
             />
           )}
         </div>
+        {isPm && (
+          <div className="rounded-xl border border-surface-border bg-white p-4 space-y-3">
+            <p className="text-sm font-semibold text-ink">Live stock across your projects</p>
+            <p className="text-xs text-ink-secondary">
+              Compare on-hand quantity before requesting a branch transfer or forwarding to Head Office.
+            </p>
+            <input
+              type="search"
+              value={materialCompare}
+              onChange={(e) => setMaterialCompare(e.target.value)}
+              placeholder="Search material e.g. Panel Board"
+              className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+            />
+            <CrossProjectStockPanel rows={crossProjectRows ?? []} />
+          </div>
+        )}
         <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950">
-          <p className="font-semibold">FY PO index — editable</p>
+          <p className="font-semibold">FY PO index — {isPm ? 'read-only' : 'editable'}</p>
           <p className="mt-1 text-sky-900/90">
             {fullAccess ? (
               <>

@@ -296,7 +296,9 @@ export function PODetailPage() {
   const canChairmanEditException =
     role === UserRole.CHAIRMAN && po.status === 'APPROVED';
   const isCoordinatorOverride =
-    role === UserRole.COORDINATOR && po.status === 'CHAIRMAN_PENDING';
+    role === UserRole.COORDINATOR &&
+    needsChairmanBand &&
+    ['PENDING_REVIEW', 'COORDINATOR_PENDING', 'CHAIRMAN_PENDING'].includes(po.status);
   const isPmApprover = role === UserRole.PROJECT_MANAGER && po.status === 'PM_PENDING';
   const canFinalApprove =
     (po.status === 'PENDING_APPROVAL' || po.status === 'CHAIRMAN_PENDING') &&
@@ -587,6 +589,22 @@ export function PODetailPage() {
               >
                 {needsChairmanBand ? 'Verify & send to Chairman' : 'Verify & approve PO'}
               </Button>
+              {needsChairmanBand && (
+                <>
+                  <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    Chairman not on premises? Approve here with a mandatory written reason (min 30
+                    characters) — permanently audited.
+                  </p>
+                  <Button
+                    variant="secondary"
+                    size="lg"
+                    className="border-amber-300 text-amber-900"
+                    onClick={() => setShowOverrideModal(true)}
+                  >
+                    Approve (Chairman unavailable)
+                  </Button>
+                </>
+              )}
               <Button
                 variant="secondary"
                 size="lg"
@@ -605,11 +623,11 @@ export function PODetailPage() {
               </Button>
             </div>
           )}
-          {isCoordinatorOverride && (
+          {isCoordinatorOverride && po.status === 'CHAIRMAN_PENDING' && (
             <div className="flex flex-col gap-2 border-t border-surface-border pt-3">
               <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                Chairman unavailable? Use the separate override path — requires a mandatory remark
-                (max 300 characters), permanently audited.
+                PO is with Chairman. If Chairman is unavailable, approve with a mandatory remark
+                (min 30 characters) — permanently audited.
               </p>
               <Button
                 variant="secondary"
@@ -617,7 +635,7 @@ export function PODetailPage() {
                 className="border-amber-300 text-amber-900"
                 onClick={() => setShowOverrideModal(true)}
               >
-                Approve in Chairman&apos;s absence
+                Approve (Chairman unavailable)
               </Button>
             </div>
           )}

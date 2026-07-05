@@ -476,7 +476,7 @@ export default function App() {
                     <ProcurementDecisionsListPage
                       basePath="/executive/procurement-decisions"
                       title="Procurement Decisions"
-                      subtitle="Select purchase order or branch transfer before Coordinator approval"
+                      subtitle="Review PM-forwarded requests — mark proceed with purchase order to queue Create PO"
                       emptyTitle="No pending procurement decisions"
                       emptyDescription="Indents forwarded to Head Office will appear here."
                     />
@@ -554,7 +554,7 @@ export default function App() {
                     <ProcurementDecisionsListPage
                       basePath="/coordinator/procurement-decisions"
                       title="Procurement Decisions"
-                      subtitle="Review executive recommendations — approve, modify, or reject"
+                      subtitle="Legacy branch-transfer recommendations only — POs are approved in the PO module"
                       emptyTitle="No decisions awaiting approval"
                       emptyDescription="Executive procurement decisions will appear here."
                     />
@@ -995,7 +995,7 @@ export default function App() {
 
                 element={
 
-                  <RoleGuard capability="VIEW_ALL_PROJECTS">
+                  <RoleGuard capabilities={['VIEW_ALL_PROJECTS', 'VIEW_OWN_SCOPE']} match="any">
 
                     <ExplorerPage />
 

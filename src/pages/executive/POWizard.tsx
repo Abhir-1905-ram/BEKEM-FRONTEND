@@ -98,29 +98,15 @@ export function POWizardPage() {
     queryKey: ['purchase-requests', 'ready-for-po'],
     queryFn: async () => {
       const res = await api.get<{ data: PurchaseRequestDto[] }>('/purchase-requests', {
-        params: { status: 'OPEN', readyForPo: 'true' },
-      });
-      return res.data.data;
-    },
-  });
-
-  const { data: pmApprovedRequests, isLoading: mrLoading, isError: mrError } = useQuery({
-    queryKey: ['exec-ready-requests'],
-    queryFn: async () => {
-      const res = await api.get<{ data: MaterialRequestDto[] }>('/material-requests', {
-        params: { status: 'PURCHASE_REQUESTED' },
+        params: { readyForPo: 'true' },
       });
       return res.data.data;
     },
   });
 
   const openPurchaseRequests = purchaseRequests ?? [];
-  const requestsWithoutPr =
-    pmApprovedRequests?.filter(
-      (mr) => !openPurchaseRequests.some((pr) => pr.materialRequestId === mr.id)
-    ) ?? [];
-  const stepLoading = prLoading || mrLoading;
-  const hasReadyItems = openPurchaseRequests.length > 0 || requestsWithoutPr.length > 0;
+  const stepLoading = prLoading;
+  const hasReadyItems = openPurchaseRequests.length > 0;
 
   const loadVendorRows = async (materialIds: string[]) => {
     if (!materialIds.length) {
@@ -376,36 +362,6 @@ export function POWizardPage() {
     }
   };
 
-  const selectRequest = async (mr: MaterialRequestDto) => {
-    setSelectingPr(true);
-    setSelectedMr(mr);
-    setLineVendorByIndex({});
-    setSkippedLines({});
-    setQuotations([]);
-    setLineItems([]);
-    try {
-      let pr = purchaseRequests?.find((p) => p.materialRequestId === mr.id);
-      if (!pr) {
-        const res = await api.post<{ data: PurchaseRequestDto }>('/purchase-requests', {
-          materialRequestId: mr.id,
-          amountEstimate: (mr.quantityRequested ?? 1) * 5000,
-        });
-        pr = res.data.data;
-      }
-      setSelectedPr(pr);
-      const preview = await loadQuotations.mutateAsync(pr.id);
-      setLineItems(preview.lineItems?.length ? preview.lineItems : []);
-      const ids =
-        mr.items?.map((i) => i.materialId || i.material?.id).filter(Boolean) ||
-        (mr.materialId || mr.material?.id ? [mr.materialId || mr.material?.id] : []);
-      await loadVendorRows(ids as string[]);
-      if (mr.projectId) await loadProjectBilling(mr.projectId);
-      setStep(1);
-    } finally {
-      setSelectingPr(false);
-    }
-  };
-
   const continueFromVendorAssign = () => {
     if (!allActiveLinesHaveVendor) {
       toast.error('Select a vendor for each line you are ordering (or skip lines with no vendor)');
@@ -464,7 +420,7 @@ export function POWizardPage() {
                     <div key={i} className="h-16 rounded-xl bg-surface-muted animate-pulse" />
                   ))}
                 </div>
-              ) : prError || mrError ? (
+              ) : prError ? (
                 <EmptyState
                   title="Could not load requests"
                   description="Check that the API is running (npm run dev:api), then refresh this page."
@@ -472,16 +428,14 @@ export function POWizardPage() {
               ) : !hasReadyItems ? (
                 <EmptyState
                   title="No requests ready"
-                  description="PM must approve a material indent first — a purchase request is created automatically."
+                  description="Mark requests as Proceed with Purchase Order in Procurement Decisions — they will appear here for PO creation."
                 />
               ) : (
-                <div className="space-y-4">
-                  {openPurchaseRequests.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                        Purchase requests
-                      </p>
-                      {openPurchaseRequests.map((pr) => (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+                    Approved for PO creation
+                  </p>
+                  {openPurchaseRequests.map((pr) => (
                         <Card
                           key={pr.id}
                           className={cn(
@@ -500,30 +454,6 @@ export function POWizardPage() {
                           </p>
                         </Card>
                       ))}
-                    </div>
-                  )}
-                  {requestsWithoutPr.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                        PM-approved (no PR yet)
-                      </p>
-                      {requestsWithoutPr.map((mr) => (
-                        <Card
-                          key={mr.id}
-                          className={cn(
-                            'cursor-pointer hover:shadow-card-hover',
-                            selectingPr && 'pointer-events-none opacity-60'
-                          )}
-                          onClick={() => selectRequest(mr)}
-                        >
-                          <p className="font-medium">{mr.material?.name}</p>
-                          <p className="text-sm text-ink-secondary">
-                            {mr.indentNumber} · {mr.project?.code}
-                          </p>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
                 </div>
               )}
             </motion.div>
@@ -1081,10 +1011,10 @@ export function POWizardPage() {
                   onClick={() => createPo.mutate()}
                 >
                   {createPo.isPending
-                    ? 'Submitting…'
+                    ? 'Forwarding…'
                     : assignedVendorIds.length > 1
-                      ? `Confirm & submit ${assignedVendorIds.length} POs`
-                      : 'Confirm & submit PO'}
+                      ? `Forward ${assignedVendorIds.length} POs for approval`
+                      : 'Forward for approval'}
                 </Button>
               </div>
             </motion.div>

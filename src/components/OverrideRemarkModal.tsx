@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 
 const MAX = 300;
-const MIN = 1;
+const MIN = 30;
 
 interface OverrideRemarkModalProps {
   open: boolean;
@@ -24,7 +24,8 @@ export function OverrideRemarkModal({ open, onClose, onSubmit, pending }: Overri
       <div className="bg-white rounded-2xl w-full max-w-md p-5 shadow-xl">
         <h3 className="font-semibold text-ink">Approve in Chairman&apos;s absence</h3>
         <p className="text-xs text-ink-secondary mt-1">
-          This action is permanently recorded. Explain why the Chairman could not approve.
+          This action is permanently recorded. Explain why the Chairman could not approve (minimum{' '}
+          {MIN} characters).
         </p>
         <textarea
           className="mt-4 w-full rounded-xl border border-surface-border px-3 py-2 text-sm min-h-[120px]"
@@ -36,10 +37,16 @@ export function OverrideRemarkModal({ open, onClose, onSubmit, pending }: Overri
         <p
           className={cn(
             'text-xs mt-1 tabular-nums',
-            remaining <= 30 ? 'text-danger font-semibold' : 'text-ink-muted'
+            remark.trim().length < MIN
+              ? 'text-danger font-semibold'
+              : remaining <= 30
+                ? 'text-amber-700 font-semibold'
+                : 'text-ink-muted'
           )}
         >
-          {remaining} characters remaining
+          {remark.trim().length < MIN
+            ? `${MIN - remark.trim().length} more characters required`
+            : `${remaining} characters remaining`}
         </p>
         <div className="flex gap-2 mt-4">
           <button

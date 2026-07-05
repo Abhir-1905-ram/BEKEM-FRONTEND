@@ -202,31 +202,24 @@ export function StoreHomePage() {
           }
         >
           <div className="space-y-2">
-            {(pendingRequests ?? []).map((r) => {
-              const itemCount = r.itemCount || r.items?.length || 1;
-              const firstLabel =
-                r.items?.[0]?.material?.name || r.material?.name || '';
-
-              return (
-                <div
-                  key={r.id}
-                  className="data-row"
-                  onClick={() => navigate(`/store/allocate/${r.id}`)}
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-ink">{r.indentNumber}</p>
-                    <p className="text-sm text-ink-secondary">
-                      {itemCount} item{itemCount !== 1 ? 's' : ''}
-                      {firstLabel ? ` · ${firstLabel}` : ''}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <AgeingBadge days={daysSince(r.createdAt)} />
-                    <ChevronRight className="h-4 w-4 text-ink-muted shrink-0" />
-                  </div>
+            {(pendingRequests ?? []).map((r) => (
+              <div
+                key={r.id}
+                className="data-row"
+                onClick={() => navigate(`/store/allocate/${r.id}`)}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-ink">{r.indentNumber}</p>
+                  {r.purpose ? (
+                    <p className="text-sm text-ink-secondary mt-0.5 line-clamp-2">{r.purpose}</p>
+                  ) : null}
                 </div>
-              );
-            })}
+                <div className="flex items-center gap-2 shrink-0">
+                  <AgeingBadge days={daysSince(r.createdAt)} />
+                  <ChevronRight className="h-4 w-4 text-ink-muted shrink-0" />
+                </div>
+              </div>
+            ))}
           </div>
         </ListQueryBoundary>
       </div>

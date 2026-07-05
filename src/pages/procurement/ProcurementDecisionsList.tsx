@@ -76,17 +76,16 @@ export function ProcurementDecisionsListPage({
                     <p className="text-sm text-ink-secondary mt-0.5">
                       {d.projectCode} — {d.projectName}
                     </p>
+                    {d.purpose && (
+                      <p className="text-xs text-ink-muted mt-1 line-clamp-2">{d.purpose}</p>
+                    )}
                     <p className="text-xs text-ink-muted mt-1">
                       {d.indentDate ? formatDate(d.indentDate) : '—'} ·{' '}
                       {formatCurrency(d.estimatedValue)}
+                      {d.priority ? ` · ${d.priority} priority` : ''}
                     </p>
-                    {d.executiveProcurementMethod && (
-                      <p className="text-xs text-ink-muted mt-1">
-                        Executive:{' '}
-                        {d.executiveProcurementMethod === 'BRANCH_TRANSFER'
-                          ? 'Branch transfer'
-                          : 'Purchase order'}
-                      </p>
+                    {d.prNumber && (
+                      <p className="text-xs text-ink-muted mt-0.5">PR {d.prNumber}</p>
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">

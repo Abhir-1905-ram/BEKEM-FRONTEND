@@ -88,6 +88,8 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
 
         { id: 'my-requests', label: 'My indents', href: '/incidents', icon: FileText },
 
+        { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass },
+
       ];
 
     case UserRole.STORE_INCHARGE:
@@ -109,6 +111,8 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
         { id: 'issue', label: 'Issue to site', href: '/store/issue', icon: FilePlus },
 
         { id: 'stock', label: 'Stock Inventory', href: '/store/stock', icon: Package },
+
+        { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass },
 
       ];
 
@@ -133,6 +137,8 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
         { id: 'approve-wos', label: 'Approve work orders', href: '/pm/approve-wos', icon: HardHat },
 
         { id: 'stock', label: 'Stock Inventory', href: '/store/stock', icon: Package },
+
+        { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass },
 
       ];
 

@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { forbiddenQueryOptions, isForbiddenError, useRedirectOnForbidden } from '@/lib/forbiddenRedirect';
 import { useAuthStore } from '@/stores/authStore';
-import { formatDate, ROLE_COLORS, UserRole } from '@afios/shared';
+import { formatDate, formatCurrency, ROLE_COLORS, UserRole } from '@afios/shared';
 import type { MaterialRequestDto } from '@afios/shared';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -15,6 +15,7 @@ import { StatusTimeline } from '@/components/StatusTimeline';
 import { Textarea } from '@/components/ui/Input';
 import { SearchSelect } from '@/components/SearchSelect';
 import { StockComparisonTable } from '@/components/StockComparisonTable';
+import { CrossProjectStockPanel } from '@/components/CrossProjectStockPanel';
 import { PmDailyCapBanner } from '@/components/PmDailyCapBanner';
 import { useApprovalShortcuts } from '@/hooks/useApprovalShortcuts';
 
@@ -267,7 +268,7 @@ export function RequestDetailPage() {
         {request.estimatedValue != null && request.estimatedValue > 0 && (
           <div>
             <p className="text-xs text-gray-500">Estimated value</p>
-            <p className="font-medium">₹{request.estimatedValue.toLocaleString('en-IN')}</p>
+            <p className="font-medium">{formatCurrency(request.estimatedValue)}</p>
           </div>
         )}
         {request.purpose && (
@@ -285,7 +286,23 @@ export function RequestDetailPage() {
       </Card>
 
       <h2 className="font-semibold text-gray-900 mb-3">Stock comparison (requesting site)</h2>
-      <StockComparisonTable items={items} className="mb-6" />
+      <StockComparisonTable
+        items={items}
+        className="mb-6"
+        showPricing
+        totalEstimatedValue={request.estimatedValue}
+      />
+
+      {role === UserRole.PROJECT_MANAGER && request.crossProjectStock?.length ? (
+        <>
+          <h2 className="font-semibold text-gray-900 mb-3">Stock across your projects</h2>
+          <CrossProjectStockPanel
+            rows={request.crossProjectStock}
+            requestingProjectId={request.projectId}
+            className="mb-6"
+          />
+        </>
+      ) : null}
 
       {canPmDecide && (
         <div className="mb-6 space-y-4 panel p-4">

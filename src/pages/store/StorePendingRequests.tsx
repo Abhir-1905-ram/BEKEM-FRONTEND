@@ -55,16 +55,15 @@ export function StorePendingRequestsPage() {
               className="cursor-pointer hover:shadow-card-hover transition-shadow"
               onClick={() => navigate(`/store/allocate/${r.id}`)}
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900">{r.material?.name}</p>
-                  <p className="text-sm text-gray-500">
-                    {r.quantityRequested} {r.material?.unit} · {r.indentNumber}
-                  </p>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-semibold text-gray-900">{r.indentNumber}</p>
+                  {r.purpose ? (
+                    <p className="text-sm text-gray-600 mt-1 line-clamp-2">{r.purpose}</p>
+                  ) : null}
                 </div>
                 <ChevronRight className={cn('h-5 w-5 text-gray-300 shrink-0')} />
-              </div>
-            </Card>
+              </div>            </Card>
           ))}
         </div>
       </ListQueryBoundary>

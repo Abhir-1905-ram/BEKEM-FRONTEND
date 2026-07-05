@@ -38,11 +38,6 @@ export function BranchTransferDetailPage() {
         ? ROLE_COLORS[UserRole.EXECUTIVE].primary
         : ROLE_COLORS[UserRole.PROJECT_MANAGER].primary;
 
-  const readOnly =
-    role === UserRole.PROJECT_MANAGER ||
-    role === UserRole.EXECUTIVE ||
-    role === UserRole.CHAIRMAN;
-
   const { data: transfer, isLoading } = useQuery({
     queryKey: ['branch-transfer', id],
     queryFn: async () => {
@@ -93,6 +88,26 @@ export function BranchTransferDetailPage() {
 
   const coordinatorReject = useMutation({
     mutationFn: () => api.post(`/branch-transfers/${id}/coordinator-reject`, { note }),
+    onSuccess: () => {
+      setDoneMessage('Branch transfer rejected');
+      setDone(true);
+    },
+    onError: () => toast.error('Rejection failed'),
+    onSettled: invalidate,
+  });
+
+  const executiveApprove = useMutation({
+    mutationFn: () => api.post(`/branch-transfers/${id}/executive-approve`, { note }),
+    onSuccess: () => {
+      setDoneMessage('Branch transfer approved — Coordinator will execute stock movement');
+      setDone(true);
+    },
+    onError: () => toast.error('Approval failed'),
+    onSettled: invalidate,
+  });
+
+  const executiveReject = useMutation({
+    mutationFn: () => api.post(`/branch-transfers/${id}/executive-reject`, { note }),
     onSuccess: () => {
       setDoneMessage('Branch transfer rejected');
       setDone(true);
@@ -166,15 +181,51 @@ export function BranchTransferDetailPage() {
         {transfer.requestedBy && (
           <p className="text-xs text-ink-muted">Requested by {transfer.requestedBy}</p>
         )}
-        {readOnly && transfer.status === 'REQUESTED' && (
+        {role === UserRole.PROJECT_MANAGER && transfer.status === 'REQUESTED' && (
           <p className="text-xs text-ink-secondary rounded-lg bg-surface-muted px-3 py-2">
-            Awaiting Head Office review. Project Managers cannot approve branch transfers.
+            Awaiting Executive approval. You cannot approve your own branch transfer request.
+          </p>
+        )}
+        {role === UserRole.EXECUTIVE && transfer.status === 'REQUESTED' && (
+          <p className="text-xs text-ink-secondary rounded-lg bg-surface-muted px-3 py-2">
+            Review only — approve or reject as submitted. You cannot modify source, material, or quantity.
           </p>
         )}
       </Card>
 
       <h2 className="font-semibold text-sm mb-3">Timeline</h2>
       <StatusTimeline entityType="BranchTransfer" entityId={transfer.id} />
+
+      {transfer.canExecutiveApprove && (
+        <div className="mt-6 space-y-4 border-t border-surface-border pt-6">
+          <h2 className="font-semibold text-sm">Executive review</h2>
+          <Textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Optional note for audit trail…"
+          />
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="accent"
+              size="lg"
+              accentColor={accent}
+              disabled={executiveApprove.isPending}
+              onClick={() => executiveApprove.mutate()}
+            >
+              Approve branch transfer
+            </Button>
+            <Button
+              variant="ghost"
+              size="lg"
+              className="text-danger"
+              disabled={!note.trim() || executiveReject.isPending}
+              onClick={() => executiveReject.mutate()}
+            >
+              Reject (remark required)
+            </Button>
+          </div>
+        </div>
+      )}
 
       {transfer.canCoordinatorDecide && (
         <div className="mt-6 space-y-4 border-t border-surface-border pt-6">

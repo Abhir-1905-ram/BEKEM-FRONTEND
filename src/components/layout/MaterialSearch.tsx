@@ -58,9 +58,13 @@ export function MaterialSearch({ className, onSelect }: MaterialSearchProps) {
                 <div className="min-w-0">
                   <p className="font-semibold text-sm text-ink">{m.name}</p>
                   <p className="text-xs text-ink-secondary mt-0.5">
-                    {m.code}
-                    {m.grade ? ` · ${m.grade}` : ''}
-                    {m.category ? ` · ${m.category}` : ''}
+                    {m.pickerSubtitle ?? (
+                      <>
+                        {m.code}
+                        {m.grade ? ` · ${m.grade}` : ''}
+                        {m.category ? ` · ${m.category}` : ''}
+                      </>
+                    )}
                   </p>
                   {m.description && (
                     <p className="text-xs text-ink-muted mt-1 line-clamp-2">{m.description}</p>

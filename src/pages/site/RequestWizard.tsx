@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, Search, Package, Building2, MapPin, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
@@ -10,6 +10,7 @@ import {
   formatCurrency,
   type MaterialDto,
   type CreateIndentDto,
+  type CreateSiteMaterialDto,
   type SiteDto,
 } from '@afios/shared';
 import { Button } from '@/components/ui/Button';
@@ -24,9 +25,9 @@ interface LineDraft {
   material: MaterialDto;
   quantity: number;
   unit: string;
-  /** True when site typed a product not in the catalog. */
-  isCustom?: boolean;
 }
+
+const MATERIAL_CATEGORIES = ['Raw Material', 'Consumables'] as const;
 
 function unitPriceSuffix(unit: string) {
   if (!unit) return '';
@@ -36,6 +37,7 @@ function unitPriceSuffix(unit: string) {
 
 export function RequestWizardPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const accent = ROLE_COLORS[UserRole.SITE_INCHARGE].primary;
   const [step, setStep] = useState<'project' | 'materials'>('project');
   const [selectedSiteId, setSelectedSiteId] = useState('');
@@ -46,6 +48,8 @@ export function RequestWizardPage() {
   const [selectedMaterial, setSelectedMaterial] = useState<MaterialDto | null>(null);
   const [customName, setCustomName] = useState('');
   const [customUnit, setCustomUnit] = useState('Nos');
+  const [customCategory, setCustomCategory] = useState<(typeof MATERIAL_CATEGORIES)[number]>('Consumables');
+  const [customDescription, setCustomDescription] = useState('');
   const [customQty, setCustomQty] = useState(1);
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -91,59 +95,68 @@ export function RequestWizardPage() {
     onError: () => toast.error('Failed to submit indent'),
   });
 
-  const addLine = (
-    material: MaterialDto,
-    qty = pickQty,
-    isCustom = false,
-    unit = pickUnit
-  ) => {
+  const createSiteMaterial = useMutation({
+    mutationFn: async (payload: CreateSiteMaterialDto) => {
+      const res = await api.post<{ data: MaterialDto; meta: { created: boolean; reused: boolean } }>(
+        '/materials/site-request',
+        payload
+      );
+      return res.data;
+    },
+  });
+
+  const addLine = (material: MaterialDto, qty = pickQty, unit = pickUnit) => {
     if (qty <= 0) return;
     const lineUnit = (unit || material.unit || 'Nos').trim() || 'Nos';
     setLines((prev) => {
-      const existing = prev.find(
-        (l) =>
-          l.material.id === material.id ||
-          (isCustom &&
-            l.isCustom &&
-            l.material.name.toLowerCase() === material.name.toLowerCase())
-      );
+      const existing = prev.find((l) => l.material.id === material.id);
       if (existing) {
         return prev.map((l) =>
-          l.material.id === existing.material.id ||
-          (l.isCustom &&
-            l.material.name.toLowerCase() === material.name.toLowerCase())
+          l.material.id === material.id
             ? { ...l, quantity: l.quantity + qty, unit: lineUnit }
             : l
         );
       }
-      return [...prev, { material, quantity: qty, unit: lineUnit, isCustom }];
+      return [...prev, { material, quantity: qty, unit: lineUnit }];
     });
     setSelectedMaterial(null);
     setPickQty(1);
     setPickUnit('Nos');
   };
 
-  const addCustomLine = () => {
+  const addCustomLine = async () => {
     const name = customName.trim();
     if (!name) {
-      toast.error('Enter the product name');
+      toast.error('Enter the material name');
       return;
     }
     if (customQty <= 0) return;
     const unit = customUnit.trim() || 'Nos';
-    const material: MaterialDto = {
-      id: `custom:${name.toLowerCase()}`,
-      code: 'NEW',
-      name,
-      unit,
-      category: 'Site request',
-    };
-    addLine(material, customQty, true, unit);
-    setCustomName('');
-    setCustomUnit('Nos');
-    setCustomQty(1);
-    setShowCustomForm(false);
-    toast.success(`“${name}” added — will be created in catalog on submit`);
+
+    try {
+      const { data: material, meta } = await createSiteMaterial.mutateAsync({
+        name,
+        unit,
+        category: customCategory,
+        description: customDescription.trim() || undefined,
+      });
+      await queryClient.invalidateQueries({ queryKey: ['materials'] });
+      addLine(material, customQty, unit);
+      setCustomName('');
+      setCustomUnit('Nos');
+      setCustomCategory('Consumables');
+      setCustomDescription('');
+      setCustomQty(1);
+      setShowCustomForm(false);
+      toast.success(
+        meta.reused
+          ? `“${name}” already in catalog — added to indent`
+          : `“${name}” saved to Material Master and added to indent`
+      );
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } } };
+      toast.error(err.response?.data?.message || 'Could not save material');
+    }
   };
 
   const updateLineQty = (materialId: string, quantity: number) => {
@@ -336,14 +349,9 @@ export function RequestWizardPage() {
                         <p className="text-xs font-semibold text-ink-muted">#{idx + 1}</p>
                         <p className="font-semibold text-sm text-ink truncate">{line.material.name}</p>
                         <p className="text-xs text-ink-secondary mt-0.5">
-                          {line.isCustom ? (
-                            <span className="text-amber-700 font-medium">New product request</span>
-                          ) : (
-                            <>
-                              {line.material.code}
-                              {line.material.grade ? ` · ${line.material.grade}` : ''}
-                            </>
-                          )}
+                          {line.material.code}
+                          {line.material.grade ? ` · ${line.material.grade}` : ''}
+                          {line.material.category ? ` · ${line.material.category}` : ''}
                         </p>
                       </div>
                       <button
@@ -376,7 +384,7 @@ export function RequestWizardPage() {
                         />
                       </div>
                     </div>
-                    {!line.isCustom && line.material.unitPrice != null && (
+                    {line.material.unitPrice != null && (
                       <p className="text-xs text-ink-secondary">
                         <span className="font-semibold text-ink-muted">Unit Price:</span>{' '}
                         {formatCurrency(line.material.unitPrice)}
@@ -413,19 +421,11 @@ export function RequestWizardPage() {
                 onClick={() =>
                   mutation.mutate({
                     purpose: purpose.trim(),
-                    items: lines.map((l) =>
-                      l.isCustom
-                        ? {
-                            customName: l.material.name,
-                            unit: l.unit || 'Nos',
-                            quantityRequested: l.quantity,
-                          }
-                        : {
-                            materialId: l.material.id,
-                            unit: l.unit || l.material.unit || 'Nos',
-                            quantityRequested: l.quantity,
-                          }
-                    ),
+                    items: lines.map((l) => ({
+                      materialId: l.material.id,
+                      unit: l.unit || l.material.unit || 'Nos',
+                      quantityRequested: l.quantity,
+                    })),
                   })
                 }
               >
@@ -498,7 +498,7 @@ export function RequestWizardPage() {
                     variant="accent"
                     accentColor={accent}
                     className="flex-1"
-                    onClick={() => addLine(selectedMaterial, pickQty, false, pickUnit)}
+                    onClick={() => addLine(selectedMaterial, pickQty, pickUnit)}
                   >
                     Add to indent
                   </Button>
@@ -532,7 +532,7 @@ export function RequestWizardPage() {
                     setShowCustomForm(true);
                   }}
                 >
-                  Request “{search.trim()}” as new product
+                  Add “{search.trim()}” as new material
                 </Button>
               </div>
             ) : (
@@ -556,8 +556,12 @@ export function RequestWizardPage() {
                         <div className="min-w-0">
                           <p className="font-semibold text-sm text-ink">{m.name}</p>
                           <p className="text-xs text-ink-secondary mt-0.5">
-                            {m.code}
-                            {m.grade ? ` · ${m.grade}` : ''} · {m.unit}
+                            {m.pickerSubtitle ?? (
+                              <>
+                                {m.code}
+                                {m.grade ? ` · ${m.grade}` : ''} · {m.unit}
+                              </>
+                            )}
                           </p>
                         </div>
                         {inCart ? (
@@ -579,14 +583,14 @@ export function RequestWizardPage() {
             <div className="rounded-2xl border border-surface-border bg-white p-4 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-sm font-semibold text-ink">Product not in catalog?</p>
+                  <p className="text-sm font-semibold text-ink">Material not in catalog?</p>
                   <p className="text-xs text-ink-muted mt-0.5">
-                    Type the name (e.g. switch-srl). It is added to the catalog when you submit.
+                    Add a new material — it is saved to Material Master immediately.
                   </p>
                 </div>
                 {!showCustomForm && (
                   <Button variant="secondary" size="sm" onClick={() => setShowCustomForm(true)}>
-                    Add product
+                    Add new material
                   </Button>
                 )}
               </div>
@@ -595,36 +599,66 @@ export function RequestWizardPage() {
                 <div className="space-y-3 pt-1 border-t border-surface-border">
                   <div>
                     <label className="text-xs font-semibold text-ink-muted mb-1 block">
-                      Product name
+                      Material name <span className="text-danger">*</span>
                     </label>
                     <Input
                       value={customName}
                       onChange={(e) => setCustomName(e.target.value)}
-                      placeholder="e.g. switch-srl"
+                      placeholder="e.g. Sand, Cement"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs font-semibold text-ink-muted mb-1 block">Unit</label>
+                      <label className="text-xs font-semibold text-ink-muted mb-1 block">
+                        Unit <span className="text-danger">*</span>
+                      </label>
                       <Input
                         value={customUnit}
                         onChange={(e) => setCustomUnit(e.target.value)}
-                        placeholder="Nos"
+                        placeholder="Nos, Mts, Bags…"
                       />
                     </div>
                     <div>
                       <label className="text-xs font-semibold text-ink-muted mb-1 block">
-                        Quantity
+                        Category <span className="text-danger">*</span>
                       </label>
-                      <QuantityStepper
-                        size="compact"
-                        value={customQty}
-                        onChange={setCustomQty}
-                        min={1}
-                        unit={customUnit || 'Nos'}
-                        accentColor={accent}
-                      />
+                      <select
+                        value={customCategory}
+                        onChange={(e) =>
+                          setCustomCategory(e.target.value as (typeof MATERIAL_CATEGORIES)[number])
+                        }
+                        className="w-full h-10 rounded-xl border border-surface-border px-3 text-sm bg-white"
+                      >
+                        {MATERIAL_CATEGORIES.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ))}
+                      </select>
                     </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-ink-muted mb-1 block">
+                      Description (optional)
+                    </label>
+                    <Input
+                      value={customDescription}
+                      onChange={(e) => setCustomDescription(e.target.value)}
+                      placeholder="Grade, spec, or usage notes"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-ink-muted mb-1 block">
+                      Quantity for this indent
+                    </label>
+                    <QuantityStepper
+                      size="compact"
+                      value={customQty}
+                      onChange={setCustomQty}
+                      min={1}
+                      unit={customUnit || 'Nos'}
+                      accentColor={accent}
+                    />
                   </div>
                   <div className="flex gap-2">
                     <Button
@@ -634,7 +668,9 @@ export function RequestWizardPage() {
                         setShowCustomForm(false);
                         setCustomName('');
                         setCustomQty(1);
+                        setCustomDescription('');
                       }}
+                      disabled={createSiteMaterial.isPending}
                     >
                       Cancel
                     </Button>
@@ -642,9 +678,10 @@ export function RequestWizardPage() {
                       variant="accent"
                       accentColor={accent}
                       className="flex-1"
-                      onClick={addCustomLine}
+                      onClick={() => void addCustomLine()}
+                      disabled={createSiteMaterial.isPending}
                     >
-                      Add to indent
+                      {createSiteMaterial.isPending ? 'Saving…' : 'Save & add to indent'}
                     </Button>
                   </div>
                 </div>

@@ -1,9 +1,7 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { api } from '@/lib/api';
-import { formatDate } from '@afios/shared';
-import type { MaterialRequestDto } from '@afios/shared';
-import { Card } from '@/components/ui/Card';
+import type { MaterialRequestDto } from '@afios/shared';import { Card } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/EmptyState';
 import { ListQueryBoundary } from '@/components/ListQueryBoundary';
@@ -80,22 +78,18 @@ export function MyRequestsPage() {
               className="cursor-pointer hover:shadow-card-hover transition-shadow"
               onClick={() => navigate(`/requests/${r.id}`)}
             >
-              <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="font-medium text-gray-900">{r.material?.name}</p>
-                  <p className="text-sm text-gray-500 mt-0.5">
-                    {r.quantityRequested} {r.material?.unit}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">{r.indentNumber}</p>
-                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">{r.purpose}</p>
+                  <p className="font-semibold text-gray-900">{r.indentNumber}</p>
+                  {r.purpose ? (
+                    <p className="text-sm text-gray-600 mt-1 line-clamp-2">{r.purpose}</p>
+                  ) : null}
                 </div>
-                <div className="flex flex-col items-end gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                   <StatusBadge status={r.status} />
                   <ChevronRight className="h-4 w-4 text-gray-300" />
                 </div>
-              </div>
-              <p className="text-xs text-gray-400 mt-2">Required: {formatDate(r.requiredByDate)}</p>
-            </Card>
+              </div>            </Card>
           ))}
         </div>
       </ListQueryBoundary>
