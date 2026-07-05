@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
@@ -66,6 +66,8 @@ function grandTotalAll(lines: PoLineItemDto[]) {
 
 export function POWizardPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const preselectedPrId = searchParams.get('purchaseRequestId');
   const accent = ROLE_COLORS[UserRole.EXECUTIVE].primary;
   const [step, setStep] = useState(0);
   const [selectedMr, setSelectedMr] = useState<MaterialRequestDto | null>(null);
@@ -130,6 +132,24 @@ export function POWizardPage() {
     });
     setVendorRows(res.data.data);
   };
+
+  useEffect(() => {
+    if (!preselectedPrId || selectedPr || prLoading) return;
+    const pr = openPurchaseRequests.find((p) => p.id === preselectedPrId);
+    if (!pr) return;
+    void (async () => {
+      setSelectedPr(pr);
+      if (pr.materialRequestId) {
+        const res = await api.get<{ data: MaterialRequestDto }>(
+          `/material-requests/${pr.materialRequestId}`
+        );
+        setSelectedMr(res.data.data);
+        const materialIds = res.data.data.items?.map((i) => i.materialId) || [];
+        await loadVendorRows(materialIds);
+      }
+      setStep(1);
+    })();
+  }, [preselectedPrId, openPurchaseRequests, prLoading, selectedPr]);
 
   const createPo = useMutation({
     mutationFn: async () => {

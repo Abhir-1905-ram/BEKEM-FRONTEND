@@ -39,6 +39,7 @@ export function GrnReceivePage() {
   const [invoicePriceByLine, setInvoicePriceByLine] = useState<Record<string, number>>({});
   const [receiveType, setReceiveType] = useState<ReceiveType>('FULL');
   const [invoiceNo, setInvoiceNo] = useState('');
+  const [invoiceDate, setInvoiceDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [challanNo, setChallanNo] = useState('');
   const [vehicleNo, setVehicleNo] = useState('');
   const [ewayBillNumber, setEwayBillNumber] = useState('');
@@ -150,6 +151,7 @@ export function GrnReceivePage() {
         purchaseOrderId: selectedPo.id,
         receiveType,
         invoiceNo,
+        invoiceDate: new Date(invoiceDate).toISOString(),
         invoiceValue,
         challanNo,
         vehicleNo,
@@ -390,6 +392,18 @@ export function GrnReceivePage() {
                     onChange={(e) => setInvoiceNo(e.target.value)}
                     placeholder="Invoice number"
                     className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-ink-secondary">
+                    Invoice date <span className="text-danger">*</span>
+                  </label>
+                  <Input
+                    type="date"
+                    value={invoiceDate}
+                    onChange={(e) => setInvoiceDate(e.target.value)}
+                    className="mt-1.5"
+                    required
                   />
                 </div>
                 <div>

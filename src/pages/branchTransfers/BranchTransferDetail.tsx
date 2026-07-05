@@ -34,7 +34,14 @@ export function BranchTransferDetailPage() {
   const accent =
     role === UserRole.COORDINATOR
       ? ROLE_COLORS[UserRole.COORDINATOR].primary
-      : ROLE_COLORS[UserRole.PROJECT_MANAGER].primary;
+      : role === UserRole.EXECUTIVE
+        ? ROLE_COLORS[UserRole.EXECUTIVE].primary
+        : ROLE_COLORS[UserRole.PROJECT_MANAGER].primary;
+
+  const readOnly =
+    role === UserRole.PROJECT_MANAGER ||
+    role === UserRole.EXECUTIVE ||
+    role === UserRole.CHAIRMAN;
 
   const { data: transfer, isLoading } = useQuery({
     queryKey: ['branch-transfer', id],
@@ -48,28 +55,8 @@ export function BranchTransferDetailPage() {
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['branch-transfer', id] });
     queryClient.invalidateQueries({ queryKey: ['branch-transfers'] });
-    queryClient.invalidateQueries({ queryKey: ['pm-branch-transfer-approvals'] });
+    queryClient.invalidateQueries({ queryKey: ['pm-branch-transfer-requests'] });
   };
-
-  const pmApprove = useMutation({
-    mutationFn: () => api.post(`/branch-transfers/${id}/pm-approve`, { note }),
-    onSuccess: () => {
-      setDoneMessage('Branch transfer approved — sent to Coordinator for decision');
-      setDone(true);
-    },
-    onError: () => toast.error('Approval failed'),
-    onSettled: invalidate,
-  });
-
-  const pmReject = useMutation({
-    mutationFn: () => api.post(`/branch-transfers/${id}/pm-reject`, { note }),
-    onSuccess: () => {
-      setDoneMessage('Branch transfer rejected');
-      setDone(true);
-    },
-    onError: () => toast.error('Rejection failed'),
-    onSettled: invalidate,
-  });
 
   const coordinatorDecide = useMutation({
     mutationFn: (decision: 'transfer' | 'raise_po_instead') =>
@@ -96,11 +83,21 @@ export function BranchTransferDetailPage() {
         }
         setDoneMessage('Marked to raise PO instead — indent forwarded to PM');
       } else {
-        setDoneMessage('Transfer confirmed — execute when ready');
+        setDoneMessage('Transfer approved — execute when ready');
       }
       setDone(true);
     },
     onError: () => toast.error('Decision failed'),
+    onSettled: invalidate,
+  });
+
+  const coordinatorReject = useMutation({
+    mutationFn: () => api.post(`/branch-transfers/${id}/coordinator-reject`, { note }),
+    onSuccess: () => {
+      setDoneMessage('Branch transfer rejected');
+      setDone(true);
+    },
+    onError: () => toast.error('Rejection failed'),
     onSettled: invalidate,
   });
 
@@ -169,44 +166,21 @@ export function BranchTransferDetailPage() {
         {transfer.requestedBy && (
           <p className="text-xs text-ink-muted">Requested by {transfer.requestedBy}</p>
         )}
+        {readOnly && transfer.status === 'REQUESTED' && (
+          <p className="text-xs text-ink-secondary rounded-lg bg-surface-muted px-3 py-2">
+            Awaiting Head Office review. Project Managers cannot approve branch transfers.
+          </p>
+        )}
       </Card>
 
       <h2 className="font-semibold text-sm mb-3">Timeline</h2>
       <StatusTimeline entityType="BranchTransfer" entityId={transfer.id} />
 
-      {(transfer.canPmApprove || transfer.canPmReject) && (
-        <div className="mt-6 space-y-3 border-t border-surface-border pt-6">
-          <Textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="Note (optional)…"
-          />
-          <Button
-            variant="accent"
-            size="lg"
-            accentColor={accent}
-            disabled={pmApprove.isPending}
-            onClick={() => pmApprove.mutate()}
-          >
-            Approve branch transfer
-          </Button>
-          <Button
-            variant="ghost"
-            size="lg"
-            className="text-danger"
-            disabled={pmReject.isPending}
-            onClick={() => pmReject.mutate()}
-          >
-            Reject
-          </Button>
-        </div>
-      )}
-
       {transfer.canCoordinatorDecide && (
         <div className="mt-6 space-y-4 border-t border-surface-border pt-6">
-          <h2 className="font-semibold text-sm">Coordinator decision</h2>
+          <h2 className="font-semibold text-sm">Head Office decision</h2>
           <p className="text-sm text-ink-secondary">
-            Confirm stock transfer between projects, or redirect this need into the normal PO workflow.
+            Approve the inter-project transfer, raise a PO instead, or reject the request.
           </p>
 
           {decisionMode === 'transfer' && (
@@ -271,14 +245,19 @@ export function BranchTransferDetailPage() {
                 accentColor={accent}
                 onClick={() => setDecisionMode('transfer')}
               >
-                Review & confirm transfer
+                Approve branch transfer
+              </Button>
+              <Button variant="secondary" size="lg" onClick={() => setDecisionMode('raise_po')}>
+                Raise PO instead
               </Button>
               <Button
-                variant="secondary"
+                variant="ghost"
                 size="lg"
-                onClick={() => setDecisionMode('raise_po')}
+                className="text-danger"
+                disabled={coordinatorReject.isPending}
+                onClick={() => coordinatorReject.mutate()}
               >
-                Raise PO instead
+                Reject request
               </Button>
             </div>
           )}
@@ -292,7 +271,7 @@ export function BranchTransferDetailPage() {
                 disabled={coordinatorDecide.isPending}
                 onClick={() => coordinatorDecide.mutate('transfer')}
               >
-                Confirm transfer (no PO)
+                Confirm approval (no PO)
               </Button>
               <Button variant="ghost" size="lg" onClick={() => setDecisionMode('idle')}>
                 Go back
@@ -325,7 +304,7 @@ export function BranchTransferDetailPage() {
       {transfer.canExecute && (
         <div className="mt-6 space-y-3 border-t border-surface-border pt-6">
           <p className="text-sm text-ink-secondary">
-            Execute the atomic stock transfer — both project ledgers will update. No PO, PDF, or vendor email.
+            Execute the atomic stock transfer — both project ledgers will update. No PO, PDF, vendor email, or GRN.
           </p>
           <Button
             variant="accent"

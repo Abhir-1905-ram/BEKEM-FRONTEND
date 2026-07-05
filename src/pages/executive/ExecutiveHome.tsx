@@ -13,6 +13,8 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { DashboardSearch } from '@/components/layout/DashboardSearch';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { DashboardWidgetCards } from '@/components/DashboardWidgetCards';
+import { ExecutiveProcurementWidget } from '@/components/ExecutiveProcurementWidget';
+import { ExecutivePurchaseRequestsWidget } from '@/components/ExecutivePurchaseRequestsWidget';
 import { FulfillmentStatusChip } from '@/components/FulfillmentStatusChip';
 import { PoEmailStatusChip } from '@/components/PoEmailStatusChip';
 import { TodayPanel } from '@/components/layout/TodayPanel';
@@ -128,6 +130,20 @@ export function ExecutiveHomePage() {
           </div>
         </div>
       )}
+
+      <ExecutiveProcurementWidget
+        total={widgets?.widgets.pendingProcurementDecisions}
+        poPending={widgets?.widgets.pendingPoDecisions}
+        btPending={widgets?.widgets.pendingBtDecisions}
+        loading={widgetsLoading}
+        onClick={() => navigate('/executive/procurement-decisions')}
+      />
+
+      <ExecutivePurchaseRequestsWidget
+        count={widgets?.widgets.pendingPurchaseRequests}
+        loading={widgetsLoading}
+        onClick={() => navigate('/executive/purchase-requests')}
+      />
 
       <DashboardWidgetCards widgets={widgets?.widgets} loading={widgetsLoading} />
 

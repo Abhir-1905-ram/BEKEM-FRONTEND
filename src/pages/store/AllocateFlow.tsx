@@ -111,7 +111,6 @@ export function AllocateFlowPage() {
             material: request.material,
             requestedQty: request.items?.[0]?.requestedQty,
             availableQty: request.items?.[0]?.availableQty,
-            existingStock: request.items?.[0]?.existingStock,
             requiredQty: request.items?.[0]?.requiredQty,
           },
         ]
@@ -136,12 +135,12 @@ export function AllocateFlowPage() {
         </div>
       </header>
 
-      {!canIssue && (
-        <div className="mb-4 rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-ink-secondary">
-          One or more lines are short on stock. You can only forward the entire indent to the Project
-          Manager — partial issue is not allowed.
-        </div>
-      )}
+        {!canIssue && (
+          <div className="mb-4 rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-ink-secondary">
+            One or more lines are short on stock. Forward the entire indent to the Project Manager
+            for a decision — partial issue is not allowed.
+          </div>
+        )}
 
       <StockComparisonTable items={items} className="mb-6" />
 
@@ -183,24 +182,6 @@ export function AllocateFlowPage() {
         >
           Forward entire indent to PM
         </Button>
-        {!canIssue && (
-          <Button
-            variant="accent"
-            size="lg"
-            accentColor={accent}
-            onClick={() =>
-              navigate('/store/branch-transfers', {
-                state: {
-                  materialRequestId: id,
-                  materialId: items[0]?.materialId,
-                  quantity: items[0]?.quantityRequested,
-                },
-              })
-            }
-          >
-            Request branch transfer instead
-          </Button>
-        )}
         <Button
           variant="ghost"
           size="lg"

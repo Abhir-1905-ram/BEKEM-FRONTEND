@@ -42,6 +42,9 @@ export function IssueMaterialPage() {
   const [reasonOther, setReasonOther] = useState('');
   const [reasonError, setReasonError] = useState('');
   const [note, setNote] = useState('');
+  const [issuedToType, setIssuedToType] = useState<'EMPLOYEE' | 'CONTRACTOR' | 'DEPARTMENT' | ''>('');
+  const [issuedToName, setIssuedToName] = useState('');
+  const [issuedToError, setIssuedToError] = useState('');
   const [attachments, setAttachments] = useState<IssueAttachment[]>([]);
   const [lastIssue, setLastIssue] = useState<{ id: string; issueNumber: string } | null>(null);
   const docRef = useRef<HTMLInputElement>(null);
@@ -78,6 +81,8 @@ export function IssueMaterialPage() {
         materialRequestId: selected!.id,
         reason,
         reasonOtherText: reason === 'other' ? reasonOther.trim() : undefined,
+        issuedToType,
+        issuedToName: issuedToName.trim(),
         note,
         attachments,
       });
@@ -90,6 +95,9 @@ export function IssueMaterialPage() {
       setReason('');
       setReasonOther('');
       setReasonError('');
+      setIssuedToType('');
+      setIssuedToName('');
+      setIssuedToError('');
       setNote('');
       setAttachments([]);
       refetch();
@@ -108,7 +116,12 @@ export function IssueMaterialPage() {
       setReasonError('Please provide details when reason is Other');
       return;
     }
+    if (!issuedToType || !issuedToName.trim()) {
+      setIssuedToError('Issued to is required (employee, contractor, or department)');
+      return;
+    }
     setReasonError('');
+    setIssuedToError('');
     issue.mutate();
   };
 
@@ -212,6 +225,40 @@ export function IssueMaterialPage() {
                 placeholder="Describe the reason…"
               />
             )}
+
+            <div>
+              <label className="text-sm font-medium text-ink-secondary block mb-2">
+                Issued to <span className="text-danger">*</span>
+              </label>
+              <select
+                value={issuedToType}
+                onChange={(e) => {
+                  setIssuedToType(e.target.value as typeof issuedToType);
+                  if (e.target.value) setIssuedToError('');
+                }}
+                className="w-full border border-surface-border rounded-xl px-3 py-2.5 text-sm bg-white mb-2"
+              >
+                <option value="">Select recipient type…</option>
+                <option value="EMPLOYEE">Employee</option>
+                <option value="CONTRACTOR">Contractor</option>
+                <option value="DEPARTMENT">Department</option>
+              </select>
+              <Input
+                value={issuedToName}
+                onChange={(e) => {
+                  setIssuedToName(e.target.value);
+                  if (e.target.value.trim()) setIssuedToError('');
+                }}
+                placeholder={
+                  issuedToType === 'EMPLOYEE'
+                    ? 'Employee name'
+                    : issuedToType === 'CONTRACTOR'
+                      ? 'Contractor name'
+                      : 'Department name'
+                }
+              />
+              {issuedToError && <p className="text-xs text-danger mt-1">{issuedToError}</p>}
+            </div>
 
             <Input placeholder="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
 

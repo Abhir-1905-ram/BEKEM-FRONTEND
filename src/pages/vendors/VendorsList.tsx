@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Star } from 'lucide-react';
+import { ChevronRight, Star, Plus } from 'lucide-react';
+import { UserRole } from '@afios/shared';
 import { api } from '@/lib/api';
+import { useAuthStore } from '@/stores/authStore';
 import type { VendorDto } from '@afios/shared';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
@@ -9,6 +11,7 @@ import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 
 export function VendorsListPage() {
   const navigate = useNavigate();
+  const role = useAuthStore((s) => s.user)?.role as UserRole;
 
   const { data: vendors, list } = useListQuery({
     queryKey: ['vendors'],
@@ -20,7 +23,22 @@ export function VendorsListPage() {
 
   return (
     <div className="page-container max-w-3xl">
-      <PageHeader title="Vendors" subtitle="Supplier scorecards and performance history" />
+      <PageHeader
+        title="Vendors"
+        subtitle="Supplier scorecards and performance history"
+        action={
+          role === UserRole.EXECUTIVE ? (
+            <button
+              type="button"
+              onClick={() => navigate('/executive/vendors/new')}
+              className="inline-flex items-center gap-2 rounded-xl bg-bekem-navy text-white px-4 py-2 text-sm font-semibold"
+            >
+              <Plus className="h-4 w-4" />
+              Add vendor
+            </button>
+          ) : undefined
+        }
+      />
 
       <ListQueryBoundary
         isLoading={list.isLoading}

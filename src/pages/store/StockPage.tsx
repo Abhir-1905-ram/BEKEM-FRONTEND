@@ -195,6 +195,15 @@ export function StockPage() {
   const queryClient = useQueryClient();
   const role = useAuthStore((s) => s.user?.role);
   const fullAccess = hasFullInventoryAccess(role);
+  const isStore = role === UserRole.STORE_INCHARGE;
+  const isPm = role === UserRole.PROJECT_MANAGER;
+  const isEnterprise = fullAccess;
+  const showProjectFilter = isPm || isEnterprise;
+  const canEditRows =
+    role === UserRole.STORE_INCHARGE ||
+    role === UserRole.COORDINATOR ||
+    role === UserRole.CHAIRMAN ||
+    role === UserRole.EXECUTIVE;
   const [search, setSearch] = useState('');
   const [project, setProject] = useState('');
   const [page, setPage] = useState(1);
@@ -202,9 +211,9 @@ export function StockPage() {
   const [form, setForm] = useState<EditForm | null>(null);
   const limit = 50;
 
-  const editFields = fullAccess
-    ? [...FIELDS_THROUGH_DELIVERY, ...FIELDS_AFTER_DELIVERY]
-    : FIELDS_THROUGH_DELIVERY;
+  const editFields = (
+    fullAccess ? [...FIELDS_THROUGH_DELIVERY, ...FIELDS_AFTER_DELIVERY] : FIELDS_THROUGH_DELIVERY
+  ).filter(([key]) => !(isStore && key === 'project'));
 
   const {
     data,
@@ -227,13 +236,16 @@ export function StockPage() {
           importedAt?: string | null;
           ledgerType?: string;
           fieldAccess?: string;
+          inventoryScope?: 'all' | 'single' | 'assigned' | 'none';
+          assignedProjectName?: string | null;
+          assignedProjects?: Array<{ id: string; name: string; code: string }>;
         };
       }>('/stock/inventory', {
         params: {
           page,
           limit,
           search: search || undefined,
-          project: project || undefined,
+          project: showProjectFilter && project ? project : undefined,
           financialYear: '25-26',
         },
       });
@@ -300,6 +312,16 @@ export function StockPage() {
 
   const rows = data?.data ?? [];
   const meta = data?.meta;
+  const pageTitle = isEnterprise
+    ? 'Enterprise Stock Inventory'
+    : 'Stock Inventory';
+  const projectSubtitle = isStore
+    ? meta?.assignedProjectName
+      ? `Project: ${meta.assignedProjectName}`
+      : 'Project: —'
+    : isPm
+      ? 'Filter by your assigned projects'
+      : null;
 
   return (
     <div className="px-4 pt-4 pb-6 max-w-[1600px] mx-auto">
@@ -313,8 +335,9 @@ export function StockPage() {
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div>
-            <h1 className="font-semibold text-gray-900">Stock Inventory</h1>
+            <h1 className="font-semibold text-gray-900">{pageTitle}</h1>
             <p className="text-xs text-gray-500">
+              {projectSubtitle && <span className="block font-medium text-gray-700">{projectSubtitle}</span>}
               BEKEM INFRA PROJECTS — FY {meta?.financialYear || '2025-26'}
               {meta?.total != null && ` · ${meta.total.toLocaleString()} line items`}
             </p>
@@ -331,16 +354,18 @@ export function StockPage() {
             }}
             className="rounded-xl border border-border px-3 py-2 text-sm flex-1 min-w-[200px]"
           />
-          <SearchSelect
-            value={project || null}
-            onChange={(id) => {
-              setProject(id);
-              setPage(1);
-            }}
-            options={(meta?.projects ?? []).map((p) => ({ id: p, label: p }))}
-            placeholder="Filter by project…"
-            emptyMessage="No projects in index"
-          />
+          {showProjectFilter && (
+            <SearchSelect
+              value={project || null}
+              onChange={(id) => {
+                setProject(id);
+                setPage(1);
+              }}
+              options={(meta?.projects ?? []).map((p) => ({ id: p, label: p }))}
+              placeholder={isEnterprise ? 'Search all projects…' : 'Search assigned projects…'}
+              emptyMessage="No projects in index"
+            />
+          )}
         </div>
         <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950">
           <p className="font-semibold">FY PO index — editable</p>
@@ -399,9 +424,11 @@ export function StockPage() {
             >
               <thead className="bg-slate-100 text-[10px] uppercase tracking-wide text-ink-muted sticky top-0">
                 <tr>
-                  <th className="px-2 py-2 font-semibold border-r border-slate-200 sticky left-0 bg-slate-100 z-10">
-                    Edit
-                  </th>
+                  {canEditRows && (
+                    <th className="px-2 py-2 font-semibold border-r border-slate-200 sticky left-0 bg-slate-100 z-10">
+                      Edit
+                    </th>
+                  )}
                   <th className="px-2 py-2 font-semibold border-r border-slate-200">PO S.No</th>
                   <th className="px-2 py-2 font-semibold border-r border-slate-200">Project</th>
                   <th className="px-2 py-2 font-semibold border-r border-slate-200">Indent No</th>
@@ -481,21 +508,23 @@ export function StockPage() {
                         : 'hover:bg-slate-50/80'
                     )}
                   >
-                    <td
-                      className={cn(
-                        'px-2 py-1.5 border-r border-slate-100 sticky left-0 z-10',
-                        r.isDeliveryLate ? 'bg-red-50' : 'bg-white'
-                      )}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => openEdit(r)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-medium text-bekem-navy hover:bg-slate-50"
+                    {canEditRows && (
+                      <td
+                        className={cn(
+                          'px-2 py-1.5 border-r border-slate-100 sticky left-0 z-10',
+                          r.isDeliveryLate ? 'bg-red-50' : 'bg-white'
+                        )}
                       >
-                        <Pencil className="h-3 w-3" />
-                        Edit
-                      </button>
-                    </td>
+                        <button
+                          type="button"
+                          onClick={() => openEdit(r)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-medium text-bekem-navy hover:bg-slate-50"
+                        >
+                          <Pencil className="h-3 w-3" />
+                          Edit
+                        </button>
+                      </td>
+                    )}
                     <td className="px-2 py-1.5 border-r border-slate-100">{r.poSlNo ?? '—'}</td>
                     <td className="px-2 py-1.5 border-r border-slate-100 font-medium">{r.project}</td>
                     <td className="px-2 py-1.5 border-r border-slate-100">{r.indentNo || '—'}</td>

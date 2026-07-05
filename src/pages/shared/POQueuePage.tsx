@@ -25,14 +25,22 @@ export function POQueuePage({ title, subtitle, queue, detailPrefix, queryKey }: 
   const { data: items, list } = useListQuery({
     queryKey: [queryKey],
     queryFn: async () => {
-      const res = await api.get<{ data: PurchaseOrderDto[] }>('/purchase-orders', {
-        params: { queue },
-      });
-      return normalizeListData<PurchaseOrderDto>(res.data.data);
+      const res = await api.get<{ data: PurchaseOrderDto[]; meta?: { count: number } }>(
+        '/purchase-orders',
+        {
+          params: { queue },
+        }
+      );
+      return {
+        items: normalizeListData<PurchaseOrderDto>(res.data.data),
+        count: res.data.meta?.count ?? normalizeListData<PurchaseOrderDto>(res.data.data).length,
+      };
     },
+    select: (result) => result,
   });
 
-  const pending = items?.length ?? 0;
+  const pending = items?.count ?? items?.items?.length ?? 0;
+  const rows = items?.items ?? [];
 
   return (
     <div className="page-container max-w-4xl">
@@ -52,7 +60,7 @@ export function POQueuePage({ title, subtitle, queue, detailPrefix, queryKey }: 
         isError={list.isError}
         onRetry={list.onRetry}
         retrying={list.retrying}
-        isEmpty={!items?.length}
+        isEmpty={!rows.length}
         empty={
           <EmptyState
             celebrate
@@ -62,7 +70,7 @@ export function POQueuePage({ title, subtitle, queue, detailPrefix, queryKey }: 
         }
       >
         <div className="space-y-2">
-          {(items ?? []).map((po) => (
+          {(rows ?? []).map((po) => (
             <button
               key={po.id}
               type="button"

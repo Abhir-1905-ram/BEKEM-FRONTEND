@@ -28,13 +28,18 @@ export function CoordinatorHomePage() {
     },
   });
 
-  const { data: queue, list: queueList } = useListQuery({
+  const { data: queueResult, list: queueList } = useListQuery({
     queryKey: ['po-queue-coordinator'],
     queryFn: async () => {
-      const res = await api.get<{ data: PurchaseOrderDto[] }>('/purchase-orders', {
-        params: { queue: 'coordinator' },
-      });
-      return normalizeListData<PurchaseOrderDto>(res.data.data);
+      const res = await api.get<{ data: PurchaseOrderDto[]; meta?: { count: number } }>(
+        '/purchase-orders',
+        { params: { queue: 'coordinator' } }
+      );
+      const items = normalizeListData<PurchaseOrderDto>(res.data.data);
+      return {
+        items,
+        count: res.data.meta?.count ?? items.length,
+      };
     },
   });
 
@@ -48,7 +53,8 @@ export function CoordinatorHomePage() {
     },
   });
 
-  const pending = queue?.length ?? 0;
+  const queue = queueResult?.items;
+  const pending = queueResult?.count ?? queue?.length ?? 0;
   const woPending = woQueue?.length ?? 0;
   const totalPending = pending + woPending;
 

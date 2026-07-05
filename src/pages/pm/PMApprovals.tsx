@@ -27,7 +27,7 @@ export function PMApprovalsPage() {
     <div className="page-container max-w-2xl">
       <PageHeader
         title="Indent approvals"
-        subtitle="Open an indent to review details, then approve or reject"
+        subtitle="Review stock across your projects — forward to Head Office, request branch transfer, or reject"
         action={
           <button
             type="button"

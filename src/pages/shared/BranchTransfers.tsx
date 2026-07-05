@@ -1,24 +1,56 @@
 import { useNavigate } from 'react-router-dom';
 import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 import { ChevronRight, Truck } from 'lucide-react';
-import type { BranchTransferDto } from '@afios/shared';
+import { UserRole, type BranchTransferDto } from '@afios/shared';
 import { api } from '@/lib/api';
+import { useAuthStore } from '@/stores/authStore';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ActionCard } from '@/components/ui/ActionCard';
 import { EmptyState } from '@/components/EmptyState';
 import { ListQueryBoundary } from '@/components/ListQueryBoundary';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 
+const HO_PENDING = ['REQUESTED', 'PM_APPROVED', 'COORDINATOR_DECIDED'];
+
+function pageCopy(role: UserRole) {
+  if (role === UserRole.EXECUTIVE) {
+    return {
+      title: 'Branch transfer dashboard',
+      subtitle: 'Monitor branch transfer requests across all projects',
+      empty: 'No branch transfers to display.',
+      actionLabel: 'Awaiting Head Office action',
+    };
+  }
+  if (role === UserRole.CHAIRMAN) {
+    return {
+      title: 'Branch transfer monitoring',
+      subtitle: 'Enterprise visibility into inter-project stock movements',
+      empty: 'No branch transfers recorded.',
+      actionLabel: 'Active transfers',
+    };
+  }
+  return {
+    title: 'Branch transfer approvals',
+    subtitle: 'Approve or reject PM requests — then execute approved transfers',
+    empty: 'No branch transfers pending Head Office review.',
+    actionLabel: 'Awaiting decision or execution',
+  };
+}
+
 export function BranchTransfersPage() {
   const navigate = useNavigate();
+  const role = useAuthStore((s) => s.user?.role) as UserRole;
+  const copy = pageCopy(role);
+  const readOnly = role === UserRole.EXECUTIVE || role === UserRole.CHAIRMAN;
 
   const { data: transfers, list } = useListQuery({
-    queryKey: ['branch-transfers'],
+    queryKey: ['branch-transfers', role],
     queryFn: async () => {
       const res = await api.get<{ data: BranchTransferDto[] }>('/branch-transfers');
-      return normalizeListData<BranchTransferDto>(res.data.data).filter((t) =>
-        ['PM_APPROVED', 'COORDINATOR_DECIDED'].includes(t.status)
-      );
+      const rows = normalizeListData<BranchTransferDto>(res.data.data);
+      if (readOnly && role === UserRole.CHAIRMAN) return rows;
+      if (readOnly) return rows.filter((t) => HO_PENDING.includes(t.status) || t.status === 'TRANSFERRED');
+      return rows.filter((t) => HO_PENDING.includes(t.status));
     },
   });
 
@@ -26,13 +58,10 @@ export function BranchTransfersPage() {
 
   return (
     <div className="page-container max-w-4xl">
-      <PageHeader
-        title="Branch transfer decisions"
-        subtitle="Confirm transfer vs. raise PO — then execute stock movement"
-      />
+      <PageHeader title={copy.title} subtitle={copy.subtitle} />
 
       <ActionCard
-        title="Awaiting decision or execution"
+        title={copy.actionLabel}
         count={pending}
         subtitle={pending > 0 ? 'Review each transfer carefully' : 'Queue clear'}
         icon={Truck}
@@ -47,11 +76,7 @@ export function BranchTransfersPage() {
         retrying={list.retrying}
         isEmpty={!transfers?.length}
         empty={
-          <EmptyState
-            celebrate
-            title="No branch transfers pending"
-            description="PM-approved requests appear here for your decision."
-          />
+          <EmptyState celebrate title="No branch transfers pending" description={copy.empty} />
         }
       >
         <div className="space-y-2">

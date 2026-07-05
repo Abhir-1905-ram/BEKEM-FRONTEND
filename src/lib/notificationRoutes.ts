@@ -1,11 +1,22 @@
 import { UserRole } from '@afios/shared';
 import type { NotificationDto } from '@afios/shared';
 
+function procurementDecisionPath(role: UserRole, id: string): string | null {
+  if (role === UserRole.EXECUTIVE) return `/executive/procurement-decisions/${id}`;
+  if (role === UserRole.COORDINATOR) return `/coordinator/procurement-decisions/${id}`;
+  if (role === UserRole.CHAIRMAN) return `/coordinator/procurement-decisions/${id}`;
+  return null;
+}
+
 /** Role-safe destination when tapping a notification. Returns null if no in-app view exists. */
 export function getNotificationPath(
   n: NotificationDto,
   role: UserRole
 ): string | null {
+  if (n.relatedEntityType === 'ProcurementDecision') {
+    return procurementDecisionPath(role, n.relatedEntityId);
+  }
+
   if (n.relatedEntityType === 'MaterialRequest') {
     if (
       [
@@ -16,6 +27,14 @@ export function getNotificationPath(
     ) {
       return `/requests/${n.relatedEntityId}`;
     }
+    if (role === UserRole.EXECUTIVE || role === UserRole.COORDINATOR) {
+      return procurementDecisionPath(role, n.relatedEntityId);
+    }
+    return null;
+  }
+
+  if (n.relatedEntityType === 'PurchaseRequest') {
+    if (role === UserRole.EXECUTIVE) return `/executive/purchase-requests/${n.relatedEntityId}`;
     return null;
   }
 

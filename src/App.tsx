@@ -76,12 +76,9 @@ const BranchTransferDetailPage = lazy(() =>
     default: m.BranchTransferDetailPage,
   }))
 );
-const StoreBranchTransfersPage = lazy(() =>
-  import('@/pages/store/StoreBranchTransfers').then((m) => ({ default: m.StoreBranchTransfersPage }))
-);
-const PMBranchTransferApprovalsPage = lazy(() =>
-  import('@/pages/pm/PMBranchTransferApprovals').then((m) => ({
-    default: m.PMBranchTransferApprovalsPage,
+const PMBranchTransferRequestsPage = lazy(() =>
+  import('@/pages/pm/PMBranchTransferRequests').then((m) => ({
+    default: m.PMBranchTransferRequestsPage,
   }))
 );
 const NotificationsPage = lazy(() =>
@@ -131,6 +128,29 @@ const CreateMaterialPage = lazy(() =>
 );
 const IncidentsPage = lazy(() =>
   import('@/pages/incidents/IncidentsPage').then((m) => ({ default: m.IncidentsPage }))
+);
+const FinancePage = lazy(() =>
+  import('@/pages/finance/FinancePage').then((m) => ({ default: m.FinancePage }))
+);
+const ExecutivePurchaseRequestsPage = lazy(() =>
+  import('@/pages/executive/ExecutivePurchaseRequests').then((m) => ({
+    default: m.ExecutivePurchaseRequestsPage,
+  }))
+);
+const ExecutivePurchaseRequestDetailPage = lazy(() =>
+  import('@/pages/executive/ExecutivePurchaseRequestDetail').then((m) => ({
+    default: m.ExecutivePurchaseRequestDetailPage,
+  }))
+);
+const ProcurementDecisionsListPage = lazy(() =>
+  import('@/pages/procurement/ProcurementDecisionsList').then((m) => ({
+    default: m.ProcurementDecisionsListPage,
+  }))
+);
+const ProcurementDecisionDetailPage = lazy(() =>
+  import('@/pages/procurement/ProcurementDecisionDetail').then((m) => ({
+    default: m.ProcurementDecisionDetailPage,
+  }))
 );
 
 import { RoleGuard } from '@/components/RoleGuard';
@@ -386,7 +406,7 @@ export default function App() {
               <Route
                 path="/admin/users"
                 element={
-                  <RoleGuard capability="MANAGE_USERS">
+                  <RoleGuard systemAdmin>
                     <UserProvisioningPage />
                   </RoleGuard>
                 }
@@ -450,6 +470,108 @@ export default function App() {
               />
 
               <Route
+                path="/executive/procurement-decisions"
+                element={
+                  <RoleGuard roles={[UserRole.EXECUTIVE]}>
+                    <ProcurementDecisionsListPage
+                      basePath="/executive/procurement-decisions"
+                      title="Procurement Decisions"
+                      subtitle="Select purchase order or branch transfer before Coordinator approval"
+                      emptyTitle="No pending procurement decisions"
+                      emptyDescription="Indents forwarded to Head Office will appear here."
+                    />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/executive/procurement-decisions/:id"
+                element={
+                  <RoleGuard roles={[UserRole.EXECUTIVE]}>
+                    <ProcurementDecisionDetailPage listPath="/executive/procurement-decisions" />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/executive/finance"
+                element={
+                  <RoleGuard capability="VIEW_FINANCE">
+                    <FinancePage />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/coordinator/finance"
+                element={
+                  <RoleGuard roles={[UserRole.COORDINATOR]}>
+                    <FinancePage />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/chairman/finance"
+                element={
+                  <RoleGuard roles={[UserRole.CHAIRMAN]}>
+                    <FinancePage />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/executive/vendors/new"
+                element={
+                  <RoleGuard capability="CREATE_VENDOR">
+                    <VendorAdminPage />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/executive/purchase-requests"
+                element={
+                  <RoleGuard roles={[UserRole.EXECUTIVE]}>
+                    <ExecutivePurchaseRequestsPage />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/executive/purchase-requests/:id"
+                element={
+                  <RoleGuard roles={[UserRole.EXECUTIVE]}>
+                    <ExecutivePurchaseRequestDetailPage />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/coordinator/procurement-decisions"
+                element={
+                  <RoleGuard roles={[UserRole.COORDINATOR, UserRole.CHAIRMAN]}>
+                    <ProcurementDecisionsListPage
+                      basePath="/coordinator/procurement-decisions"
+                      title="Procurement Decisions"
+                      subtitle="Review executive recommendations — approve, modify, or reject"
+                      emptyTitle="No decisions awaiting approval"
+                      emptyDescription="Executive procurement decisions will appear here."
+                    />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/coordinator/procurement-decisions/:id"
+                element={
+                  <RoleGuard roles={[UserRole.COORDINATOR, UserRole.CHAIRMAN]}>
+                    <ProcurementDecisionDetailPage listPath="/coordinator/procurement-decisions" />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
                 path="/coordinator/material-indents"
                 element={
                   <RoleGuard roles={[UserRole.COORDINATOR]}>
@@ -469,8 +591,10 @@ export default function App() {
                   <RoleGuard
                     roles={[
                       UserRole.STORE_INCHARGE,
+                      UserRole.PROJECT_MANAGER,
                       UserRole.COORDINATOR,
                       UserRole.CHAIRMAN,
+                      UserRole.EXECUTIVE,
                     ]}
                   >
 
@@ -628,20 +752,21 @@ export default function App() {
 
               <Route
                 path="/store/branch-transfers"
+                element={<Navigate to="/store" replace />}
+              />
+
+              <Route
+                path="/pm/branch-transfer-requests"
                 element={
-                  <RoleGuard roles={[UserRole.STORE_INCHARGE]}>
-                    <StoreBranchTransfersPage />
+                  <RoleGuard roles={[UserRole.PROJECT_MANAGER]}>
+                    <PMBranchTransferRequestsPage />
                   </RoleGuard>
                 }
               />
 
               <Route
                 path="/pm/branch-transfer-approvals"
-                element={
-                  <RoleGuard roles={[UserRole.PROJECT_MANAGER]}>
-                    <PMBranchTransferApprovalsPage />
-                  </RoleGuard>
-                }
+                element={<Navigate to="/pm/branch-transfer-requests" replace />}
               />
 
               <Route
@@ -649,9 +774,10 @@ export default function App() {
                 element={
                   <RoleGuard
                     roles={[
-                      UserRole.STORE_INCHARGE,
                       UserRole.PROJECT_MANAGER,
                       UserRole.COORDINATOR,
+                      UserRole.EXECUTIVE,
+                      UserRole.CHAIRMAN,
                     ]}
                   >
                     <BranchTransferDetailPage />
@@ -661,13 +787,31 @@ export default function App() {
 
               <Route
                 path="/pm/branch-transfers"
-                element={<Navigate to="/pm/branch-transfer-approvals" replace />}
+                element={<Navigate to="/pm/branch-transfer-requests" replace />}
+              />
+
+              <Route
+                path="/executive/branch-transfers"
+                element={
+                  <RoleGuard roles={[UserRole.EXECUTIVE]}>
+                    <BranchTransfersPage />
+                  </RoleGuard>
+                }
               />
 
               <Route
                 path="/coordinator/branch-transfers"
                 element={
                   <RoleGuard roles={[UserRole.COORDINATOR]}>
+                    <BranchTransfersPage />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/chairman/branch-transfers"
+                element={
+                  <RoleGuard roles={[UserRole.CHAIRMAN]}>
                     <BranchTransfersPage />
                   </RoleGuard>
                 }

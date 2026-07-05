@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { StatusTimeline } from '@/components/StatusTimeline';
 import { Textarea } from '@/components/ui/Input';
+import { SearchSelect } from '@/components/SearchSelect';
 import { StockComparisonTable } from '@/components/StockComparisonTable';
 import { PmDailyCapBanner } from '@/components/PmDailyCapBanner';
 import { useApprovalShortcuts } from '@/hooks/useApprovalShortcuts';
@@ -24,8 +25,13 @@ export function RequestDetailPage() {
   const user = useAuthStore((s) => s.user);
   const role = user?.role as UserRole;
   const accent = ROLE_COLORS[UserRole.PROJECT_MANAGER].primary;
+  const [pmRemark, setPmRemark] = useState('');
+  const [pmRemarkError, setPmRemarkError] = useState('');
   const [showReject, setShowReject] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [showBranchTransfer, setShowBranchTransfer] = useState(false);
+  const [fromProjectId, setFromProjectId] = useState('');
+  const [btNote, setBtNote] = useState('');
 
   const { data: request, isLoading, isError, error } = useQuery({
     queryKey: ['material-request', id],
@@ -39,35 +45,78 @@ export function RequestDetailPage() {
 
   useRedirectOnForbidden(error);
 
-  const approve = useMutation({
-    mutationFn: async () => {
-      const res = await api.post<{
-        escalated?: boolean;
-        dailyApprovedTotal?: number;
-        message?: string;
-      }>(`/material-requests/${id}/approve`);
+  const pmLocalClose = useMutation({
+    mutationFn: async (remark: string) => {
+      const res = await api.post<{ data: MaterialRequestDto }>(
+        `/material-requests/${id}/pm-local-close`,
+        { remark }
+      );
+      return res.data.data;
+    },
+    onSuccess: () => {
+      toast.success('Indent approved and closed locally — store will proceed');
+      setPmRemark('');
+      queryClient.invalidateQueries({ queryKey: ['material-request', id] });
+      queryClient.invalidateQueries({ queryKey: ['pm-approvals'] });
+    },
+    onError: (err: Error & { response?: { data?: { message?: string } } }) => {
+      toast.error(err.response?.data?.message || 'Could not approve locally');
+    },
+  });
+
+  const forwardToHo = useMutation({
+    mutationFn: async (remark: string) => {
+      const res = await api.post<{ data: MaterialRequestDto; message?: string; prNumber?: string }>(
+        `/material-requests/${id}/forward-to-ho`,
+        { remark }
+      );
       return res.data;
     },
     onSuccess: (data) => {
-      if (data.escalated) {
-        toast.warning(data.message || 'Escalated to Head Office — daily cap exceeded');
-      } else {
-        toast.success('Approved — purchase request created for executive');
-      }
+      toast.success(data.message || `Forwarded to Head Office — PR ${data.prNumber || 'created'}`);
+      setPmRemark('');
       queryClient.invalidateQueries({ queryKey: ['material-request', id] });
       queryClient.invalidateQueries({ queryKey: ['pm-approvals'] });
       queryClient.invalidateQueries({ queryKey: ['pm-dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['pm-daily-cap'] });
     },
-    onError: (err: Error & { response?: { data?: { message?: string; escalated?: boolean } } }) => {
-      const msg = err.response?.data?.message;
-      if (err.response?.data?.escalated) {
-        toast.warning(msg || 'Escalated to Head Office');
-        queryClient.invalidateQueries({ queryKey: ['material-request', id] });
-        queryClient.invalidateQueries({ queryKey: ['pm-daily-cap'] });
-      } else {
-        toast.error(msg || 'Approval failed');
-      }
+    onError: (err: Error & { response?: { data?: { message?: string } } }) => {
+      toast.error(err.response?.data?.message || 'Could not forward to Head Office');
+    },
+  });
+
+  const branchTransfer = useMutation({
+    mutationFn: async () => {
+      const items =
+        request?.items?.map((item) => ({
+          materialId: item.materialId,
+          quantity: item.quantityRequested,
+        })) ||
+        (request?.materialId
+          ? [{ materialId: request.materialId, quantity: request.quantityRequested || 1 }]
+          : []);
+      const res = await api.post<{ data: { id: string; transferNumber: string } }>(
+        '/branch-transfers',
+        {
+          fromProjectId,
+          materialRequestId: id,
+          items,
+          note: btNote.trim() || undefined,
+        }
+      );
+      return res.data.data;
+    },
+    onSuccess: (data) => {
+      toast.success(`Branch transfer ${data.transferNumber} requested — no purchase order created`);
+      setShowBranchTransfer(false);
+      setFromProjectId('');
+      setBtNote('');
+      queryClient.invalidateQueries({ queryKey: ['material-request', id] });
+      queryClient.invalidateQueries({ queryKey: ['pm-approvals'] });
+      queryClient.invalidateQueries({ queryKey: ['branch-transfers'] });
+      navigate(`/branch-transfers/${data.id}`);
+    },
+    onError: (err: Error & { response?: { data?: { message?: string } } }) => {
+      toast.error(err.response?.data?.message || 'Could not create branch transfer');
     },
   });
 
@@ -92,32 +141,15 @@ export function RequestDetailPage() {
   });
 
   useApprovalShortcuts({
-    enabled: !!request && !isLoading && !showReject,
-    onApprove: () => {
-      if (!request) return;
-      if (
-        role === UserRole.PROJECT_MANAGER &&
-        request.status === 'FORWARDED_TO_PM' &&
-        !request.escalatedToHo
-      ) {
-        approve.mutate();
-      } else if (
-        [UserRole.EXECUTIVE, UserRole.COORDINATOR].includes(role) &&
-        request.status === 'PENDING_HO'
-      ) {
-        approve.mutate();
-      }
-    },
-    onReject: () => {
-      if (!request) return;
-      if (
-        role === UserRole.PROJECT_MANAGER &&
-        request.status === 'FORWARDED_TO_PM' &&
-        !request.escalatedToHo
-      ) {
-        setShowReject(true);
-      }
-    },
+    enabled:
+      !!request &&
+      !isLoading &&
+      !showReject &&
+      !showBranchTransfer &&
+      role === UserRole.PROJECT_MANAGER &&
+      request.status === 'FORWARDED_TO_PM' &&
+      !request.escalatedToHo,
+    onReject: () => setShowReject(true),
   });
 
   if (isLoading) {
@@ -144,15 +176,31 @@ export function RequestDetailPage() {
             materialId: request.materialId,
             quantityRequested: request.quantityRequested || 0,
             material: request.material,
+            requestedQty: request.items?.[0]?.requestedQty,
+            availableQty: request.items?.[0]?.availableQty,
+            requiredQty: request.items?.[0]?.requiredQty,
           },
         ]
       : [];
 
-  const canPmApprove =
+  const canPmDecide =
     role === UserRole.PROJECT_MANAGER && request.status === 'FORWARDED_TO_PM' && !request.escalatedToHo;
-  const canHoApprove =
-    [UserRole.EXECUTIVE, UserRole.COORDINATOR].includes(role) && request.status === 'PENDING_HO';
+  const canHoReview =
+    [UserRole.EXECUTIVE, UserRole.COORDINATOR].includes(role) &&
+    ['PENDING_HO', 'PENDING_EXECUTIVE_DECISION', 'EXECUTIVE_DECISION_PO', 'EXECUTIVE_DECISION_BRANCH_TRANSFER'].includes(
+      request.status
+    );
   const canConfirmReceipt = role === UserRole.SITE_INCHARGE && request.status === 'ISSUED';
+  const destProjectId = request.projectId;
+
+  const requirePmRemark = () => {
+    if (!pmRemark.trim()) {
+      setPmRemarkError('Remark is required');
+      return false;
+    }
+    setPmRemarkError('');
+    return true;
+  };
 
   return (
     <div className="px-4 pt-4 pb-6 max-w-3xl mx-auto">
@@ -183,7 +231,7 @@ export function RequestDetailPage() {
         </div>
       </header>
 
-      {(canPmApprove) && <PmDailyCapBanner />}
+      {canPmDecide && <PmDailyCapBanner />}
 
       {request.escalatedToHo && (
         <div className="mb-4 rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-sm">
@@ -224,7 +272,7 @@ export function RequestDetailPage() {
         )}
         {request.purpose && (
           <div>
-            <p className="text-xs text-gray-500">Purpose</p>
+            <p className="text-xs text-gray-500">Reason for request</p>
             <p className="font-medium">{request.purpose}</p>
           </div>
         )}
@@ -236,22 +284,41 @@ export function RequestDetailPage() {
         )}
       </Card>
 
-      <h2 className="font-semibold text-gray-900 mb-3">Stock comparison</h2>
+      <h2 className="font-semibold text-gray-900 mb-3">Stock comparison (requesting site)</h2>
       <StockComparisonTable items={items} className="mb-6" />
 
-      {canPmApprove && (
-        <div className="mb-6 space-y-3 panel p-4">
-          <p className="text-sm font-semibold text-ink">PM decision</p>
-          <p className="text-xs text-ink-secondary">
-            Review stock levels above, then approve (sends purchase request to executive) or reject
-            with a reason.
-          </p>
+      {canPmDecide && (
+        <div className="mb-6 space-y-4 panel p-4">
+          <div>
+            <p className="text-sm font-semibold text-ink">PM decision</p>
+            <p className="text-xs text-ink-secondary mt-1">
+              Store forwarded this indent because stock is short at site. Compare availability across
+              your supervised projects, then forward to Head Office for procurement, request a branch
+              transfer from another project, or reject.
+            </p>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-ink-secondary block mb-2">
+              Remark <span className="text-danger">*</span>
+            </label>
+            <Textarea
+              value={pmRemark}
+              onChange={(e) => {
+                setPmRemark(e.target.value);
+                if (e.target.value.trim()) setPmRemarkError('');
+              }}
+              placeholder="Decision rationale — visible in audit trail to all approvers…"
+            />
+            {pmRemarkError && <p className="text-xs text-danger mt-1">{pmRemarkError}</p>}
+          </div>
+
           {showReject ? (
-            <div className="space-y-2">
+            <div className="space-y-2 rounded-xl border border-danger/20 bg-danger-light/30 p-3">
               <Textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="Reason for rejection…"
+                placeholder="Reason for rejection (required)…"
               />
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -266,37 +333,112 @@ export function RequestDetailPage() {
                 </Button>
               </div>
             </div>
+          ) : showBranchTransfer ? (
+            <div className="space-y-3 rounded-xl border border-surface-border bg-surface-muted/40 p-3">
+              <p className="text-sm font-medium text-ink">Request branch transfer</p>
+              <p className="text-xs text-ink-secondary">
+                Select the supervised project with surplus stock. No purchase order will be created.
+              </p>
+              <label className="text-xs font-semibold text-ink-muted block">Source project (has stock)</label>
+              <SearchSelect
+                placeholder="Search project code or name…"
+                value={fromProjectId || null}
+                onChange={(id) => setFromProjectId(id)}
+                searchPath="/branch-transfers/targets/search"
+                searchParams={destProjectId ? { excludeProjectId: destProjectId } : undefined}
+                mapResult={(raw) => {
+                  const row = raw as { id: string; code: string; name: string };
+                  return { id: row.id, label: `${row.code} — ${row.name}` };
+                }}
+              />
+              <Textarea
+                value={btNote}
+                onChange={(e) => setBtNote(e.target.value)}
+                placeholder="Optional note for coordinator…"
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="accent"
+                  accentColor={accent}
+                  disabled={!fromProjectId || branchTransfer.isPending}
+                  onClick={() => branchTransfer.mutate()}
+                >
+                  Submit branch transfer request
+                </Button>
+                <Button variant="ghost" onClick={() => setShowBranchTransfer(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
           ) : (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col gap-2">
               <Button
                 variant="accent"
                 accentColor={accent}
-                disabled={approve.isPending}
-                onClick={() => approve.mutate()}
+                disabled={pmLocalClose.isPending}
+                onClick={() => {
+                  if (!requirePmRemark()) return;
+                  pmLocalClose.mutate(pmRemark.trim());
+                }}
               >
-                Approve & create purchase request
+                Approve &amp; close (within PM limit)
               </Button>
-              <Button variant="secondary" onClick={() => setShowReject(true)}>
-                Reject
+              <Button
+                variant="secondary"
+                disabled={forwardToHo.isPending}
+                onClick={() => {
+                  if (!requirePmRemark()) return;
+                  forwardToHo.mutate(pmRemark.trim());
+                }}
+              >
+                Forward to Head Office
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={branchTransfer.isPending}
+                onClick={() => setShowBranchTransfer(true)}
+              >
+                Request branch transfer
+              </Button>
+              <Button
+                variant="ghost"
+                className="text-danger"
+                onClick={() => {
+                  if (!requirePmRemark()) {
+                    setShowReject(true);
+                    setRejectReason(pmRemark);
+                    return;
+                  }
+                  setRejectReason(pmRemark);
+                  setShowReject(true);
+                }}
+              >
+                Reject request
               </Button>
             </div>
           )}
         </div>
       )}
 
-      {canHoApprove && (
+      {canHoReview && (
         <div className="mb-6 space-y-3 panel p-4">
-          <p className="text-sm font-semibold text-ink">Head Office decision</p>
+          <p className="text-sm font-semibold text-ink">Head Office procurement</p>
           <p className="text-xs text-ink-secondary">
-            This indent exceeded the PM daily approval cap. Approve to create a purchase request.
+            This indent is in the procurement decision workflow. Open Procurement Decisions to select
+            or review the method.
           </p>
           <Button
             variant="accent"
             accentColor={ROLE_COLORS[UserRole.EXECUTIVE].primary}
-            disabled={approve.isPending}
-            onClick={() => approve.mutate()}
+            onClick={() =>
+              navigate(
+                role === UserRole.COORDINATOR
+                  ? `/coordinator/procurement-decisions/${request.id}`
+                  : `/executive/procurement-decisions/${request.id}`
+              )
+            }
           >
-            Approve (Head Office)
+            Open procurement decision
           </Button>
         </div>
       )}

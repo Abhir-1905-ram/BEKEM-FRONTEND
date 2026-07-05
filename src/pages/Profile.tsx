@@ -4,7 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import { LogOut, Bell, Globe, Users } from 'lucide-react';
 import { BRAND_ACCENT } from '@/lib/brand';
 import { useAuthStore } from '@/stores/authStore';
-import { PERMISSION_MATRIX, ROLE_LABELS, UserRole, type NotificationPrefsDto } from '@afios/shared';
+import { ROLE_LABELS, UserRole, type NotificationPrefsDto } from '@afios/shared';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { useSignOut } from '@/lib/signOut';
@@ -41,8 +41,8 @@ export function ProfilePage() {
 
   const role = user.role as UserRole;
   const accent = user.avatarColor || BRAND_ACCENT;
-  const canViewAudit = PERMISSION_MATRIX[role]?.includes('VIEW_AUDIT_LOGS');
-  const canManageUsers = PERMISSION_MATRIX[role]?.includes('MANAGE_USERS');
+  const canViewAudit = [UserRole.COORDINATOR, UserRole.CHAIRMAN].includes(role);
+  const canManageUsers = !!user.isSystemAdmin;
 
   const savePrefs = (next: NotificationPrefsDto) => {
     setPrefs(next);

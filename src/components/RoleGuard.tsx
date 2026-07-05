@@ -14,9 +14,10 @@ interface RoleGuardProps {
   match?: 'any' | 'all';
   roles?: UserRole[];
   forbid?: boolean;
+  systemAdmin?: boolean;
 }
 
-export function RoleGuard({ children, capability, capabilities, match = 'any', roles, forbid }: RoleGuardProps) {
+export function RoleGuard({ children, capability, capabilities, match = 'any', roles, forbid, systemAdmin }: RoleGuardProps) {
   const user = useAuthStore((s) => s.user);
   const location = useLocation();
 
@@ -30,6 +31,10 @@ export function RoleGuard({ children, capability, capabilities, match = 'any', r
     markAccessDenied();
     return <Navigate to={home} replace state={{ from: location.pathname }} />;
   };
+
+  if (systemAdmin && !user.isSystemAdmin) {
+    return deny();
+  }
 
   if (forbid && capability && caps.includes(capability)) {
     return deny();

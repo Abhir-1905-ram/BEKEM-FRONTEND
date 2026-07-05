@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import {
   ROLE_COLORS,
   UserRole,
+  formatCurrency,
   type MaterialDto,
   type CreateIndentDto,
   type SiteDto,
@@ -27,6 +28,12 @@ interface LineDraft {
   isCustom?: boolean;
 }
 
+function unitPriceSuffix(unit: string) {
+  if (!unit) return '';
+  if (unit.length > 1 && unit.endsWith('s')) return unit.slice(0, -1);
+  return unit;
+}
+
 export function RequestWizardPage() {
   const navigate = useNavigate();
   const accent = ROLE_COLORS[UserRole.SITE_INCHARGE].primary;
@@ -43,6 +50,7 @@ export function RequestWizardPage() {
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [success, setSuccess] = useState(false);
   const [indentNumber, setIndentNumber] = useState('');
+  const [purpose, setPurpose] = useState('');
 
   const { data: sites, isLoading: sitesLoading } = useQuery({
     queryKey: ['indent-sites'],
@@ -368,12 +376,30 @@ export function RequestWizardPage() {
                         />
                       </div>
                     </div>
+                    {!line.isCustom && line.material.unitPrice != null && (
+                      <p className="text-xs text-ink-secondary">
+                        <span className="font-semibold text-ink-muted">Unit Price:</span>{' '}
+                        {formatCurrency(line.material.unitPrice)}
+                        {line.unit ? ` / ${unitPriceSuffix(line.unit)}` : ''}
+                      </p>
+                    )}
                   </li>
                 ))}
               </ul>
             )}
 
             <div className="pt-2 border-t border-surface-border space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-ink-muted mb-1 block">
+                  Reason for request <span className="text-danger">*</span>
+                </label>
+                <Input
+                  value={purpose}
+                  onChange={(e) => setPurpose(e.target.value)}
+                  placeholder="Why is this material needed? (mandatory)"
+                  className="text-sm"
+                />
+              </div>
               <div className="flex justify-between text-sm">
                 <span className="text-ink-secondary">Total quantity</span>
                 <span className="font-semibold text-ink tabular-nums">{totalItems}</span>
@@ -383,9 +409,10 @@ export function RequestWizardPage() {
                 size="lg"
                 accentColor={accent}
                 className="w-full"
-                disabled={lines.length === 0 || mutation.isPending}
+                disabled={lines.length === 0 || !purpose.trim() || mutation.isPending}
                 onClick={() =>
                   mutation.mutate({
+                    purpose: purpose.trim(),
                     items: lines.map((l) =>
                       l.isCustom
                         ? {
@@ -434,6 +461,12 @@ export function RequestWizardPage() {
                     {selectedMaterial.code}
                     {selectedMaterial.grade ? ` · ${selectedMaterial.grade}` : ''}
                   </p>
+                  {selectedMaterial.unitPrice != null && (
+                    <p className="text-xs text-ink-muted mt-1">
+                      Unit price (reference): {formatCurrency(selectedMaterial.unitPrice)}
+                      {pickUnit ? ` / ${unitPriceSuffix(pickUnit)}` : ''}
+                    </p>
+                  )}
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4 items-end">
                   <QuantityStepper

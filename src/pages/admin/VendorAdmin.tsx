@@ -73,6 +73,28 @@ export function VendorAdminPage() {
     },
   });
 
+  const { data: pendingVendors, refetch: refetchPending } = useQuery({
+    queryKey: ['vendors-pending'],
+    queryFn: async () => {
+      const res = await api.get<{ data: VendorDto[] }>('/vendors/pending-authorization');
+      return res.data.data;
+    },
+  });
+
+  const authorize = useMutation({
+    mutationFn: async ({ id, action }: { id: string; action: 'authorize' | 'reject' }) => {
+      await api.post(`/vendors/${id}/authorize`, { action });
+    },
+    onSuccess: () => {
+      toast.success('Vendor authorization updated');
+      refetchPending();
+      queryClient.invalidateQueries({ queryKey: ['vendors'] });
+    },
+    onError: (e: Error & { response?: { data?: { message?: string } } }) => {
+      toast.error(e.response?.data?.message || 'Authorization failed');
+    },
+  });
+
   const save = useMutation({
     mutationFn: async () => {
       const payload = {
@@ -192,6 +214,43 @@ export function VendorAdminPage() {
           </Button>
         }
       />
+
+      {!!pendingVendors?.length && (
+        <div className="mb-6 panel p-4 border-amber-200 bg-amber-50/50">
+          <p className="font-semibold text-ink mb-3">
+            Pending authorization ({pendingVendors.length})
+          </p>
+          <div className="space-y-2">
+            {pendingVendors.map((v) => (
+              <div key={v.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white border border-surface-border px-3 py-2">
+                <div>
+                  <p className="font-medium text-sm">{v.name}</p>
+                  <p className="text-xs text-ink-muted">{v.gstNumber || v.code}</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="accent"
+                    disabled={authorize.isPending}
+                    onClick={() => authorize.mutate({ id: v.id, action: 'authorize' })}
+                  >
+                    Authorize
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-danger"
+                    disabled={authorize.isPending}
+                    onClick={() => authorize.mutate({ id: v.id, action: 'reject' })}
+                  >
+                    Reject
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <ListQueryBoundary
         isLoading={list.isLoading}
