@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { formatDate } from '@afios/shared';
 import type { NotificationDto } from '@afios/shared';
@@ -9,6 +9,8 @@ import { getNotificationPath } from '@/lib/notificationRoutes';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { ListQueryBoundary } from '@/components/ListQueryBoundary';
+import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 import { cn } from '@/lib/utils';
 
 function startOfDay(d: Date) {
@@ -47,11 +49,11 @@ export function NotificationsPage() {
   const queryClient = useQueryClient();
   const role = useAuthStore((s) => s.user?.role) as UserRole;
 
-  const { data: notifications, isLoading } = useQuery({
+  const { data: notifications, list } = useListQuery({
     queryKey: ['notifications'],
     queryFn: async () => {
       const res = await api.get<{ data: NotificationDto[] }>('/notifications');
-      return res.data.data;
+      return normalizeListData<NotificationDto>(res.data.data);
     },
   });
 
@@ -78,25 +80,21 @@ export function NotificationsPage() {
     <div className="page-container">
       <PageHeader title="Notification center" subtitle="Updates grouped by when they arrived" />
 
-      {isLoading ? (
-        <div className="space-y-6">
-          {[1, 2, 3].map((i) => (
-            <div key={i}>
-              <div className="h-4 w-24 bg-surface-muted rounded mb-3 animate-pulse" />
-              <div className="space-y-2">
-                <div className="h-16 rounded-2xl bg-surface-muted animate-pulse" />
-                <div className="h-16 rounded-2xl bg-surface-muted animate-pulse" />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : !notifications?.length ? (
-        <EmptyState
-          celebrate
-          title="All quiet"
-          description="No new notifications. Everything is completed."
-        />
-      ) : (
+      <ListQueryBoundary
+        isLoading={list.isLoading}
+        isError={list.isError}
+        onRetry={list.onRetry}
+        retrying={list.retrying}
+        isEmpty={!notifications?.length}
+        skeletonRows={6}
+        empty={
+          <EmptyState
+            celebrate
+            title="All quiet"
+            description="No new notifications. Everything is completed."
+          />
+        }
+      >
         <div className="space-y-8">
           {groups.map((group) => (
             <section key={group.label}>
@@ -126,7 +124,7 @@ export function NotificationsPage() {
             </section>
           ))}
         </div>
-      )}
+      </ListQueryBoundary>
     </div>
   );
 }

@@ -5,33 +5,46 @@ import { getGreeting } from '@afios/shared';
 import type { PurchaseOrderDto, WorkOrderDto } from '@afios/shared';
 import { api } from '@/lib/api';
 import { EmptyState } from '@/components/EmptyState';
+import { ListQueryBoundary } from '@/components/ListQueryBoundary';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ActionCard } from '@/components/ui/ActionCard';
 import { TodayPanel } from '@/components/layout/TodayPanel';
 import { DashboardSearch } from '@/components/layout/DashboardSearch';
+import { DashboardWidgetCards } from '@/components/DashboardWidgetCards';
 import { useTodayActions } from '@/hooks/useTodayActions';
+import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 
 export function CoordinatorHomePage() {
   const navigate = useNavigate();
   const { data: today, isLoading: todayLoading } = useTodayActions();
 
-  const { data: queue } = useQuery({
+  const { data: widgets, isLoading: widgetsLoading } = useQuery({
+    queryKey: ['dashboard-widgets'],
+    queryFn: async () => {
+      const res = await api.get<{ data: import('@afios/shared').DashboardWidgetsDto }>(
+        '/dashboard/widgets'
+      );
+      return res.data.data;
+    },
+  });
+
+  const { data: queue, list: queueList } = useListQuery({
     queryKey: ['po-queue-coordinator'],
     queryFn: async () => {
       const res = await api.get<{ data: PurchaseOrderDto[] }>('/purchase-orders', {
         params: { queue: 'coordinator' },
       });
-      return res.data.data;
+      return normalizeListData<PurchaseOrderDto>(res.data.data);
     },
   });
 
-  const { data: woQueue } = useQuery({
+  const { data: woQueue, list: woQueueList } = useListQuery({
     queryKey: ['wo-queue-coordinator'],
     queryFn: async () => {
       const res = await api.get<{ data: WorkOrderDto[] }>('/work-orders', {
         params: { queue: 'coordinator' },
       });
-      return res.data.data;
+      return normalizeListData<WorkOrderDto>(res.data.data);
     },
   });
 
@@ -47,11 +60,24 @@ export function CoordinatorHomePage() {
         subtitle="Final approval for purchase orders and work orders"
       />
 
-      <DashboardSearch placeholder="Search POs, work orders, indents…" />
-
       <TodayPanel actions={today ?? []} loading={todayLoading} />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8 lg:mb-10">
+      <DashboardSearch placeholder="Search POs, work orders, indents…" />
+
+      <DashboardWidgetCards widgets={widgets?.widgets} loading={widgetsLoading} />
+
+      <ListQueryBoundary
+        isLoading={queueList.isLoading || woQueueList.isLoading}
+        isError={queueList.isError || woQueueList.isError}
+        onRetry={() => {
+          queueList.onRetry();
+          woQueueList.onRetry();
+        }}
+        retrying={queueList.retrying || woQueueList.retrying}
+        skeletonRows={2}
+        empty={<></>}
+      >
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 lg:mb-8">
         <ActionCard
           title="Pending PO approval"
           count={pending}
@@ -77,6 +103,7 @@ export function CoordinatorHomePage() {
           description="No POs or work orders need verification right now."
         />
       )}
+      </ListQueryBoundary>
     </div>
   );
 }

@@ -1,23 +1,24 @@
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { MaterialRequestDto } from '@afios/shared';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/EmptyState';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { ListQueryBoundary } from '@/components/ListQueryBoundary';
+import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 
 /** Purchase requests created from PM-approved indents (auto-created on approval). */
 export function PMPurchaseRequestsPage() {
   const navigate = useNavigate();
 
-  const { data: requests, isLoading } = useQuery({
+  const { data: requests, list } = useListQuery({
     queryKey: ['pm-purchase-requests'],
     queryFn: async () => {
       const res = await api.get<{ data: MaterialRequestDto[] }>('/material-requests', {
         params: { status: 'PURCHASE_REQUESTED' },
       });
-      return res.data.data;
+      return normalizeListData<MaterialRequestDto>(res.data.data);
     },
   });
 
@@ -37,20 +38,22 @@ export function PMPurchaseRequestsPage() {
         </div>
       </header>
 
-      {isLoading ? (
+      <ListQueryBoundary
+        isLoading={list.isLoading}
+        isError={list.isError}
+        onRetry={list.onRetry}
+        retrying={list.retrying}
+        isEmpty={!requests?.length}
+        skeletonRows={2}
+        empty={
+          <EmptyState
+            title="No purchase requests yet"
+            description="When you approve an indent, a purchase request is created automatically for the executive."
+          />
+        }
+      >
         <div className="space-y-2">
-          {[1, 2].map((i) => (
-            <div key={i} className="h-16 rounded-xl bg-gray-100 animate-pulse" />
-          ))}
-        </div>
-      ) : !requests?.length ? (
-        <EmptyState
-          title="No purchase requests yet"
-          description="When you approve an indent, a purchase request is created automatically for the executive."
-        />
-      ) : (
-        <div className="space-y-2">
-          {requests.map((r) => (
+          {(requests ?? []).map((r) => (
             <Card
               key={r.id}
               className="cursor-pointer hover:shadow-card-hover"
@@ -69,7 +72,7 @@ export function PMPurchaseRequestsPage() {
             </Card>
           ))}
         </div>
-      )}
+      </ListQueryBoundary>
     </div>
   );
 }

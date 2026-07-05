@@ -1,10 +1,11 @@
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { formatDate, type MaterialRequestDto } from '@afios/shared';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/EmptyState';
+import { ListQueryBoundary } from '@/components/ListQueryBoundary';
+import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 
 function lineSummary(mr: MaterialRequestDto) {
   if (mr.items?.length) {
@@ -19,13 +20,13 @@ function lineSummary(mr: MaterialRequestDto) {
 export function StoreCompleteIndentsPage() {
   const navigate = useNavigate();
 
-  const { data: indents, isLoading } = useQuery({
+  const { data: indents, list } = useListQuery({
     queryKey: ['store-completed-indents'],
     queryFn: async () => {
       const res = await api.get<{ data: MaterialRequestDto[] }>('/material-requests', {
         params: { tab: 'completed' },
       });
-      return res.data.data;
+      return normalizeListData<MaterialRequestDto>(res.data.data);
     },
   });
 
@@ -36,20 +37,22 @@ export function StoreCompleteIndentsPage() {
         subtitle="Indents fully issued and confirmed by site — closed loop complete"
       />
 
-      {isLoading ? (
+      <ListQueryBoundary
+        isLoading={list.isLoading}
+        isError={list.isError}
+        onRetry={list.onRetry}
+        retrying={list.retrying}
+        isEmpty={!indents?.length}
+        skeletonRows={3}
+        empty={
+          <EmptyState
+            title="No completed indents yet"
+            description="Indents appear here after site confirms receipt of issued materials."
+          />
+        }
+      >
         <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-20 rounded-xl bg-surface-muted animate-pulse" />
-          ))}
-        </div>
-      ) : !indents?.length ? (
-        <EmptyState
-          title="No completed indents yet"
-          description="Indents appear here after site confirms receipt of issued materials."
-        />
-      ) : (
-        <div className="space-y-2">
-          {indents.map((mr) => (
+          {(indents ?? []).map((mr) => (
             <button
               key={mr.id}
               type="button"
@@ -69,7 +72,7 @@ export function StoreCompleteIndentsPage() {
             </button>
           ))}
         </div>
-      )}
+      </ListQueryBoundary>
     </div>
   );
 }

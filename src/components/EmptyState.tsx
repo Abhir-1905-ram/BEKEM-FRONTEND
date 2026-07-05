@@ -33,7 +33,7 @@ export function EmptyState({
           strokeWidth={1.5}
         />
       </div>
-      <p className="text-lg font-semibold text-ink">{title}</p>
+      <p className="text-[20px] font-semibold text-ink">{title}</p>
       {description && (
         <p className="text-sm text-ink-muted mt-2 max-w-sm leading-relaxed">{description}</p>
       )}

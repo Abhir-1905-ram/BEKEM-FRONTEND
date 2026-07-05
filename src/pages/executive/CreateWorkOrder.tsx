@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
@@ -16,6 +16,8 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { SuccessScreen } from '@/components/SuccessScreen';
 import { EmptyState } from '@/components/EmptyState';
+import { ListQueryBoundary } from '@/components/ListQueryBoundary';
+import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 import { cn } from '@/lib/utils';
 
 export function CreateWorkOrderPage() {
@@ -27,15 +29,17 @@ export function CreateWorkOrderPage() {
   const [quantityUnit, setQuantityUnit] = useState('Units');
   const [createdWo, setCreatedWo] = useState<WorkOrderDto | null>(null);
 
-  const { data: approvedPos, isLoading } = useQuery({
+  const { data: approvedPos, list } = useListQuery({
     queryKey: ['approved-pos-for-wo'],
     queryFn: async () => {
       const [poRes, woRes] = await Promise.all([
         api.get<{ data: PurchaseOrderDto[] }>('/purchase-orders', { params: { status: 'APPROVED' } }),
         api.get<{ data: WorkOrderDto[] }>('/work-orders'),
       ]);
-      const usedPoIds = new Set(woRes.data.data.map((w) => w.purchaseOrderId));
-      return poRes.data.data.filter((po) => !usedPoIds.has(po.id));
+      const pos = normalizeListData<PurchaseOrderDto>(poRes.data.data);
+      const workOrders = normalizeListData<WorkOrderDto>(woRes.data.data);
+      const usedPoIds = new Set(workOrders.map((w) => w.purchaseOrderId));
+      return pos.filter((po) => !usedPoIds.has(po.id));
     },
   });
 
@@ -90,16 +94,22 @@ export function CreateWorkOrderPage() {
       {!selectedPo ? (
         <>
           <h2 className="text-sm font-semibold text-ink mb-3">Select approved PO</h2>
-          {isLoading ? (
-            <div className="h-32 bg-surface-muted rounded-card animate-pulse" />
-          ) : !approvedPos?.length ? (
-            <EmptyState
-              title="No approved POs available"
-              description="Complete PO approval first, or all approved POs already have work orders."
-            />
-          ) : (
+          <ListQueryBoundary
+            isLoading={list.isLoading}
+            isError={list.isError}
+            onRetry={list.onRetry}
+            retrying={list.retrying}
+            isEmpty={!approvedPos?.length}
+            skeletonRows={3}
+            empty={
+              <EmptyState
+                title="No approved POs available"
+                description="Complete PO approval first, or all approved POs already have work orders."
+              />
+            }
+          >
             <div className="space-y-2">
-              {approvedPos.map((po) => (
+              {(approvedPos ?? []).map((po) => (
                 <Card
                   key={po.id}
                   className={cn('cursor-pointer hover:border-bekem-accent transition-colors py-3')}
@@ -122,7 +132,7 @@ export function CreateWorkOrderPage() {
                 </Card>
               ))}
             </div>
-          )}
+          </ListQueryBoundary>
         </>
       ) : (
         <div className="space-y-4">

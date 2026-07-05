@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
@@ -10,7 +10,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { StatCard } from '@/components/ui/StatCard';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
-import { DashboardSkeleton } from '@/components/ui/DashboardSkeleton';
+import { ListQueryBoundary } from '@/components/ListQueryBoundary';
 
 export function VendorScorecardPage() {
   const { id } = useParams<{ id: string }>();
@@ -20,7 +20,13 @@ export function VendorScorecardPage() {
   const [qualityScore, setQualityScore] = useState(4);
   const [note, setNote] = useState('');
 
-  const { data, isLoading } = useQuery({
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    isFetching,
+  } = useQuery({
     queryKey: ['vendor-scorecard', id],
     queryFn: async () => {
       const res = await api.get<{ data: VendorScorecardDto }>(`/vendors/${id}/scorecard`);
@@ -46,10 +52,15 @@ export function VendorScorecardPage() {
     },
   });
 
-  if (isLoading || !data) return <DashboardSkeleton />;
+  if (!id) return null;
 
-  const { vendor, metrics, recentOrders, reviews } = data;
-  const displayRating = metrics.compositeRating ?? vendor.rating;
+  const { vendor, metrics, recentOrders, reviews } = data ?? {
+    vendor: null,
+    metrics: null,
+    recentOrders: [],
+    reviews: [],
+  };
+  const displayRating = metrics?.compositeRating ?? vendor?.rating ?? 0;
 
   return (
     <div className="page-container max-w-3xl">
@@ -62,6 +73,17 @@ export function VendorScorecardPage() {
         Back
       </button>
 
+      <ListQueryBoundary
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
+        retrying={isFetching && !isLoading}
+        isEmpty={!data}
+        skeletonRows={8}
+        empty={<></>}
+      >
+        {vendor && metrics && (
+          <>
       <PageHeader
         title={vendor.name}
         subtitle={`${vendor.category} · ${vendor.contactInfo}`}
@@ -75,7 +97,7 @@ export function VendorScorecardPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard label="Purchase orders" value={metrics.poCount} tone="blue" />
-        <StatCard label="Total spend" value={formatCurrency(metrics.totalSpend)} tone="violet" />
+        <StatCard label="Total spend" value={formatCurrency(metrics.totalSpend)} tone="blue" />
         <StatCard label="Fulfillment" value={`${metrics.onTimeDeliveryPct}%`} tone="teal" />
         <StatCard label="Rejected POs" value={metrics.rejectedCount} tone="amber" />
       </div>
@@ -155,6 +177,9 @@ export function VendorScorecardPage() {
           </div>
         </section>
       )}
+          </>
+        )}
+      </ListQueryBoundary>
     </div>
   );
 }

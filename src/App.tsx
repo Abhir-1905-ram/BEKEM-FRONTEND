@@ -71,6 +71,19 @@ const IssueMaterialPage = lazy(() =>
 const BranchTransfersPage = lazy(() =>
   import('@/pages/shared/BranchTransfers').then((m) => ({ default: m.BranchTransfersPage }))
 );
+const BranchTransferDetailPage = lazy(() =>
+  import('@/pages/branchTransfers/BranchTransferDetail').then((m) => ({
+    default: m.BranchTransferDetailPage,
+  }))
+);
+const StoreBranchTransfersPage = lazy(() =>
+  import('@/pages/store/StoreBranchTransfers').then((m) => ({ default: m.StoreBranchTransfersPage }))
+);
+const PMBranchTransferApprovalsPage = lazy(() =>
+  import('@/pages/pm/PMBranchTransferApprovals').then((m) => ({
+    default: m.PMBranchTransferApprovalsPage,
+  }))
+);
 const NotificationsPage = lazy(() =>
   import('@/pages/Notifications').then((m) => ({ default: m.NotificationsPage }))
 );
@@ -97,6 +110,12 @@ const CreateWorkOrderPage = lazy(() =>
 );
 const WorkOrderDetailPage = lazy(() =>
   import('@/pages/workOrders/WorkOrderDetail').then((m) => ({ default: m.WorkOrderDetailPage }))
+);
+const PMApproveWOsPage = lazy(() =>
+  import('@/pages/pm/PMApproveWOs').then((m) => ({ default: m.PMApproveWOsPage }))
+);
+const ExecutiveReviewWOsPage = lazy(() =>
+  import('@/pages/executive/ExecutiveReviewWOs').then((m) => ({ default: m.ExecutiveReviewWOsPage }))
 );
 const UserProvisioningPage = lazy(() =>
   import('@/pages/admin/UserProvisioning').then((m) => ({ default: m.UserProvisioningPage }))
@@ -412,6 +431,33 @@ export default function App() {
                 }
               />
 
+              <Route
+                path="/pm/material-indents"
+                element={
+                  <RoleGuard roles={[UserRole.PROJECT_MANAGER]}>
+                    <IncidentsPage />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/executive/material-indents"
+                element={
+                  <RoleGuard roles={[UserRole.EXECUTIVE]}>
+                    <IncidentsPage />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/coordinator/material-indents"
+                element={
+                  <RoleGuard roles={[UserRole.COORDINATOR]}>
+                    <IncidentsPage />
+                  </RoleGuard>
+                }
+              />
+
 
 
               <Route
@@ -581,19 +627,41 @@ export default function App() {
               />
 
               <Route
-
-                path="/pm/branch-transfers"
-
+                path="/store/branch-transfers"
                 element={
-
-                  <RoleGuard roles={[UserRole.PROJECT_MANAGER]}>
-
-                    <BranchTransfersPage />
-
+                  <RoleGuard roles={[UserRole.STORE_INCHARGE]}>
+                    <StoreBranchTransfersPage />
                   </RoleGuard>
-
                 }
+              />
 
+              <Route
+                path="/pm/branch-transfer-approvals"
+                element={
+                  <RoleGuard roles={[UserRole.PROJECT_MANAGER]}>
+                    <PMBranchTransferApprovalsPage />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/branch-transfers/:id"
+                element={
+                  <RoleGuard
+                    roles={[
+                      UserRole.STORE_INCHARGE,
+                      UserRole.PROJECT_MANAGER,
+                      UserRole.COORDINATOR,
+                    ]}
+                  >
+                    <BranchTransferDetailPage />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/pm/branch-transfers"
+                element={<Navigate to="/pm/branch-transfer-approvals" replace />}
               />
 
               <Route
@@ -601,6 +669,24 @@ export default function App() {
                 element={
                   <RoleGuard roles={[UserRole.COORDINATOR]}>
                     <BranchTransfersPage />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/pm/approve-wos"
+                element={
+                  <RoleGuard roles={[UserRole.PROJECT_MANAGER]}>
+                    <PMApproveWOsPage />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/executive/review-wos"
+                element={
+                  <RoleGuard roles={[UserRole.EXECUTIVE]}>
+                    <ExecutiveReviewWOsPage />
                   </RoleGuard>
                 }
               />

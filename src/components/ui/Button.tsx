@@ -3,18 +3,17 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bekem-accent/30 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bekem-accent/25 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
-        primary: 'bg-bekem-accent text-white hover:bg-bekem-accent-hover shadow-sm hover:shadow-md',
-        accent:
-          'bg-bekem-accent text-white hover:bg-bekem-accent-hover shadow-sm hover:shadow-md',
+        primary: 'bg-bekem-accent text-white hover:bg-bekem-accent-hover border border-bekem-accent',
+        accent: 'bg-bekem-accent text-white hover:bg-bekem-accent-hover border border-bekem-accent',
         secondary:
-          'bg-white text-ink border border-surface-border hover:bg-surface-muted shadow-sm',
-        ghost: 'hover:bg-surface-muted text-ink-secondary hover:text-ink',
-        destructive: 'bg-danger text-white hover:bg-danger-dark shadow-sm',
-        success: 'bg-success text-white hover:bg-success-dark shadow-sm',
+          'bg-white text-bekem-accent border border-bekem-accent/40 hover:bg-bekem-accent-soft/50 hover:border-bekem-accent/60',
+        ghost: 'hover:bg-surface-muted text-ink-secondary hover:text-ink border border-transparent',
+        destructive: 'bg-danger text-white hover:bg-danger-dark border border-danger',
+        success: 'bg-success text-white hover:bg-success-dark border border-success',
       },
       size: {
         sm: 'h-9 px-3.5 text-sm',

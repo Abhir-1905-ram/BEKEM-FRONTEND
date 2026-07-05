@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
@@ -8,20 +8,19 @@ import { forbiddenQueryOptions, isForbiddenError, useRedirectOnForbidden } from 
 import { ROLE_COLORS, UserRole } from '@afios/shared';
 import type { MaterialRequestDto } from '@afios/shared';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { Textarea } from '@/components/ui/Input';
 import { SuccessScreen } from '@/components/SuccessScreen';
-import { useAuthStore } from '@/stores/authStore';
+import { StockComparisonTable } from '@/components/StockComparisonTable';
+import { cn } from '@/lib/utils';
 
 export function AllocateFlowPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const accent = ROLE_COLORS[UserRole.STORE_INCHARGE].primary;
-  const siteId = useAuthStore((s) => s.user?.assignedSiteId);
-  const [forwardReason, setForwardReason] = useState('');
-  const [phase, setPhase] = useState<'review' | 'forward' | 'done'>('review');
-  const [allocQty, setAllocQty] = useState<Record<string, number>>({});
+  const [remark, setRemark] = useState('');
+  const [remarkError, setRemarkError] = useState('');
+  const [phase, setPhase] = useState<'review' | 'done'>('review');
 
   const {
     data: request,
@@ -40,62 +39,48 @@ export function AllocateFlowPage() {
 
   useRedirectOnForbidden(error);
 
-  const { data: stock } = useQuery({
-    queryKey: ['stock', siteId],
-    queryFn: async () => {
-      const res = await api.get<{
-        data: Array<{ materialId: string; quantityOnHand: number; material: { name: string; unit: string } }>;
-      }>(`/stock/site/${siteId}`);
-      return res.data.data;
+  const actionMutation = useMutation({
+    mutationFn: async (decision: 'issue' | 'forward') => {
+      const trimmed = remark.trim();
+      if (!trimmed) {
+        throw new Error('Remark is required before submitting');
+      }
+      await api.post(`/material-requests/${id}/allocate`, { decision, remark: trimmed });
     },
-    enabled: !!siteId,
-  });
-
-  const stockMap = useMemo(() => {
-    const m = new Map<string, number>();
-    stock?.forEach((s) => m.set(s.materialId, s.quantityOnHand));
-    return m;
-  }, [stock]);
-
-  const allocateMutation = useMutation({
-    mutationFn: async () => {
-      const allocations = (request?.items || []).map((item) => ({
-        itemId: item.id,
-        quantityAllocated: allocQty[item.id] ?? 0,
-      }));
-      await api.post(`/material-requests/${id}/allocate`, { allocations });
-    },
-    onSuccess: () => {
-      toast.success('Indent accepted');
+    onSuccess: (_, decision) => {
+      toast.success(decision === 'issue' ? 'Complete indent issued' : 'Forwarded to PM');
       setPhase('done');
       queryClient.invalidateQueries({ queryKey: ['store-pending-requests'] });
     },
-    onError: () => toast.error('Allocation failed'),
+    onError: (err: Error & { response?: { data?: { message?: string } } }) => {
+      toast.error(err.response?.data?.message || err.message || 'Action failed');
+    },
   });
 
-  const forwardMutation = useMutation({
+  const rejectMutation = useMutation({
     mutationFn: async () => {
-      const res = await api.post<{ data: unknown; message?: string }>(
-        `/material-requests/${id}/forward`,
-        { reason: forwardReason }
-      );
-      return res.data;
+      const trimmed = remark.trim();
+      if (!trimmed) throw new Error('Remark is required before rejecting');
+      await api.post(`/material-requests/${id}/store-reject`, { remark: trimmed });
     },
-    onSuccess: (data) => {
-      toast.success(data?.message || 'Forwarded to PM');
+    onSuccess: () => {
+      toast.success('Indent rejected');
       setPhase('done');
+      queryClient.invalidateQueries({ queryKey: ['store-pending-requests'] });
     },
-    onError: (err: Error & { response?: { data?: { message?: string }; status?: number } }) => {
-      const msg = err.response?.data?.message || 'Forward failed';
-      // If already with PM, treat as success (idempotent server)
-      if (err.response?.status === 400 && /forwarded|With PM|FORWARDED/i.test(msg)) {
-        toast.success('Already forwarded to PM');
-        setPhase('done');
-        return;
-      }
-      toast.error(msg);
+    onError: (err: Error & { response?: { data?: { message?: string } } }) => {
+      toast.error(err.response?.data?.message || err.message || 'Rejection failed');
     },
   });
+
+  const submit = (decision: 'issue' | 'forward') => {
+    if (!remark.trim()) {
+      setRemarkError('Remark is required before submitting this action');
+      return;
+    }
+    setRemarkError('');
+    actionMutation.mutate(decision);
+  };
 
   if (phase === 'done') {
     return (
@@ -124,104 +109,113 @@ export function AllocateFlowPage() {
             quantityRequested: request.quantityRequested || 0,
             quantityAllocated: request.quantityAllocated || 0,
             material: request.material,
+            requestedQty: request.items?.[0]?.requestedQty,
+            availableQty: request.items?.[0]?.availableQty,
+            existingStock: request.items?.[0]?.existingStock,
+            requiredQty: request.items?.[0]?.requiredQty,
           },
         ]
       : [];
 
-  if (phase === 'forward') {
-    return (
-      <div className="px-4 pt-4 pb-6 max-w-lg mx-auto">
-        <header className="flex items-center gap-3 mb-6">
-          <button onClick={() => setPhase('review')} className="h-10 w-10 rounded-xl hover:bg-gray-100 flex items-center justify-center">
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <h1 className="font-semibold">Forward to PM</h1>
-        </header>
-        <Textarea
-          value={forwardReason}
-          onChange={(e) => setForwardReason(e.target.value)}
-          placeholder="Reason for forwarding (e.g. insufficient stock)"
-        />
-        <Button
-          className="mt-4 w-full"
-          variant="accent"
-          accentColor={accent}
-          disabled={!forwardReason.trim() || forwardMutation.isPending}
-          onClick={() => forwardMutation.mutate()}
-        >
-          Forward indent
-        </Button>
-      </div>
-    );
-  }
+  const canIssue = request.canFullyIssue ?? !request.hasShortfall;
 
   return (
     <div className="px-4 pt-4 pb-6 max-w-3xl mx-auto">
       <header className="flex items-center gap-3 mb-6">
-        <button onClick={() => navigate('/store')} className="h-10 w-10 rounded-xl hover:bg-gray-100 flex items-center justify-center">
+        <button
+          onClick={() => navigate('/store')}
+          className="h-10 w-10 rounded-xl hover:bg-gray-100 flex items-center justify-center"
+        >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div>
           <h1 className="font-semibold">{request.indentNumber}</h1>
-          <p className="text-xs text-ink-secondary">{items.length} item(s) — allocate or forward</p>
+          <p className="text-xs text-ink-secondary">
+            {items.length} item(s) — full indent only, no partial allocation
+          </p>
         </div>
       </header>
 
-      <Card className="overflow-hidden p-0">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-surface-border bg-surface-muted/50">
-              <th className="text-left px-3 py-2 font-semibold text-ink-muted">Item</th>
-              <th className="text-right px-3 py-2 font-semibold text-ink-muted">Stock</th>
-              <th className="text-right px-3 py-2 font-semibold text-ink-muted">Requested</th>
-              <th className="text-right px-3 py-2 font-semibold text-ink-muted">Allocate</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => {
-              const available = stockMap.get(item.materialId) ?? 0;
-              return (
-                <tr key={item.id} className="border-b border-surface-border last:border-0">
-                  <td className="px-3 py-3">
-                    <p className="font-medium">{item.material?.name}</p>
-                    <p className="text-xs text-ink-muted">{item.material?.unit}</p>
-                  </td>
-                  <td className="px-3 py-3 text-right tabular-nums">{available}</td>
-                  <td className="px-3 py-3 text-right tabular-nums">{item.quantityRequested}</td>
-                  <td className="px-3 py-3 text-right">
-                    <input
-                      type="number"
-                      min={0}
-                      max={Math.min(available, item.quantityRequested)}
-                      value={allocQty[item.id] ?? item.quantityRequested}
-                      onChange={(e) =>
-                        setAllocQty((prev) => ({
-                          ...prev,
-                          [item.id]: parseFloat(e.target.value) || 0,
-                        }))
-                      }
-                      className="w-20 border rounded px-2 py-1 text-right text-sm"
-                    />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </Card>
+      {!canIssue && (
+        <div className="mb-4 rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-ink-secondary">
+          One or more lines are short on stock. You can only forward the entire indent to the Project
+          Manager — partial issue is not allowed.
+        </div>
+      )}
 
-      <div className="flex flex-col gap-2 mt-6">
+      <StockComparisonTable items={items} className="mb-6" />
+
+      <div className="mb-4">
+        <label className="text-sm font-medium text-ink-secondary block mb-2">
+          Remark <span className="text-danger">*</span>
+        </label>
+        <Textarea
+          value={remark}
+          onChange={(e) => {
+            setRemark(e.target.value);
+            if (e.target.value.trim()) setRemarkError('');
+          }}
+          placeholder={
+            canIssue
+              ? 'Note for allocation (visible to PM, Executive, Coordinator, Chairman)…'
+              : 'Reason for forwarding entire indent to PM…'
+          }
+        />
+        {remarkError && <p className="text-xs text-danger mt-1">{remarkError}</p>}
+      </div>
+
+      <div className="flex flex-col gap-2">
         <Button
           variant="accent"
           size="lg"
           accentColor={accent}
-          disabled={allocateMutation.isPending}
-          onClick={() => allocateMutation.mutate()}
+          disabled={!canIssue || actionMutation.isPending}
+          className={cn(!canIssue && 'opacity-50 cursor-not-allowed')}
+          onClick={() => submit('issue')}
         >
-          Accept & allocate
+          Issue complete indent
         </Button>
-        <Button variant="secondary" size="lg" onClick={() => setPhase('forward')}>
-          Forward to PM
+        <Button
+          variant="secondary"
+          size="lg"
+          disabled={actionMutation.isPending}
+          onClick={() => submit('forward')}
+        >
+          Forward entire indent to PM
+        </Button>
+        {!canIssue && (
+          <Button
+            variant="accent"
+            size="lg"
+            accentColor={accent}
+            onClick={() =>
+              navigate('/store/branch-transfers', {
+                state: {
+                  materialRequestId: id,
+                  materialId: items[0]?.materialId,
+                  quantity: items[0]?.quantityRequested,
+                },
+              })
+            }
+          >
+            Request branch transfer instead
+          </Button>
+        )}
+        <Button
+          variant="ghost"
+          size="lg"
+          className="text-danger"
+          disabled={rejectMutation.isPending}
+          onClick={() => {
+            if (!remark.trim()) {
+              setRemarkError('Remark is required before rejecting this indent');
+              return;
+            }
+            setRemarkError('');
+            rejectMutation.mutate();
+          }}
+        >
+          Reject indent
         </Button>
       </div>
     </div>

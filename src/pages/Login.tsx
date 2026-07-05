@@ -17,7 +17,7 @@ import type { LoginResponseDto } from '@afios/shared';
 import { ROLE_LABELS, UserRole } from '@afios/shared';
 import { getRoleHomePath } from '@/lib/rolePaths';
 import { BRAND_TAGLINE, BRAND_COMPANY } from '@/lib/brand';
-import { BekemLogo, BekemMark } from '@/components/brand/BekemLogo';
+import { BekemLogo } from '@/components/brand/BekemLogo';
 import { cn } from '@/lib/utils';
 
 const DEMO_PASSWORD = 'Bekem@Demo2026!';
@@ -71,11 +71,8 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen flex">
-      <div className="hidden lg:flex lg:w-[42%] bg-bekem-navy flex-col justify-between p-12">
-        <div className="flex items-center gap-3">
-          <BekemMark />
-          <BekemLogo variant="light" size="sm" />
-        </div>
+      <div className="hidden lg:flex lg:w-[42%] bg-surface-sidebar flex-col justify-between p-12">
+        <BekemLogo variant="light" size="md" />
         <div className="max-w-md">
           <h2 className="text-3xl font-extrabold text-white leading-tight tracking-tight">
             {BRAND_TAGLINE}
@@ -93,13 +90,10 @@ export function LoginPage() {
         <p className="text-xs text-white/30">© {new Date().getFullYear()} {BRAND_COMPANY}</p>
       </div>
 
-      <div className="flex-1 flex items-center justify-center px-6 py-10 bg-surface-muted">
+      <div className="flex-1 flex items-center justify-center px-6 py-10 bg-white">
         <div className="w-full max-w-[440px]">
-          <div className="lg:hidden flex items-center gap-3 mb-8">
-            <BekemMark />
-            <span className="text-xl font-extrabold text-ink">
-              Bekem <span className="text-bekem-accent">OS</span>
-            </span>
+          <div className="lg:hidden mb-8">
+            <BekemLogo size="md" />
           </div>
 
           <div className="panel p-8">
@@ -156,7 +150,7 @@ export function LoginPage() {
                       setEmail(u.email);
                       void authenticate(u.email, { role: u.role, password: DEMO_PASSWORD });
                     }}
-                    className="panel p-3 flex items-center gap-3 text-left hover:shadow-card-hover transition-shadow disabled:opacity-50"
+                    className="panel p-3 flex items-center gap-3 text-left hover:border-bekem-accent/40 transition-colors disabled:opacity-50"
                   >
                     <span
                       className={cn(

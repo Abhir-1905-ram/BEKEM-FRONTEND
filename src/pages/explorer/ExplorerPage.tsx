@@ -1,25 +1,23 @@
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Building2 } from 'lucide-react';
 import { formatCurrency } from '@afios/shared';
 import type { ExplorerProjectDto } from '@afios/shared';
 import { api } from '@/lib/api';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { DashboardSkeleton } from '@/components/ui/DashboardSkeleton';
 import { EmptyState } from '@/components/EmptyState';
+import { ListQueryBoundary } from '@/components/ListQueryBoundary';
+import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 
 export function ExplorerPage() {
   const navigate = useNavigate();
 
-  const { data: projects, isLoading } = useQuery({
+  const { data: projects, list } = useListQuery({
     queryKey: ['explorer'],
     queryFn: async () => {
       const res = await api.get<{ data: ExplorerProjectDto[] }>('/dashboard/explorer');
-      return res.data.data;
+      return normalizeListData<ExplorerProjectDto>(res.data.data);
     },
   });
-
-  if (isLoading) return <DashboardSkeleton />;
 
   return (
     <div className="page-container">
@@ -37,11 +35,17 @@ export function ExplorerPage() {
         subtitle="Cross-project drill-down for leadership and PM"
       />
 
-      {!projects?.length ? (
-        <EmptyState title="No projects" description="Active projects will appear here." />
-      ) : (
+      <ListQueryBoundary
+        isLoading={list.isLoading}
+        isError={list.isError}
+        onRetry={list.onRetry}
+        retrying={list.retrying}
+        isEmpty={!projects?.length}
+        skeletonRows={6}
+        empty={<EmptyState title="No projects" description="Active projects will appear here." />}
+      >
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {projects.map((p) => (
+          {(projects ?? []).map((p) => (
             <div key={p.id} className="panel p-5 hover:shadow-card-hover transition-all">
               <div className="flex items-start gap-3">
                 <div className="h-10 w-10 rounded-xl bg-store/10 flex items-center justify-center">
@@ -83,7 +87,7 @@ export function ExplorerPage() {
             </div>
           ))}
         </div>
-      )}
+      </ListQueryBoundary>
     </div>
   );
 }

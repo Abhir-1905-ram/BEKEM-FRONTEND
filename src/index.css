@@ -2,12 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Bekem enterprise design system — Inter, white surfaces, thin borders, 24–32px section rhythm */
+
 @layer base {
   * {
     @apply border-surface-border;
   }
   body {
-    @apply bg-[#F8FAFC] text-ink font-sans antialiased text-[15px] leading-relaxed;
+    @apply bg-white text-ink font-sans antialiased text-sm leading-relaxed;
   }
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-bekem-accent;
@@ -20,22 +22,26 @@
     @apply text-ink font-semibold tracking-tight;
   }
   h1 {
-    @apply text-[22px] lg:text-[26px];
+    @apply text-[24px] lg:text-[32px];
   }
   h2 {
-    @apply text-lg;
+    @apply text-[20px];
+  }
+  h3 {
+    @apply text-base;
   }
 }
 
 @layer components {
   .page-container {
-    @apply py-6 lg:py-10 w-full;
+    @apply py-6 lg:py-8 w-full;
+    animation: bekem-fade-in 200ms ease-out;
   }
 
   .data-row {
-    @apply flex items-center justify-between gap-4 px-5 min-h-[48px] rounded-2xl border border-surface-border bg-white
-      hover:border-bekem-accent/25 hover:shadow-card-hover
-      transition-shadow duration-200 cursor-pointer;
+    @apply flex items-center justify-between gap-4 px-4 min-h-[48px] rounded-lg border border-surface-border bg-white
+      hover:border-bekem-accent/30 hover:bg-bekem-accent-soft/30
+      transition-colors duration-200 cursor-pointer;
   }
 
   .section-label {
@@ -43,17 +49,25 @@
   }
 
   .panel {
-    @apply rounded-2xl border border-surface-border bg-white shadow-card;
+    @apply rounded-lg border border-surface-border bg-white;
+  }
+
+  .field-readonly {
+    @apply rounded-lg border border-surface-border bg-surface-muted px-3 py-2 text-sm text-ink-secondary cursor-default;
+  }
+
+  .field-readonly-label {
+    @apply text-[10px] font-semibold uppercase tracking-wider text-ink-muted;
   }
 
   .action-card {
-    @apply relative overflow-hidden rounded-3xl border border-surface-border bg-white p-6 lg:p-8
-      shadow-card transition-shadow duration-200 text-left w-full
-      hover:shadow-card-hover;
+    @apply relative overflow-hidden rounded-lg border border-surface-border bg-white p-6
+      transition-colors duration-200 text-left w-full
+      hover:border-bekem-accent/30 hover:bg-bekem-accent-soft/20;
   }
 
   .action-card-strip {
-    @apply absolute left-0 top-0 bottom-0 w-1 rounded-l-3xl;
+    @apply absolute left-0 top-0 bottom-0 w-1 rounded-l-lg;
   }
 
   .data-table {
@@ -61,27 +75,48 @@
   }
 
   .data-table thead {
-    @apply sticky top-0 z-10 bg-[#F8FAFC]/95 backdrop-blur-sm;
+    @apply sticky top-0 z-10 bg-white;
   }
 
   .data-table th {
-    @apply text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-ink-muted border-b border-surface-border;
+    @apply text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-ink-muted border-b border-surface-border bg-surface-muted/50;
   }
 
   .data-table td {
-    @apply px-4 py-3 border-b border-surface-border/80 text-ink;
+    @apply px-4 py-3 border-b border-surface-border text-ink;
   }
 
   .data-table tbody tr {
-    @apply min-h-[48px] transition-colors duration-150 hover:bg-bekem-accent-soft/40;
+    @apply min-h-[48px] transition-colors duration-150 hover:bg-bekem-accent-soft/25;
   }
 
-  .data-table tbody tr:last-child td {
-    @apply border-b-0;
+  .data-table td.num,
+  .data-table th.num {
+    @apply text-right tabular-nums;
+  }
+
+  .data-table tbody tr:active {
+    @apply bg-bekem-accent-soft/40;
+  }
+
+  [data-table-density='compact'] .data-table th {
+    @apply py-2;
+  }
+
+  [data-table-density='compact'] .data-table td {
+    @apply py-2;
+  }
+
+  [data-table-density='compact'] .data-table tbody tr {
+    @apply min-h-[40px];
   }
 
   .table-shell {
     @apply panel overflow-hidden;
+  }
+
+  .enterprise-chip {
+    @apply inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold border;
   }
 
   .sr-only {
@@ -127,6 +162,46 @@
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
+  .animate-fade-in {
+    animation: bekem-fade-in 200ms ease-out;
+  }
+  .animate-slide-up {
+    animation: bekem-slide-up 220ms ease-out;
+  }
+  .animate-slide-down {
+    animation: bekem-slide-down 220ms ease-out;
+  }
+}
+
+@keyframes bekem-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes bekem-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bekem-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 button:focus-visible,
@@ -134,6 +209,6 @@ a:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 [role="button"]:focus-visible {
-  outline: 2px solid #1A4FA0;
+  outline: 2px solid #1D4E9E;
   outline-offset: 2px;
 }

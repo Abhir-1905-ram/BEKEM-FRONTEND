@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Filter, Download } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatDate } from '@afios/shared';
@@ -10,7 +9,8 @@ import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { DashboardSkeleton } from '@/components/ui/DashboardSkeleton';
+import { ListQueryBoundary } from '@/components/ListQueryBoundary';
+import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 import { downloadExport } from '@/lib/downloadExport';
 import { toast } from 'sonner';
 
@@ -39,7 +39,7 @@ export function AuditLogViewerPage() {
     }
   };
 
-  const { data: logs, isLoading, refetch, isFetching } = useQuery({
+  const { data: logs, list } = useListQuery({
     queryKey: ['audit-logs', entityType, action, from, to],
     queryFn: async () => {
       const res = await api.get<{ data: AuditLogDto[] }>('/audit-logs', {
@@ -51,7 +51,7 @@ export function AuditLogViewerPage() {
           limit: 100,
         },
       });
-      return res.data.data;
+      return normalizeListData<AuditLogDto>(res.data.data);
     },
   });
 
@@ -97,9 +97,9 @@ export function AuditLogViewerPage() {
           <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
         <div className="sm:col-span-2 lg:col-span-4 flex gap-2">
-          <Button variant="secondary" size="sm" onClick={() => refetch()} disabled={isFetching}>
+          <Button variant="secondary" size="sm" onClick={list.onRetry} disabled={list.retrying}>
             <Filter className="h-4 w-4" />
-            {isFetching ? 'Loading…' : 'Apply filters'}
+            {list.retrying ? 'Loading…' : 'Apply filters'}
           </Button>
           <Button variant="secondary" size="sm" onClick={exportPdf} disabled={exporting}>
             <Download className="h-4 w-4" />
@@ -120,13 +120,17 @@ export function AuditLogViewerPage() {
         </div>
       </div>
 
-      {isLoading ? (
-        <DashboardSkeleton />
-      ) : !logs?.length ? (
-        <EmptyState title="No audit entries" description="Try adjusting your filters." />
-      ) : (
+      <ListQueryBoundary
+        isLoading={list.isLoading}
+        isError={list.isError}
+        onRetry={list.onRetry}
+        retrying={list.retrying}
+        isEmpty={!logs?.length}
+        skeletonRows={6}
+        empty={<EmptyState title="No audit entries" description="Try adjusting your filters." />}
+      >
         <div className="space-y-2">
-          {logs.map((log) => (
+          {(logs ?? []).map((log) => (
             <div key={log.id} className="panel px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-ink">{formatAuditAction(log.action)}</p>
@@ -141,7 +145,7 @@ export function AuditLogViewerPage() {
             </div>
           ))}
         </div>
-      )}
+      </ListQueryBoundary>
     </div>
   );
 }

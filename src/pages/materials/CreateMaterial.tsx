@@ -18,9 +18,11 @@ import type {
   AddMaterialStockDto,
   CreateMaterialDto,
   MaterialCatalogItemDto,
+  MaterialCategoryDto,
   MaterialDto,
   UpdateMaterialDto,
 } from '@afios/shared';
+import { CategoryToggle } from '@/components/CategoryToggle';
 import { useAuthStore } from '@/stores/authStore';
 import { UserRole, PERMISSION_MATRIX } from '@afios/shared';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -61,6 +63,7 @@ export function CreateMaterialPage() {
     description: '',
     grade: '',
     category: '',
+    categoryId: '',
     hsnCode: '',
     initialQuantity: 0,
     lowStockThreshold: 20,
@@ -80,7 +83,16 @@ export function CreateMaterialPage() {
     description: '',
     grade: '',
     category: '',
+    categoryId: '',
     hsnCode: '',
+  });
+
+  const { data: categories } = useQuery({
+    queryKey: ['material-categories'],
+    queryFn: async () => {
+      const res = await api.get<{ data: MaterialCategoryDto[] }>('/material-categories');
+      return res.data.data;
+    },
   });
 
   const { data: sites } = useQuery({
@@ -166,6 +178,7 @@ export function CreateMaterialPage() {
         description: '',
         grade: '',
         category: '',
+    categoryId: '',
         hsnCode: '',
         initialQuantity: 0,
         lowStockThreshold: 20,
@@ -242,6 +255,7 @@ export function CreateMaterialPage() {
       description: item.description || '',
       grade: item.grade || '',
       category: item.category || '',
+      categoryId: item.categoryId || categories?.find((c) => c.name === item.category)?.id || '',
       hsnCode: item.hsnCode || '',
     });
   };
@@ -505,11 +519,18 @@ export function CreateMaterialPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-ink-muted mb-1 block">Category</label>
-              <Input
-                value={createForm.category}
-                onChange={(e) => setCreateForm({ ...createForm, category: e.target.value })}
-              />
+              <label className="text-xs font-semibold text-ink-muted mb-2 block">Category</label>
+              {categories?.length ? (
+                <CategoryToggle
+                  categories={categories}
+                  value={createForm.categoryId}
+                  onChange={(categoryId, categoryName) =>
+                    setCreateForm({ ...createForm, categoryId, category: categoryName })
+                  }
+                />
+              ) : (
+                <div className="h-10 rounded-xl bg-surface-muted animate-pulse" />
+              )}
             </div>
           </div>
           <div>
@@ -550,7 +571,7 @@ export function CreateMaterialPage() {
           <Button
             variant="primary"
             className="w-full"
-            disabled={!createForm.code || !createForm.name || !createForm.unit || create.isPending}
+            disabled={!createForm.code || !createForm.name || !createForm.unit || !createForm.categoryId || create.isPending}
             onClick={() => create.mutate()}
           >
             Create product
@@ -682,12 +703,19 @@ export function CreateMaterialPage() {
                 onChange={(e) => setEditForm({ ...editForm, grade: e.target.value })}
               />
             </div>
-            <div>
-              <label className="text-xs font-semibold text-ink-muted mb-1 block">Category</label>
-              <Input
-                value={editForm.category}
-                onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
-              />
+            <div className="sm:col-span-2">
+              <label className="text-xs font-semibold text-ink-muted mb-2 block">Category</label>
+              {categories?.length ? (
+                <CategoryToggle
+                  categories={categories}
+                  value={editForm.categoryId}
+                  onChange={(categoryId, categoryName) =>
+                    setEditForm({ ...editForm, categoryId, category: categoryName })
+                  }
+                />
+              ) : (
+                <div className="h-10 rounded-xl bg-surface-muted animate-pulse" />
+              )}
             </div>
           </div>
           <div>

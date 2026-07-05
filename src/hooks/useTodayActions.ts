@@ -7,7 +7,7 @@ export function useTodayActions() {
     queryKey: ['dashboard-today'],
     queryFn: async () => {
       const res = await api.get<{ data: TodayActionDto[] }>('/dashboard/today');
-      return res.data.data;
+      return Array.isArray(res.data.data) ? res.data.data : [];
     },
     staleTime: 60_000,
   });

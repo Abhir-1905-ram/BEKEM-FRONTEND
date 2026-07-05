@@ -17,7 +17,7 @@ export const ROLE_TONE: Record<UserRole, RoleTone> = {
   [UserRole.CHAIRMAN]: 'chairman',
 };
 
-export const STAT_TONES = ['amber', 'blue', 'violet', 'teal', 'rose', 'emerald'] as const;
+export const STAT_TONES = ['amber', 'blue', 'gold', 'teal', 'rose', 'emerald'] as const;
 export type StatTone = (typeof STAT_TONES)[number] | RoleTone;
 
 export function getRoleTone(role?: UserRole | string): RoleTone {
@@ -25,12 +25,12 @@ export function getRoleTone(role?: UserRole | string): RoleTone {
   return 'site';
 }
 
-/** Solid icon badge colors for stat widgets */
+/** Icon badge colors — corporate blue; gold reserved for chairman */
 export const STAT_ICON_BG: Record<string, string> = {
   amber: 'bg-warning',
   blue: 'bg-bekem-accent',
-  violet: 'bg-violet-600',
-  teal: 'bg-coordinator',
+  gold: 'bg-gold',
+  teal: 'bg-bekem-accent',
   rose: 'bg-danger',
   emerald: 'bg-success',
   site: 'bg-site',

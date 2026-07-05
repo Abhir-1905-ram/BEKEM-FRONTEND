@@ -1,5 +1,4 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { ChevronRight } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatDate } from '@afios/shared';
@@ -7,6 +6,8 @@ import type { MaterialRequestDto } from '@afios/shared';
 import { Card } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/EmptyState';
+import { ListQueryBoundary } from '@/components/ListQueryBoundary';
+import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 import { cn } from '@/lib/utils';
 
 const TABS = [
@@ -21,13 +22,13 @@ export function MyRequestsPage() {
   const [params, setParams] = useSearchParams();
   const tab = params.get('tab') || 'pending';
 
-  const { data: requests, isLoading } = useQuery({
+  const { data: requests, list } = useListQuery({
     queryKey: ['material-requests', tab],
     queryFn: async () => {
       const res = await api.get<{ data: MaterialRequestDto[] }>('/material-requests', {
         params: { tab },
       });
-      return res.data.data;
+      return normalizeListData<MaterialRequestDto>(res.data.data);
     },
   });
 
@@ -50,28 +51,30 @@ export function MyRequestsPage() {
         ))}
       </div>
 
-      {isLoading ? (
+      <ListQueryBoundary
+        isLoading={list.isLoading}
+        isError={list.isError}
+        onRetry={list.onRetry}
+        retrying={list.retrying}
+        isEmpty={!requests?.length}
+        skeletonRows={3}
+        empty={
+          <EmptyState
+            title={
+              tab === 'pending'
+                ? 'No pending requests'
+                : tab === 'approved'
+                ? 'No in-progress requests'
+                : tab === 'completed'
+                ? 'No completed requests yet'
+                : 'No rejected requests'
+            }
+            description="You're all caught up."
+          />
+        }
+      >
         <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-20 rounded-xl bg-gray-100 animate-pulse" />
-          ))}
-        </div>
-      ) : !requests?.length ? (
-        <EmptyState
-          title={
-            tab === 'pending'
-              ? 'No pending requests'
-              : tab === 'approved'
-              ? 'No in-progress requests'
-              : tab === 'completed'
-              ? 'No completed requests yet'
-              : 'No rejected requests'
-          }
-          description="You're all caught up."
-        />
-      ) : (
-        <div className="space-y-2">
-          {requests.map((r) => (
+          {(requests ?? []).map((r) => (
             <Card
               key={r.id}
               className="cursor-pointer hover:shadow-card-hover transition-shadow"
@@ -95,7 +98,7 @@ export function MyRequestsPage() {
             </Card>
           ))}
         </div>
-      )}
+      </ListQueryBoundary>
     </div>
   );
 }

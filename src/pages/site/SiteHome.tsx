@@ -7,17 +7,19 @@ import { getGreeting, getFirstName } from '@afios/shared';
 import type { MaterialRequestDto, SiteDto, NotificationDto } from '@afios/shared';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/EmptyState';
+import { ListQueryBoundary } from '@/components/ListQueryBoundary';
 import { ActionCard } from '@/components/ui/ActionCard';
-import { DashboardSkeleton } from '@/components/ui/DashboardSkeleton';
 import { TodayPanel } from '@/components/layout/TodayPanel';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { useTodayActions } from '@/hooks/useTodayActions';
+import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 
 export function SiteHomePage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user)!;
   const { data: today, isLoading: todayLoading } = useTodayActions();
 
-  const { data: site, isLoading: siteLoading } = useQuery({
+  const { data: site } = useQuery({
     queryKey: ['my-site'],
     queryFn: async () => {
       const res = await api.get<{ data: SiteDto & { project: { code: string; name: string } } }>(
@@ -27,11 +29,11 @@ export function SiteHomePage() {
     },
   });
 
-  const { data: requests, isLoading: requestsLoading } = useQuery({
+  const { data: requests, list: requestsList } = useListQuery({
     queryKey: ['material-requests'],
     queryFn: async () => {
       const res = await api.get<{ data: MaterialRequestDto[] }>('/material-requests');
-      return res.data.data;
+      return normalizeListData<MaterialRequestDto>(res.data.data);
     },
   });
 
@@ -39,7 +41,7 @@ export function SiteHomePage() {
     queryKey: ['notifications'],
     queryFn: async () => {
       const res = await api.get<{ data: NotificationDto[] }>('/notifications');
-      return res.data.data;
+      return res.data.data ?? [];
     },
   });
 
@@ -54,67 +56,50 @@ export function SiteHomePage() {
   const unread = notifications?.filter((n) => !n.isRead).length || 0;
   const recent = requests?.slice(0, 5) || [];
 
-  if (siteLoading || requestsLoading) return <DashboardSkeleton />;
-
   return (
     <div className="page-container">
-      <section className="mb-8 lg:mb-10">
-        <div className="rounded-3xl border border-surface-border bg-white shadow-card overflow-hidden">
-          <div className="bg-gradient-to-br from-bekem-navy to-bekem-navy-light px-8 py-8 lg:py-10 text-white">
-            <p className="text-xs font-semibold uppercase tracking-widest text-white/50">
-              {getGreeting()}
-            </p>
-            <h1 className="text-2xl lg:text-3xl font-semibold mt-2 text-white">
-              {getFirstName(user.name)}
-            </h1>
-            {site && (
-              <div className="mt-4 pt-4 border-t border-white/10">
-                <p className="text-xs font-semibold uppercase tracking-widest text-white/45">
-                  Project
-                </p>
-                <p className="text-lg font-semibold mt-1">{site.project?.name}</p>
-                <p className="text-sm text-white/60 mt-0.5">
-                  {site.project?.code}
-                  {site.chainageLabel ? ` · ${site.chainageLabel}` : ''}
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="p-6 lg:p-8 space-y-4">
-            <ActionCard
-              title="Request material"
-              subtitle="Create a new indent for your site"
-              icon={Package}
-              tone="success"
-              featured
-              onClick={() => navigate('/request/new')}
-            />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <ActionCard
-                title="Pending requests"
-                subtitle={pendingTotal > 0 ? 'Awaiting store or approval' : 'Nothing in queue'}
-                count={pendingTotal}
-                icon={Clock}
-                tone="warning"
-                onClick={() => navigate('/requests?tab=pending')}
-              />
-              <ActionCard
-                title="Notifications"
-                subtitle={unread > 0 ? 'Unread updates' : 'All caught up'}
-                count={unread}
-                icon={Bell}
-                tone="info"
-                onClick={() => navigate('/notifications')}
-              />
-            </div>
-          </div>
-        </div>
-      </section>
+      <PageHeader
+        eyebrow={getGreeting()}
+        title={getFirstName(user.name)}
+        subtitle={
+          site
+            ? `${site.project?.name} · ${site.project?.code}${site.chainageLabel ? ` · ${site.chainageLabel}` : ''}`
+            : 'Site material requests and indents'
+        }
+      />
 
       <TodayPanel actions={today ?? []} loading={todayLoading} />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 lg:mb-10">
+      <section className="mb-6 lg:mb-8">
+        <ActionCard
+          title="Request material"
+          subtitle="Create a new indent for your site"
+          icon={Package}
+          tone="primary"
+          featured
+          onClick={() => navigate('/request/new')}
+        />
+        <div className="grid gap-4 sm:grid-cols-2 mt-4">
+          <ActionCard
+            title="Pending requests"
+            subtitle={pendingTotal > 0 ? 'Awaiting store or approval' : 'Nothing in queue'}
+            count={pendingTotal}
+            icon={Clock}
+            tone="warning"
+            onClick={() => navigate('/requests?tab=pending')}
+          />
+          <ActionCard
+            title="Notifications"
+            subtitle={unread > 0 ? 'Unread updates' : 'All caught up'}
+            count={unread}
+            icon={Bell}
+            tone="info"
+            onClick={() => navigate('/notifications')}
+          />
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 lg:mb-8">
         <ActionCard
           title="Waiting at store"
           count={pending}
@@ -149,30 +134,57 @@ export function SiteHomePage() {
           </button>
         </div>
 
-        {recent.length === 0 ? (
-          <EmptyState
-            celebrate
-            title="No pending requests"
-            description="Everything is completed. Create a new indent when you need materials."
-          />
-        ) : (
-          <div className="space-y-2">
-            {recent.map((r) => (
-              <div key={r.id} className="data-row" onClick={() => navigate(`/requests/${r.id}`)}>
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-ink truncate">{r.material?.name || 'Material'}</p>
-                  <p className="text-sm text-ink-secondary mt-0.5">
-                    {r.quantityRequested} {r.material?.unit} · {r.indentNumber}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <StatusBadge status={r.status} />
-                  <ChevronRight className="h-4 w-4 text-ink-muted" />
-                </div>
-              </div>
-            ))}
+        <ListQueryBoundary
+          isLoading={requestsList.isLoading}
+          isError={requestsList.isError}
+          onRetry={requestsList.onRetry}
+          retrying={requestsList.retrying}
+          isEmpty={recent.length === 0}
+          skeletonRows={4}
+          empty={
+            <EmptyState
+              celebrate
+              title="No pending requests"
+              description="Everything is completed. Create a new indent when you need materials."
+            />
+          }
+        >
+          <div className="table-shell">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Material</th>
+                  <th>Indent</th>
+                  <th>Status</th>
+                  <th className="w-10" />
+                </tr>
+              </thead>
+              <tbody>
+                {recent.map((r) => (
+                  <tr
+                    key={r.id}
+                    className="cursor-pointer"
+                    onClick={() => navigate(`/requests/${r.id}`)}
+                  >
+                    <td>
+                      <p className="font-semibold">{r.material?.name || 'Material'}</p>
+                      <p className="text-xs text-ink-secondary mt-0.5">
+                        {r.quantityRequested} {r.material?.unit}
+                      </p>
+                    </td>
+                    <td className="text-ink-secondary">{r.indentNumber}</td>
+                    <td>
+                      <StatusBadge status={r.status} />
+                    </td>
+                    <td className="text-right">
+                      <ChevronRight className="h-4 w-4 text-ink-muted inline-block" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        )}
+        </ListQueryBoundary>
       </section>
     </div>
   );

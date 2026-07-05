@@ -21,6 +21,7 @@ export function getNotificationPath(
 
   if (n.relatedEntityType === 'PurchaseOrder') {
     if (role === UserRole.EXECUTIVE) return `/purchase-orders/${n.relatedEntityId}`;
+    if (role === UserRole.PROJECT_MANAGER) return `/pm/po/${n.relatedEntityId}`;
     if (role === UserRole.COORDINATOR) return `/coordinator/po/${n.relatedEntityId}`;
     if (role === UserRole.CHAIRMAN) return `/chairman/po/${n.relatedEntityId}`;
     return null;

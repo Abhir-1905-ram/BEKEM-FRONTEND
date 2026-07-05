@@ -13,6 +13,9 @@ import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { StatusTimeline } from '@/components/StatusTimeline';
 import { Textarea } from '@/components/ui/Input';
+import { StockComparisonTable } from '@/components/StockComparisonTable';
+import { PmDailyCapBanner } from '@/components/PmDailyCapBanner';
+import { useApprovalShortcuts } from '@/hooks/useApprovalShortcuts';
 
 export function RequestDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -37,13 +40,35 @@ export function RequestDetailPage() {
   useRedirectOnForbidden(error);
 
   const approve = useMutation({
-    mutationFn: () => api.post(`/material-requests/${id}/approve`),
-    onSuccess: () => {
-      toast.success('Approved — purchase request created for executive');
+    mutationFn: async () => {
+      const res = await api.post<{
+        escalated?: boolean;
+        dailyApprovedTotal?: number;
+        message?: string;
+      }>(`/material-requests/${id}/approve`);
+      return res.data;
+    },
+    onSuccess: (data) => {
+      if (data.escalated) {
+        toast.warning(data.message || 'Escalated to Head Office — daily cap exceeded');
+      } else {
+        toast.success('Approved — purchase request created for executive');
+      }
       queryClient.invalidateQueries({ queryKey: ['material-request', id] });
       queryClient.invalidateQueries({ queryKey: ['pm-approvals'] });
+      queryClient.invalidateQueries({ queryKey: ['pm-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['pm-daily-cap'] });
     },
-    onError: () => toast.error('Approval failed'),
+    onError: (err: Error & { response?: { data?: { message?: string; escalated?: boolean } } }) => {
+      const msg = err.response?.data?.message;
+      if (err.response?.data?.escalated) {
+        toast.warning(msg || 'Escalated to Head Office');
+        queryClient.invalidateQueries({ queryKey: ['material-request', id] });
+        queryClient.invalidateQueries({ queryKey: ['pm-daily-cap'] });
+      } else {
+        toast.error(msg || 'Approval failed');
+      }
+    },
   });
 
   const reject = useMutation({
@@ -66,6 +91,35 @@ export function RequestDetailPage() {
     },
   });
 
+  useApprovalShortcuts({
+    enabled: !!request && !isLoading && !showReject,
+    onApprove: () => {
+      if (!request) return;
+      if (
+        role === UserRole.PROJECT_MANAGER &&
+        request.status === 'FORWARDED_TO_PM' &&
+        !request.escalatedToHo
+      ) {
+        approve.mutate();
+      } else if (
+        [UserRole.EXECUTIVE, UserRole.COORDINATOR].includes(role) &&
+        request.status === 'PENDING_HO'
+      ) {
+        approve.mutate();
+      }
+    },
+    onReject: () => {
+      if (!request) return;
+      if (
+        role === UserRole.PROJECT_MANAGER &&
+        request.status === 'FORWARDED_TO_PM' &&
+        !request.escalatedToHo
+      ) {
+        setShowReject(true);
+      }
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="px-4 pt-6 space-y-4">
@@ -81,12 +135,27 @@ export function RequestDetailPage() {
 
   if (!request) return null;
 
-  const canPmApprove = role === UserRole.PROJECT_MANAGER && request.status === 'FORWARDED_TO_PM';
-  const canConfirmReceipt =
-    role === UserRole.SITE_INCHARGE && request.status === 'ISSUED';
+  const items = request.items?.length
+    ? request.items
+    : request.materialId
+      ? [
+          {
+            id: request.id,
+            materialId: request.materialId,
+            quantityRequested: request.quantityRequested || 0,
+            material: request.material,
+          },
+        ]
+      : [];
+
+  const canPmApprove =
+    role === UserRole.PROJECT_MANAGER && request.status === 'FORWARDED_TO_PM' && !request.escalatedToHo;
+  const canHoApprove =
+    [UserRole.EXECUTIVE, UserRole.COORDINATOR].includes(role) && request.status === 'PENDING_HO';
+  const canConfirmReceipt = role === UserRole.SITE_INCHARGE && request.status === 'ISSUED';
 
   return (
-    <div className="px-4 pt-4 pb-6">
+    <div className="px-4 pt-4 pb-6 max-w-3xl mx-auto">
       <header className="flex items-center gap-3 mb-6">
         <button
           onClick={() => navigate(-1)}
@@ -114,6 +183,15 @@ export function RequestDetailPage() {
         </div>
       </header>
 
+      {(canPmApprove) && <PmDailyCapBanner />}
+
+      {request.escalatedToHo && (
+        <div className="mb-4 rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-sm">
+          This indent was escalated to Head Office — it exceeds the PM&apos;s ₹5,000 daily approval
+          limit.
+        </div>
+      )}
+
       <Card className="space-y-3 mb-6">
         {request.project && (
           <div>
@@ -123,37 +201,6 @@ export function RequestDetailPage() {
             </p>
           </div>
         )}
-        <div>
-          <p className="text-xs text-gray-500">Material</p>
-          <p className="font-medium">{request.material?.name}</p>
-        </div>
-        <div>
-          <p className="text-xs text-gray-500">Quantity</p>
-          <p className="font-medium">
-            {request.quantityRequested} {request.material?.unit || request.items?.[0]?.unit}
-          </p>
-        </div>
-        {request.items && request.items.length > 1 && (
-          <div>
-            <p className="text-xs text-gray-500 mb-1">Line items</p>
-            <ul className="space-y-1">
-              {request.items.map((item) => (
-                <li key={item.id} className="text-sm">
-                  {item.material?.name || 'Material'} — {item.quantityRequested}{' '}
-                  {item.unit || item.material?.unit}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        <div>
-          <p className="text-xs text-gray-500">Required by</p>
-          <p className="font-medium">{formatDate(request.requiredByDate)}</p>
-        </div>
-        <div>
-          <p className="text-xs text-gray-500">Purpose</p>
-          <p className="font-medium">{request.purpose}</p>
-        </div>
         {request.requester?.name && (
           <div>
             <p className="text-xs text-gray-500">Requested by</p>
@@ -169,14 +216,35 @@ export function RequestDetailPage() {
             </p>
           </div>
         )}
+        {request.estimatedValue != null && request.estimatedValue > 0 && (
+          <div>
+            <p className="text-xs text-gray-500">Estimated value</p>
+            <p className="font-medium">₹{request.estimatedValue.toLocaleString('en-IN')}</p>
+          </div>
+        )}
+        {request.purpose && (
+          <div>
+            <p className="text-xs text-gray-500">Purpose</p>
+            <p className="font-medium">{request.purpose}</p>
+          </div>
+        )}
+        {request.requiredByDate && (
+          <div>
+            <p className="text-xs text-gray-500">Required by</p>
+            <p className="font-medium">{formatDate(request.requiredByDate)}</p>
+          </div>
+        )}
       </Card>
+
+      <h2 className="font-semibold text-gray-900 mb-3">Stock comparison</h2>
+      <StockComparisonTable items={items} className="mb-6" />
 
       {canPmApprove && (
         <div className="mb-6 space-y-3 panel p-4">
           <p className="text-sm font-semibold text-ink">PM decision</p>
           <p className="text-xs text-ink-secondary">
-            Review the indent details above, then approve (sends purchase request to executive) or
-            reject with a reason.
+            Review stock levels above, then approve (sends purchase request to executive) or reject
+            with a reason.
           </p>
           {showReject ? (
             <div className="space-y-2">
@@ -213,6 +281,23 @@ export function RequestDetailPage() {
               </Button>
             </div>
           )}
+        </div>
+      )}
+
+      {canHoApprove && (
+        <div className="mb-6 space-y-3 panel p-4">
+          <p className="text-sm font-semibold text-ink">Head Office decision</p>
+          <p className="text-xs text-ink-secondary">
+            This indent exceeded the PM daily approval cap. Approve to create a purchase request.
+          </p>
+          <Button
+            variant="accent"
+            accentColor={ROLE_COLORS[UserRole.EXECUTIVE].primary}
+            disabled={approve.isPending}
+            onClick={() => approve.mutate()}
+          >
+            Approve (Head Office)
+          </Button>
         </div>
       )}
 

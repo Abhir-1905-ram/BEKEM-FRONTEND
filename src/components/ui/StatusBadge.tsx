@@ -1,88 +1,111 @@
 import { cn } from '@/lib/utils';
 
-const STATUS_DOT: Record<string, string> = {
-  PENDING_STORE: 'bg-warning',
-  ALLOCATED: 'bg-bekem-accent',
-  FORWARDED_TO_PM: 'bg-bekem-accent',
-  PM_APPROVED: 'bg-success',
-  PURCHASE_REQUESTED: 'bg-bekem-accent',
-  PO_CREATED: 'bg-bekem-accent',
-  CHAIRMAN_APPROVED: 'bg-success',
-  APPROVED: 'bg-success',
-  REJECTED: 'bg-danger',
-  CANCELLED: 'bg-ink-muted',
-  PENDING_REVIEW: 'bg-warning',
-  PENDING_APPROVAL: 'bg-warning',
-  COORDINATOR_PENDING: 'bg-warning',
-  PM_PENDING: 'bg-warning',
-  CHAIRMAN_PENDING: 'bg-warning',
-  PENDING_ACCEPTANCE: 'bg-warning',
-  ACCEPTED: 'bg-success',
-  IN_PROGRESS: 'bg-bekem-accent',
-  MATERIAL_RECEIVED: 'bg-success',
-  ISSUED: 'bg-bekem-accent',
-  COMPLETED: 'bg-success',
-  CLOSED: 'bg-success',
-  RUNNING: 'bg-bekem-accent',
-  COMPLETED_MILESTONE: 'bg-success',
-  PENDING: 'bg-warning',
-  PENDING_PM: 'bg-warning',
-  PM_VERIFIED: 'bg-success',
-  OPEN: 'bg-danger',
-  IN_REVIEW: 'bg-warning',
-  RESOLVED: 'bg-success',
-  ACTIVE: 'bg-success',
-  ON_HOLD: 'bg-warning',
-  PENDING_DESTINATION_PM: 'bg-warning',
-  PENDING_SOURCE_FINAL: 'bg-warning',
-  DISPATCHED: 'bg-bekem-accent',
-  RECEIVED: 'bg-success',
-  REQUESTED: 'bg-warning',
-};
+/** Enterprise semantic chips: Pending=Orange, Approved=Green, Rejected=Red, Review=Blue */
+const PENDING = 'bg-warning-light text-warning-dark border-warning/25';
+const APPROVED = 'bg-success-light text-success-dark border-success/25';
+const REJECTED = 'bg-danger-light text-danger-dark border-danger/25';
+const REVIEW = 'bg-review-light text-review-dark border-review/25';
+const NEUTRAL = 'bg-surface-muted text-ink-secondary border-surface-border';
+
+const PENDING_DOT = 'bg-warning';
+const APPROVED_DOT = 'bg-success';
+const REJECTED_DOT = 'bg-danger';
+const REVIEW_DOT = 'bg-review';
+const NEUTRAL_DOT = 'bg-ink-muted';
 
 const STATUS_STYLES: Record<string, string> = {
-  PENDING_STORE: 'bg-warning-light text-warning-dark border-warning/20',
-  ALLOCATED: 'bg-bekem-accent-soft text-bekem-accent border-bekem-accent/15',
-  FORWARDED_TO_PM: 'bg-bekem-accent-soft text-bekem-accent border-bekem-accent/15',
-  PM_APPROVED: 'bg-success-light text-success-dark border-success/20',
-  PURCHASE_REQUESTED: 'bg-bekem-accent-soft text-bekem-accent border-bekem-accent/15',
-  PO_CREATED: 'bg-bekem-accent-soft text-bekem-accent border-bekem-accent/15',
-  CHAIRMAN_APPROVED: 'bg-success-light text-success-dark border-success/20',
-  COORDINATOR_PENDING: 'bg-warning-light text-warning-dark border-warning/20',
-  PM_PENDING: 'bg-warning-light text-warning-dark border-warning/20',
-  CHAIRMAN_PENDING: 'bg-warning-light text-warning-dark border-warning/20',
-  PENDING_REVIEW: 'bg-warning-light text-warning-dark border-warning/20',
-  PENDING_APPROVAL: 'bg-warning-light text-warning-dark border-warning/20',
-  APPROVED: 'bg-success-light text-success-dark border-success/20',
-  REJECTED: 'bg-danger-light text-danger-dark border-danger/20',
-  CANCELLED: 'bg-slate-50 text-slate-500 border-slate-200',
-  PENDING_ACCEPTANCE: 'bg-warning-light text-warning-dark border-warning/20',
-  ACCEPTED: 'bg-success-light text-success-dark border-success/20',
-  IN_PROGRESS: 'bg-bekem-accent-soft text-bekem-accent border-bekem-accent/15',
-  CLOSED: 'bg-success-light text-success-dark border-success/20',
-  RUNNING: 'bg-bekem-accent-soft text-bekem-accent border-bekem-accent/15',
-  COMPLETED: 'bg-success-light text-success-dark border-success/20',
-  PENDING: 'bg-warning-light text-warning-dark border-warning/20',
-  PENDING_PM: 'bg-warning-light text-warning-dark border-warning/20',
-  PM_VERIFIED: 'bg-success-light text-success-dark border-success/20',
-  MATERIAL_RECEIVED: 'bg-success-light text-success-dark border-success/20',
-  ISSUED: 'bg-bekem-accent-soft text-bekem-accent border-bekem-accent/15',
-  ACTIVE: 'bg-success-light text-success-dark border-success/20',
-  ON_HOLD: 'bg-warning-light text-warning-dark border-warning/20',
-  OPEN: 'bg-danger-light text-danger-dark border-danger/20',
-  IN_REVIEW: 'bg-warning-light text-warning-dark border-warning/20',
-  RESOLVED: 'bg-success-light text-success-dark border-success/20',
-  PENDING_DESTINATION_PM: 'bg-warning-light text-warning-dark border-warning/20',
-  PENDING_SOURCE_FINAL: 'bg-amber-50 text-amber-800 border-amber-200',
-  DISPATCHED: 'bg-bekem-accent-soft text-bekem-accent border-bekem-accent/15',
-  RECEIVED: 'bg-success-light text-success-dark border-success/20',
-  REQUESTED: 'bg-warning-light text-warning-dark border-warning/20',
+  PENDING_STORE: PENDING,
+  PENDING_HO: PENDING,
+  PENDING_REVIEW: REVIEW,
+  PENDING_APPROVAL: PENDING,
+  PENDING_ACCEPTANCE: PENDING,
+  PENDING: PENDING,
+  PENDING_PM: PENDING,
+  PENDING_DESTINATION_PM: PENDING,
+  PENDING_SOURCE_FINAL: PENDING,
+  REQUESTED: PENDING,
+  ON_HOLD: PENDING,
+  OPEN: PENDING,
+  RAISE_PO_INSTEAD: PENDING,
+  COORDINATOR_PENDING: REVIEW,
+  PM_PENDING: PENDING,
+  CHAIRMAN_PENDING: PENDING,
+  EXECUTIVE_PENDING: REVIEW,
+  IN_REVIEW: REVIEW,
+  ALLOCATED: REVIEW,
+  FORWARDED_TO_PM: REVIEW,
+  PURCHASE_REQUESTED: REVIEW,
+  PO_CREATED: REVIEW,
+  IN_PROGRESS: REVIEW,
+  RUNNING: REVIEW,
+  ISSUED: REVIEW,
+  DISPATCHED: REVIEW,
+  COORDINATOR_DECIDED: REVIEW,
+  PM_APPROVED: APPROVED,
+  CHAIRMAN_APPROVED: APPROVED,
+  APPROVED: APPROVED,
+  ACCEPTED: APPROVED,
+  PM_VERIFIED: APPROVED,
+  MATERIAL_RECEIVED: APPROVED,
+  COMPLETED: APPROVED,
+  CLOSED: APPROVED,
+  RECEIVED: APPROVED,
+  TRANSFERRED: APPROVED,
+  ACTIVE: APPROVED,
+  RESOLVED: APPROVED,
+  REJECTED: REJECTED,
+  CANCELLED: REJECTED,
+};
+
+const STATUS_DOT: Record<string, string> = {
+  PENDING_STORE: PENDING_DOT,
+  PENDING_HO: PENDING_DOT,
+  PENDING_REVIEW: REVIEW_DOT,
+  PENDING_APPROVAL: PENDING_DOT,
+  PENDING_ACCEPTANCE: PENDING_DOT,
+  PENDING: PENDING_DOT,
+  PENDING_PM: PENDING_DOT,
+  PENDING_DESTINATION_PM: PENDING_DOT,
+  PENDING_SOURCE_FINAL: PENDING_DOT,
+  REQUESTED: PENDING_DOT,
+  ON_HOLD: PENDING_DOT,
+  OPEN: PENDING_DOT,
+  RAISE_PO_INSTEAD: PENDING_DOT,
+  COORDINATOR_PENDING: REVIEW_DOT,
+  PM_PENDING: PENDING_DOT,
+  CHAIRMAN_PENDING: PENDING_DOT,
+  EXECUTIVE_PENDING: REVIEW_DOT,
+  IN_REVIEW: REVIEW_DOT,
+  ALLOCATED: REVIEW_DOT,
+  FORWARDED_TO_PM: REVIEW_DOT,
+  PURCHASE_REQUESTED: REVIEW_DOT,
+  PO_CREATED: REVIEW_DOT,
+  IN_PROGRESS: REVIEW_DOT,
+  RUNNING: REVIEW_DOT,
+  ISSUED: REVIEW_DOT,
+  DISPATCHED: REVIEW_DOT,
+  COORDINATOR_DECIDED: REVIEW_DOT,
+  PM_APPROVED: APPROVED_DOT,
+  CHAIRMAN_APPROVED: APPROVED_DOT,
+  APPROVED: APPROVED_DOT,
+  ACCEPTED: APPROVED_DOT,
+  PM_VERIFIED: APPROVED_DOT,
+  MATERIAL_RECEIVED: APPROVED_DOT,
+  COMPLETED: APPROVED_DOT,
+  CLOSED: APPROVED_DOT,
+  RECEIVED: APPROVED_DOT,
+  TRANSFERRED: APPROVED_DOT,
+  ACTIVE: APPROVED_DOT,
+  RESOLVED: APPROVED_DOT,
+  REJECTED: REJECTED_DOT,
+  CANCELLED: REJECTED_DOT,
 };
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING_STORE: 'Pending',
   ALLOCATED: 'Store accepted',
   FORWARDED_TO_PM: 'With PM',
+  PENDING_HO: 'Head Office',
   PM_APPROVED: 'Approved',
   PURCHASE_REQUESTED: 'Purchase request created',
   CHAIRMAN_APPROVED: 'Approved',
@@ -115,6 +138,11 @@ const STATUS_LABELS: Record<string, string> = {
   DISPATCHED: 'Dispatched',
   RECEIVED: 'Received',
   REQUESTED: 'Requested',
+  COORDINATOR_DECIDED: 'Ready to transfer',
+  TRANSFERRED: 'Transferred',
+  RAISE_PO_INSTEAD: 'Raise PO instead',
+  EXECUTIVE_PENDING: 'Executive review',
+  PM_PENDING: 'PM approval',
 };
 
 interface StatusBadgeProps {
@@ -123,14 +151,14 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
-  const dot = STATUS_DOT[status] || 'bg-ink-muted';
+  const dot = STATUS_DOT[status] || NEUTRAL_DOT;
   const label = STATUS_LABELS[status] || status.replace(/_/g, ' ');
 
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold border',
-        STATUS_STYLES[status] || 'bg-slate-50 text-slate-700 border-slate-200',
+        'enterprise-chip',
+        STATUS_STYLES[status] || NEUTRAL,
         className
       )}
     >

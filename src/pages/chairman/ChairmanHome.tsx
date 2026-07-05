@@ -2,14 +2,16 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, Download, Users, ClipboardCheck, Package, HardHat } from 'lucide-react';
-import { getGreeting, formatCurrency } from '@afios/shared';
+import { getGreeting, formatCurrency, formatUnitCount } from '@afios/shared';
 import type { ChairmanKpiDto } from '@afios/shared';
 import { api } from '@/lib/api';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { StatCard } from '@/components/ui/StatCard';
 import { DashboardSkeleton } from '@/components/ui/DashboardSkeleton';
+import { PaginationBar } from '@/components/ui/PaginationBar';
 import { TodayPanel } from '@/components/layout/TodayPanel';
 import { useTodayActions } from '@/hooks/useTodayActions';
+import { ListErrorState } from '@/components/ListErrorState';
 import { Button } from '@/components/ui/Button';
 import { downloadExport } from '@/lib/downloadExport';
 import { toast } from 'sonner';
@@ -28,6 +30,8 @@ export function ChairmanHomePage() {
   const navigate = useNavigate();
   const { data: today, isLoading: todayLoading } = useTodayActions();
   const [exportingBudget, setExportingBudget] = useState(false);
+  const [projectPage, setProjectPage] = useState(1);
+  const [supplierPage, setSupplierPage] = useState(1);
 
   const exportBudgetPdf = async () => {
     setExportingBudget(true);
@@ -41,10 +45,23 @@ export function ChairmanHomePage() {
     }
   };
 
-  const { data: kpis, isLoading: kpisLoading } = useQuery({
-    queryKey: ['chairman-kpis'],
+  const { data: kpis, isLoading: kpisLoading, isError: kpisError, refetch: refetchKpis, isFetching: kpisFetching } = useQuery({
+    queryKey: ['chairman-kpis', projectPage],
     queryFn: async () => {
-      const res = await api.get<{ data: ChairmanKpiDto }>('/dashboard/chairman-kpis');
+      const res = await api.get<{ data: ChairmanKpiDto }>('/dashboard/chairman-kpis', {
+        params: { page: projectPage, limit: 15 },
+      });
+      return res.data.data;
+    },
+  });
+
+  const { data: chairmanExtras } = useQuery({
+    queryKey: ['chairman-dashboard-extras', supplierPage],
+    queryFn: async () => {
+      const res = await api.get<{ data: ChairmanKpiDto & import('@afios/shared').ChairmanDashboardExtrasDto }>(
+        '/dashboard/chairman',
+        { params: { page: supplierPage, limit: 8 } }
+      );
       return res.data.data;
     },
   });
@@ -60,6 +77,13 @@ export function ChairmanHomePage() {
   });
 
   if (kpisLoading) return <DashboardSkeleton />;
+  if (kpisError) {
+    return (
+      <div className="page-container">
+        <ListErrorState onRetry={() => refetchKpis()} retrying={kpisFetching} />
+      </div>
+    );
+  }
 
   const pipeline = kpis?.poPipeline;
   const maxPipe = Math.max(
@@ -81,9 +105,9 @@ export function ChairmanHomePage() {
       <TodayPanel actions={today ?? []} loading={todayLoading} />
 
       {kpis?.approvalRules && (
-        <div className="mb-6 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950">
-          <p className="font-semibold">PO approval rules</p>
-          <p className="mt-1 text-sky-900/90">{kpis.approvalRules.note}</p>
+        <div className="mb-6 rounded-lg border border-review/20 bg-review-light px-4 py-3 text-sm text-ink">
+          <p className="font-semibold text-bekem-accent">PO approval rules</p>
+          <p className="mt-1 text-ink-secondary">{kpis.approvalRules.note}</p>
         </div>
       )}
 
@@ -94,7 +118,12 @@ export function ChairmanHomePage() {
           value={kpis?.projectsRunning ?? 0}
           tone="blue"
           sparkline={kpis?.sparklines.budget}
-          trend={{ label: `${kpis?.budgetDeployPct ?? 0}% budget deployed` }}
+          trend={{
+            label:
+              (kpis?.budgetCap ?? 0) > 0
+                ? `${kpis?.budgetDeployPct ?? 0}% budget deployed`
+                : 'No budget cap configured',
+          }}
         />
         <StatCard
           hero
@@ -112,7 +141,7 @@ export function ChairmanHomePage() {
           hero
           label="WO approvals"
           value={kpis?.woPipeline?.chairmanPending ?? 0}
-          tone="violet"
+          tone="blue"
           icon={<HardHat className="h-6 w-6" />}
           trend={{ label: 'Work orders pending you' }}
           onClick={() => navigate('/chairman/approve-wos')}
@@ -161,7 +190,7 @@ export function ChairmanHomePage() {
           hero
           label="Stock inventory"
           value="Full access"
-          tone="violet"
+          tone="blue"
           icon={<Package className="h-6 w-6" />}
           trend={{ label: 'All fields + late delivery reasons' }}
           onClick={() => navigate('/store/stock')}
@@ -170,7 +199,7 @@ export function ChairmanHomePage() {
           hero
           label="Team overview"
           value="Analytics"
-          tone="violet"
+          tone="blue"
           icon={<Users className="h-6 w-6" />}
           trend={{ label: 'User activity, indents & assignments' }}
           onClick={() => navigate('/chairman/user-analytics')}
@@ -219,10 +248,8 @@ export function ChairmanHomePage() {
                 </tr>
               </thead>
               <tbody>
-                {[...kpis.projectBreakdown]
-                  .sort((a, b) => a.code.localeCompare(b.code))
-                  .map((row) => (
-                    <tr key={row.projectId}>
+                {kpis.projectBreakdown.map((row) => (
+                  <tr key={row.projectId}>
                       <td className="font-medium">
                         {row.code}
                         <span className="block text-xs text-ink-muted font-normal mt-0.5">
@@ -271,6 +298,13 @@ export function ChairmanHomePage() {
               </tbody>
             </table>
           </div>
+          {kpis.projectPagination && (
+            <PaginationBar
+              pagination={kpis.projectPagination}
+              onPageChange={setProjectPage}
+              className="mt-4"
+            />
+          )}
         </section>
       )}
 
@@ -319,6 +353,92 @@ export function ChairmanHomePage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </section>
+      )}
+
+      {chairmanExtras?.enterpriseSummary && (
+        <section className="mb-8 lg:mb-10 panel p-5">
+          <h2 className="section-label mb-4">Enterprise summary</h2>
+          <div className="grid sm:grid-cols-3 gap-4">
+            <div>
+              <p className="text-xs text-ink-muted uppercase tracking-wide">Total approved spend</p>
+              <p className="text-2xl font-bold mt-1">
+                {formatCurrency(chairmanExtras.enterpriseSummary.totalSpend)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-ink-muted uppercase tracking-wide">Open POs (receipt pending)</p>
+              <p className="text-2xl font-bold mt-1">{chairmanExtras.enterpriseSummary.openPoCount}</p>
+            </div>
+            <div>
+              <p className="text-xs text-ink-muted uppercase tracking-wide">Budget deployed</p>
+              <p className="text-2xl font-bold mt-1">
+                {formatCurrency(chairmanExtras.enterpriseSummary.budgetDeployed)}
+              </p>
+              <p className="text-xs text-ink-muted mt-1">
+                {chairmanExtras.enterpriseSummary.budgetCap > 0 ? (
+                  <>
+                    {chairmanExtras.enterpriseSummary.deployPct ?? 0}% of{' '}
+                    {formatCurrency(chairmanExtras.enterpriseSummary.budgetCap)} cap
+                  </>
+                ) : (
+                  'No budget cap configured'
+                )}
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {chairmanExtras?.suppliers && (
+        <section className="mb-8 lg:mb-10 panel p-5">
+          <h2 className="section-label mb-4">Suppliers ({chairmanExtras.suppliers.totalCount})</h2>
+          <div className="space-y-2">
+            {chairmanExtras.suppliers.topVendors?.map((v) => (
+              <div key={v.id} className="flex justify-between text-sm border-b border-surface-border pb-2 last:border-0">
+                <span className="font-medium">
+                  {v.name}
+                  {v.isMsme && (
+                    <span className="ml-2 text-[10px] uppercase text-teal-700 font-bold">MSME</span>
+                  )}
+                </span>
+                <span className="text-ink-muted tabular-nums">{v.poCount} POs</span>
+              </div>
+            ))}
+          </div>
+          {chairmanExtras.suppliers.pagination && (
+            <PaginationBar
+              pagination={chairmanExtras.suppliers.pagination}
+              onPageChange={setSupplierPage}
+              className="mt-4"
+            />
+          )}
+        </section>
+      )}
+
+      {chairmanExtras?.stock && (
+        <section className="mb-8 lg:mb-10 panel p-5">
+          <h2 className="section-label mb-4">Stock health</h2>
+          <div className="grid sm:grid-cols-4 gap-4 text-sm">
+            <div>
+              <p className="text-ink-muted">Status</p>
+              <p className="font-bold text-lg">{chairmanExtras.stock.healthLabel}</p>
+            </div>
+            <div>
+              <p className="text-ink-muted">Shortages</p>
+              <p className={cn('font-bold text-lg', chairmanExtras.stock.shortages > 0 && 'text-red-600')}>
+                {chairmanExtras.stock.shortages}
+              </p>
+            </div>
+            <div>
+              <p className="text-ink-muted">SKUs</p>
+              <p className="font-bold text-lg">{chairmanExtras.stock.skuCount}</p>
+            </div>
+            <div>
+              <p className="text-ink-muted">On hand (units)</p>
+              <p className="font-bold text-lg tabular-nums">{formatUnitCount(chairmanExtras.stock.totalOnHand)}</p>
+            </div>
           </div>
         </section>
       )}

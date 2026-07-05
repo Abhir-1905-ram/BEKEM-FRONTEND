@@ -31,7 +31,7 @@ export function Modal({ open, onClose, title, subtitle, children, className }: M
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
-        className="absolute inset-0 bg-ink/40 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-ink/30"
         onClick={onClose}
         aria-label="Close dialog"
       />
@@ -40,8 +40,7 @@ export function Modal({ open, onClose, title, subtitle, children, className }: M
         aria-modal="true"
         aria-labelledby="modal-title"
         className={cn(
-          'relative w-full max-w-lg rounded-2xl border border-surface-border bg-white shadow-2xl',
-          'animate-in fade-in zoom-in-95 duration-200',
+          'relative w-full max-w-lg rounded-lg border border-surface-border bg-white animate-slide-up',
           className
         )}
       >

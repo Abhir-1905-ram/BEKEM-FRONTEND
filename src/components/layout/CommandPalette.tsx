@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, FileText, Package, Building2, Users, X, HardHat } from 'lucide-react';
+import { Search, FileText, Package, Building2, Users, X, HardHat, Truck, ArrowLeftRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import type { GlobalSearchDto } from '@afios/shared';
@@ -9,13 +9,15 @@ import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
 import { getRoleNavShortcuts, type NavShortcut } from '@/lib/roleNav';
 
-const ICONS = {
+const ICONS: Record<keyof GlobalSearchDto, typeof FileText> = {
   materials: Package,
   requests: FileText,
   orders: FileText,
   workOrders: HardHat,
   vendors: Users,
   projects: Building2,
+  grns: Truck,
+  branchTransfers: ArrowLeftRight,
 };
 
 interface CommandPaletteProps {
@@ -67,9 +69,9 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
       key={item.id}
       type="button"
       onClick={() => go(item.href)}
-      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-muted text-left transition-colors"
+      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-bekem-accent-soft/50 text-left transition-colors duration-200"
     >
-      <item.icon className="h-4 w-4 text-ink-muted shrink-0" />
+      <item.icon className="h-4 w-4 text-bekem-accent shrink-0" />
       <div className="min-w-0">
         <p className="text-sm font-medium text-ink truncate">{item.label}</p>
         {item.sublabel && (
@@ -88,14 +90,14 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center pt-[12vh] px-4 bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-start justify-center pt-[10vh] px-4 bg-ink/25 animate-fade-in"
       role="dialog"
       aria-modal="true"
       aria-label="Global search"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-xl rounded-2xl bg-white shadow-2xl border border-surface-border overflow-hidden"
+        className="w-full max-w-xl rounded-lg bg-white border border-surface-border overflow-hidden animate-slide-down"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 px-4 border-b border-surface-border">
@@ -105,7 +107,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search requests, POs, materials, vendors…"
-            className="flex-1 h-14 bg-transparent text-sm outline-none placeholder:text-ink-muted"
+            className="flex-1 h-12 bg-transparent text-sm outline-none placeholder:text-ink-muted"
             aria-label="Search query"
           />
           <button
@@ -150,9 +152,9 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
                     key={item.id}
                     type="button"
                     onClick={() => go(item.href)}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-muted text-left transition-colors"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-bekem-accent-soft/50 text-left transition-colors duration-200"
                   >
-                    <Icon className="h-4 w-4 text-ink-muted shrink-0" />
+                    <Icon className="h-4 w-4 text-bekem-accent shrink-0" />
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-ink truncate">{item.label}</p>
                       <p className="text-xs text-ink-muted truncate">{item.sublabel}</p>
@@ -164,7 +166,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
           })}
         </div>
 
-        <div className="px-4 py-2 border-t border-surface-border bg-surface-muted/50 text-[10px] text-ink-muted flex justify-between">
+        <div className="px-4 py-2 border-t border-surface-border bg-surface-muted/40 text-[10px] text-ink-muted flex justify-between">
           <span>Global search across Bekem OS</span>
           <kbd className="font-mono">Esc</kbd>
         </div>
@@ -173,20 +175,21 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
   );
 }
 
-export function SearchTrigger({ onClick }: { onClick: () => void }) {
+export function SearchTrigger({ onClick, className }: { onClick: () => void; className?: string }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        'hidden lg:flex items-center gap-2 h-9 px-3 rounded-lg border border-surface-border',
-        'bg-surface-muted/50 text-sm text-ink-muted hover:text-ink hover:bg-surface-muted transition-colors'
+        'flex items-center gap-2 h-9 px-3 rounded-lg border border-surface-border',
+        'bg-white text-sm text-ink-muted hover:text-ink hover:border-bekem-accent/40 hover:bg-bekem-accent-soft/30 transition-colors duration-200',
+        className
       )}
       aria-label="Open search (Ctrl+K)"
     >
       <Search className="h-4 w-4" />
-      <span>Search…</span>
-      <kbd className="ml-4 text-[10px] font-mono bg-white border border-surface-border rounded px-1.5 py-0.5">
+      <span className="hidden xl:inline">Search…</span>
+      <kbd className="hidden xl:inline ml-2 text-[10px] font-mono bg-surface-muted border border-surface-border rounded px-1.5 py-0.5">
         ⌘K
       </kbd>
     </button>

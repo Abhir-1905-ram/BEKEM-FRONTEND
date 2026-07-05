@@ -41,7 +41,7 @@ export function MobileNav({ role, homePath, unread }: MobileNavProps) {
       )}
 
       {menuOpen && (
-        <div className="lg:hidden fixed bottom-[60px] left-0 right-0 z-[70] max-h-[55vh] overflow-y-auto sidebar-scroll bg-bekem-navy border-t border-white/10 rounded-t-2xl shadow-2xl safe-bottom">
+        <div className="lg:hidden fixed bottom-[60px] left-0 right-0 z-[70] max-h-[55vh] overflow-y-auto sidebar-scroll bg-surface-sidebar border-t border-white/10 rounded-t-xl safe-bottom animate-slide-up">
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
             <p className="text-xs font-bold uppercase tracking-widest text-white/50">Workspace</p>
             <button
@@ -81,7 +81,7 @@ export function MobileNav({ role, homePath, unread }: MobileNavProps) {
       )}
 
       <nav
-        className="lg:hidden fixed bottom-0 left-0 right-0 bg-bekem-navy safe-bottom z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.15)]"
+        className="lg:hidden fixed bottom-0 left-0 right-0 bg-surface-sidebar safe-bottom z-50 border-t border-white/10"
         aria-label="Mobile navigation"
       >
         <div className="flex justify-around items-center h-[60px] px-1">

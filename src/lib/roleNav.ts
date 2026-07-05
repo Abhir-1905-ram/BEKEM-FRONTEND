@@ -104,6 +104,8 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
 
         { id: 'grn', label: 'Material receipt (GRN)', href: '/store/grn', icon: Package },
 
+        { id: 'branch-transfers', label: 'Branch transfers', href: '/store/branch-transfers', icon: Truck },
+
         { id: 'issue', label: 'Issue to site', href: '/store/issue', icon: FilePlus },
 
         { id: 'stock', label: 'Stock Inventory', href: '/store/stock', icon: Package },
@@ -122,11 +124,13 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
 
         { id: 'po-approvals', label: 'Approve POs (under ₹5k)', href: '/pm/approve-pos', icon: ShoppingCart },
 
-        { id: 'incidents', label: 'Material indents', href: '/incidents', icon: FileText },
+        { id: 'incidents', label: 'Material indents', href: '/pm/material-indents', icon: FileText },
 
         { id: 'purchase-requests', label: 'Purchase requests', href: '/pm/purchase-requests', icon: FilePlus },
 
-        { id: 'branch-transfer', label: 'Branch transfers', href: '/pm/branch-transfers', icon: Truck },
+        { id: 'branch-transfer', label: 'Branch transfer approvals', href: '/pm/branch-transfer-approvals', icon: Truck },
+
+        { id: 'approve-wos', label: 'Approve work orders', href: '/pm/approve-wos', icon: HardHat },
 
       ];
 
@@ -136,11 +140,13 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
 
         ...common,
 
-        { id: 'incidents', label: 'Material indents', href: '/incidents', icon: FileText },
+        { id: 'incidents', label: 'Material indents', href: '/executive/material-indents', icon: FileText },
 
         { id: 'create-po', label: 'Create PO', href: '/executive/po/new', icon: ShoppingCart },
 
         { id: 'create-wo', label: 'Generate WO', href: '/executive/wo/new', icon: HardHat },
+
+        { id: 'review-wos', label: 'Review work orders', href: '/executive/review-wos', icon: HardHat },
 
         { id: 'vendors', label: 'Vendors', href: '/vendors', icon: Users },
 
@@ -164,13 +170,15 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
 
         { id: 'verify-wo', label: 'Approve WOs', href: '/coordinator/verify-wos', icon: HardHat },
 
+        { id: 'branch-transfers', label: 'Branch transfers', href: '/coordinator/branch-transfers', icon: Truck },
+
         { id: 'projects', label: 'Projects', href: '/admin/projects', icon: Building2 },
 
         { id: 'vendors', label: 'Vendors', href: '/admin/vendors', icon: Truck },
 
         { id: 'users', label: 'Manage users', href: '/admin/users', icon: Users },
 
-        { id: 'incidents', label: 'Material indents', href: '/incidents', icon: FileText },
+        { id: 'incidents', label: 'Material indents', href: '/coordinator/material-indents', icon: FileText },
 
         { id: 'add-material', label: 'Product catalog', href: '/materials/new', icon: Package },
 
@@ -189,6 +197,8 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
         ...common,
 
         { id: 'approvals', label: 'Approve POs', href: '/chairman/approve-pos', icon: CheckSquare },
+
+        { id: 'approve-wos', label: 'Approve work orders', href: '/chairman/approve-wos', icon: HardHat },
 
         { id: 'stock', label: 'Stock Inventory', href: '/store/stock', icon: Package },
 

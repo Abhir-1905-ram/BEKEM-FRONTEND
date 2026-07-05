@@ -1,23 +1,25 @@
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { MaterialRequestDto } from '@afios/shared';
 import { Card } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/EmptyState';
+import { ListQueryBoundary } from '@/components/ListQueryBoundary';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { PmDailyCapBanner } from '@/components/PmDailyCapBanner';
+import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 
 export function PMApprovalsPage() {
   const navigate = useNavigate();
 
-  const { data: requests, isLoading } = useQuery({
+  const { data: requests, list } = useListQuery({
     queryKey: ['pm-approvals'],
     queryFn: async () => {
       const res = await api.get<{ data: MaterialRequestDto[] }>('/material-requests', {
         params: { status: 'FORWARDED_TO_PM' },
       });
-      return res.data.data;
+      return normalizeListData<MaterialRequestDto>(res.data.data).filter((r) => !r.escalatedToHo);
     },
   });
 
@@ -38,17 +40,19 @@ export function PMApprovalsPage() {
         }
       />
 
-      {isLoading ? (
+      <PmDailyCapBanner />
+
+      <ListQueryBoundary
+        isLoading={list.isLoading}
+        isError={list.isError}
+        onRetry={list.onRetry}
+        retrying={list.retrying}
+        isEmpty={!requests?.length}
+        skeletonRows={3}
+        empty={<EmptyState title="No pending approvals" description="You're all caught up." />}
+      >
         <div className="space-y-2">
-          {[1, 2].map((i) => (
-            <div key={i} className="h-24 rounded-xl bg-gray-100 animate-pulse" />
-          ))}
-        </div>
-      ) : !requests?.length ? (
-        <EmptyState title="No pending approvals" description="You're all caught up." />
-      ) : (
-        <div className="space-y-2">
-          {requests.map((r) => (
+          {(requests ?? []).map((r) => (
             <button
               key={r.id}
               type="button"
@@ -83,7 +87,7 @@ export function PMApprovalsPage() {
             </button>
           ))}
         </div>
-      )}
+      </ListQueryBoundary>
     </div>
   );
 }

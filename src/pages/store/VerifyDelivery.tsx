@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { ROLE_COLORS, UserRole, formatDate, type PurchaseOrderDto, type PoLineItemDto } from '@afios/shared';
@@ -7,6 +7,8 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { EmptyState } from '@/components/EmptyState';
+import { ListQueryBoundary } from '@/components/ListQueryBoundary';
+import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 import { QuantityStepper } from '@/components/QuantityStepper';
 import { ArrowLeft } from 'lucide-react';
 
@@ -16,11 +18,11 @@ export function VerifyDeliveryPage() {
   const [receivedByLine, setReceivedByLine] = useState<Record<string, number>>({});
   const [remarks, setRemarks] = useState('');
 
-  const { data: orders, refetch } = useQuery({
+  const { data: orders, list, refetch } = useListQuery({
     queryKey: ['pending-delivery-verify'],
     queryFn: async () => {
       const res = await api.get<{ data: PurchaseOrderDto[] }>('/delivery-verifications/pending');
-      return res.data.data;
+      return normalizeListData<PurchaseOrderDto>(res.data.data);
     },
   });
 
@@ -132,14 +134,21 @@ export function VerifyDeliveryPage() {
         subtitle="Physical check at project store — does not update inventory"
       />
 
-      {!orders?.length ? (
-        <EmptyState
-          title="No deliveries to verify"
-          description="Approved POs awaiting vendor dispatch will appear here."
-        />
-      ) : (
+      <ListQueryBoundary
+        isLoading={list.isLoading}
+        isError={list.isError}
+        onRetry={list.onRetry}
+        retrying={list.retrying}
+        isEmpty={!orders?.length}
+        empty={
+          <EmptyState
+            title="No deliveries to verify"
+            description="Approved POs awaiting vendor dispatch will appear here."
+          />
+        }
+      >
         <div className="space-y-2">
-          {orders.map((po) => (
+          {(orders ?? []).map((po) => (
             <button
               key={po.id}
               type="button"
@@ -155,7 +164,7 @@ export function VerifyDeliveryPage() {
             </button>
           ))}
         </div>
-      )}
+      </ListQueryBoundary>
     </div>
   );
 }

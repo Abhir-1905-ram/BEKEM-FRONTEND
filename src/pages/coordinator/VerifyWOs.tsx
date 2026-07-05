@@ -4,7 +4,7 @@ export function CoordinatorVerifyWOsPage() {
   return (
     <WOQueuePage
       title="Approve work orders"
-      subtitle="Final approval for work orders"
+      subtitle="Verify work orders before chairman approval"
       queue="coordinator"
       detailPrefix="/coordinator"
       queryKey="wo-queue-coordinator"

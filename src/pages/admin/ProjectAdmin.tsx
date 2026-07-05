@@ -31,6 +31,8 @@ import { Input } from '@/components/ui/Input';
 import { ActionCard } from '@/components/ui/ActionCard';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Modal } from '@/components/ui/Modal';
+import { ListQueryBoundary } from '@/components/ListQueryBoundary';
+import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 import { cn } from '@/lib/utils';
 
 interface ProjectDetail {
@@ -71,11 +73,11 @@ export function ProjectAdminPage() {
   });
   const [assignUserId, setAssignUserId] = useState('');
 
-  const { data: projects } = useQuery({
+  const { data: projects, list: projectsList } = useListQuery({
     queryKey: ['projects'],
     queryFn: async () => {
       const res = await api.get<{ data: ProjectDto[] }>('/projects');
-      return res.data.data;
+      return normalizeListData<ProjectDto>(res.data.data);
     },
   });
 
@@ -87,7 +89,7 @@ export function ProjectAdminPage() {
     },
   });
 
-  const { data: detail, isLoading: detailLoading } = useQuery({
+  const { data: detail, isLoading: detailLoading, isError: detailError, refetch: refetchDetail, isFetching: detailFetching } = useQuery({
     queryKey: ['project-detail', selectedProjectId],
     queryFn: async () => {
       const res = await api.get<{ data: ProjectDetail }>(`/projects/${selectedProjectId}/detail`);
@@ -266,13 +268,15 @@ export function ProjectAdminPage() {
           ))}
         </div>
 
-        {detailLoading ? (
-          <div className="space-y-2">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-16 rounded-2xl bg-surface-muted animate-pulse" />
-            ))}
-          </div>
-        ) : detailTab === 'users' ? (
+        <ListQueryBoundary
+          isLoading={detailLoading}
+          isError={detailError}
+          onRetry={() => refetchDetail()}
+          retrying={detailFetching && !detailLoading}
+          skeletonRows={3}
+          empty={<></>}
+        >
+        {detailTab === 'users' ? (
           <div className="space-y-4">
             <div className="panel p-4 flex flex-col sm:flex-row gap-3 sm:items-end">
               <div className="flex-1">
@@ -424,6 +428,7 @@ export function ProjectAdminPage() {
             )}
           </div>
         )}
+        </ListQueryBoundary>
 
         <Modal
           open={showSiteModal}
@@ -549,8 +554,17 @@ export function ProjectAdminPage() {
 
       <section>
         <h2 className="section-label mb-4">Portfolio</h2>
+        <ListQueryBoundary
+          isLoading={projectsList.isLoading}
+          isError={projectsList.isError}
+          onRetry={projectsList.onRetry}
+          retrying={projectsList.retrying}
+          isEmpty={!projects?.length}
+          skeletonRows={4}
+          empty={<></>}
+        >
         <div className="space-y-2">
-          {projects?.map((p) => (
+          {(projects ?? []).map((p) => (
             <button
               key={p.id}
               type="button"
@@ -573,6 +587,7 @@ export function ProjectAdminPage() {
             </button>
           ))}
         </div>
+        </ListQueryBoundary>
       </section>
 
       <Modal

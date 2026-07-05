@@ -41,11 +41,11 @@ export function StatCard({
   hero,
 }: StatCardProps) {
   const Comp = onClick ? 'button' : 'div';
-  const iconBg = tone ? STAT_ICON_BG[tone] : 'bg-bekem-navy';
+  const iconBg = tone ? STAT_ICON_BG[tone] : 'bg-bekem-accent';
 
   if (loading) {
     return (
-      <div className={cn('panel p-6 lg:p-8 animate-pulse', hero && 'lg:p-10', className)}>
+      <div className={cn('panel p-6 animate-pulse', hero && 'lg:p-8', className)}>
         <div className="h-4 w-24 bg-surface-muted rounded mb-6" />
         <div className="h-12 w-32 bg-surface-muted rounded" />
       </div>
@@ -84,10 +84,10 @@ export function StatCard({
       type={onClick ? 'button' : undefined}
       onClick={onClick}
       className={cn(
-        'relative overflow-hidden rounded-3xl border border-surface-border bg-white text-left w-full group',
-        'shadow-card transition-all duration-200',
-        hero ? 'p-8 lg:p-10' : 'p-6 lg:p-7',
-        onClick && 'hover:shadow-card-hover hover:-translate-y-1 cursor-pointer',
+        'relative overflow-hidden rounded-lg border border-surface-border bg-white text-left w-full group',
+        'transition-colors duration-200',
+        hero ? 'p-6 lg:p-8' : 'p-6',
+        onClick && 'hover:border-bekem-accent/30 hover:bg-bekem-accent-soft/20 cursor-pointer',
         className
       )}
     >
@@ -114,9 +114,8 @@ export function StatCard({
           {icon && (
             <div
               className={cn(
-                'shrink-0 rounded-2xl flex items-center justify-center text-white shadow-sm',
-                'transition-transform group-hover:scale-105',
-                hero ? 'h-14 w-14' : 'h-12 w-12',
+                'shrink-0 rounded-lg flex items-center justify-center text-white',
+                hero ? 'h-12 w-12' : 'h-11 w-11',
                 iconBg
               )}
             >

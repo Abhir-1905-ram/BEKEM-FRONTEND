@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { Bell } from 'lucide-react';
+import { Bell, Search, Rows3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
 import { ROLE_LABELS, UserRole } from '@afios/shared';
@@ -12,6 +12,9 @@ import { AppSidebar } from '@/components/layout/AppSidebar';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { AccessDeniedToast } from '@/components/AccessDeniedToast';
 import { CommandPalette, SearchTrigger } from '@/components/layout/CommandPalette';
+import { BekemLogo } from '@/components/brand/BekemLogo';
+import { useTableDensity } from '@/hooks/useTableDensity';
+import { RouteErrorBoundary } from '@/components/RouteErrorBoundary';
 
 export function AppShell() {
   const user = useAuthStore((s) => s.user);
@@ -19,6 +22,7 @@ export function AppShell() {
   const role = user?.role as UserRole;
   const homePath = role ? getRoleHomePath(role) : '/';
   const [searchOpen, setSearchOpen] = useState(false);
+  const { density, toggle: toggleDensity } = useTableDensity();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -48,11 +52,16 @@ export function AppShell() {
     location.pathname.includes('/executive/po/new') ||
     location.pathname.includes('/pm/approvals');
 
+  const roleBadgeClass =
+    role === UserRole.CHAIRMAN
+      ? 'text-gold-dark bg-gold-light border border-gold/25 px-2 py-0.5 rounded-md text-xs font-semibold'
+      : 'text-bekem-accent font-medium';
+
   return (
-    <div className="min-h-screen flex bg-[#F8FAFC]">
+    <div className="min-h-screen flex bg-white">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[200] focus:px-4 focus:py-2 focus:bg-white focus:rounded-lg focus:shadow-lg"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[200] focus:px-4 focus:py-2 focus:bg-white focus:rounded-lg focus:border focus:border-surface-border"
       >
         Skip to content
       </a>
@@ -62,26 +71,61 @@ export function AppShell() {
 
       <div className="flex-1 flex flex-col min-w-0">
         {!hideNav && user && (
-          <header className="hidden lg:flex h-14 shrink-0 items-center justify-between border-b border-surface-border bg-white/95 backdrop-blur-md px-6 sticky top-0 z-30">
-            <div className="flex items-center gap-6 min-w-0">
-              <span className="text-sm font-semibold tracking-tight text-ink shrink-0">AFIOS</span>
-              <span className="h-4 w-px bg-surface-border shrink-0" aria-hidden />
-              <p className="text-sm text-ink-secondary truncate">
-                <span className="font-semibold text-ink">{user.name}</span>
-                <span className="mx-2 text-ink-muted">·</span>
-                <span className="font-medium text-bekem-accent">{ROLE_LABELS[role]}</span>
-              </p>
+          <header className="sticky top-0 z-30 shrink-0 border-b border-surface-border bg-white">
+            <div className="hidden lg:flex h-14 items-center justify-between px-6">
+              <div className="flex items-center gap-4 min-w-0">
+                <p className="text-sm text-ink-secondary truncate">
+                  <span className="font-semibold text-ink">{user.name}</span>
+                  <span className="mx-2 text-ink-muted">·</span>
+                  <span className={roleBadgeClass}>{ROLE_LABELS[role]}</span>
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <SearchTrigger onClick={() => setSearchOpen(true)} />
+                <button
+                  type="button"
+                  onClick={toggleDensity}
+                  className="flex h-9 items-center gap-1.5 rounded-lg border border-transparent px-2.5 text-xs font-medium text-ink-secondary hover:text-ink hover:bg-surface-muted hover:border-surface-border transition-colors"
+                  aria-label={`Table density: ${density}. Click to toggle.`}
+                  title={`Table density: ${density} (toggle)`}
+                >
+                  <Rows3 className="h-4 w-4" strokeWidth={1.75} />
+                  <span className="hidden xl:inline">{density === 'compact' ? 'Compact' : 'Comfortable'}</span>
+                </button>
+                <NavLink
+                  to="/notifications"
+                  className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-transparent text-ink-secondary hover:text-ink hover:bg-surface-muted hover:border-surface-border transition-colors duration-200"
+                  aria-label={`Notifications${unread > 0 ? `, ${unread} unread` : ''}`}
+                >
+                  <Bell className="h-4 w-4" strokeWidth={1.75} />
+                  {unread > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-bekem-accent text-white text-[10px] font-bold flex items-center justify-center">
+                      {unread > 9 ? '9+' : unread}
+                    </span>
+                  )}
+                </NavLink>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              <SearchTrigger onClick={() => setSearchOpen(true)} />
+
+            <div className="lg:hidden flex h-14 items-center gap-3 px-4">
+              <BekemLogo size="sm" className="shrink-0" />
+              <button
+                type="button"
+                onClick={() => setSearchOpen(true)}
+                className="flex-1 flex items-center gap-2 h-9 px-3 rounded-lg border border-surface-border bg-surface-muted/60 text-sm text-ink-muted"
+                aria-label="Open search"
+              >
+                <Search className="h-4 w-4 shrink-0" />
+                <span className="truncate">Search…</span>
+              </button>
               <NavLink
                 to="/notifications"
-                className="relative flex h-9 w-9 items-center justify-center rounded-xl text-ink-secondary hover:text-ink hover:bg-surface-muted transition-all duration-200"
+                className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-surface-border text-ink-secondary"
                 aria-label={`Notifications${unread > 0 ? `, ${unread} unread` : ''}`}
               >
                 <Bell className="h-4 w-4" strokeWidth={1.75} />
                 {unread > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-bekem-accent text-white text-[10px] font-bold flex items-center justify-center">
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-bekem-accent text-white text-[9px] font-bold flex items-center justify-center">
                     {unread > 9 ? '9+' : unread}
                   </span>
                 )}
@@ -92,10 +136,12 @@ export function AppShell() {
 
         <main
           id="main-content"
-          className={cn('flex-1 overflow-y-auto w-full', hideNav ? 'pb-4' : 'pb-20 lg:pb-10')}
+          className={cn('flex-1 overflow-y-auto w-full', hideNav ? 'pb-4' : 'pb-20 lg:pb-8')}
         >
-          <div className="max-w-dashboard mx-auto px-4 sm:px-6 lg:px-10 py-2">
-            <Outlet />
+          <div className="max-w-dashboard mx-auto px-4 sm:px-6 lg:px-8 py-2">
+            <RouteErrorBoundary resetKey={location.pathname}>
+              <Outlet />
+            </RouteErrorBoundary>
           </div>
         </main>
 

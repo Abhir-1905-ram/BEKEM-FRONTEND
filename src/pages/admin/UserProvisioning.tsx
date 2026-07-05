@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
@@ -8,7 +8,8 @@ import { ROLE_LABELS, UserRole, type CreateUserDto, type UserDto } from '@afios/
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { DashboardSkeleton } from '@/components/ui/DashboardSkeleton';
+import { ListQueryBoundary } from '@/components/ListQueryBoundary';
+import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 import { useI18n } from '@/i18n/I18nContext';
 
 interface UserRow extends UserDto {
@@ -38,11 +39,11 @@ export function UserProvisioningPage() {
   const { t } = useI18n();
   const [form, setForm] = useState<CreateUserDto>({ ...EMPTY_FORM });
 
-  const { data: users, isLoading } = useQuery({
+  const { data: users, list } = useListQuery({
     queryKey: ['admin-users'],
     queryFn: async () => {
       const res = await api.get<{ data: UserRow[] }>('/users');
-      return res.data.data;
+      return normalizeListData<UserRow>(res.data.data);
     },
   });
 
@@ -74,8 +75,6 @@ export function UserProvisioningPage() {
 
   const canSubmit =
     form.name.trim() && form.email.trim() && form.password.length >= 8 && !createUser.isPending;
-
-  if (isLoading) return <DashboardSkeleton />;
 
   return (
     <div className="page-container max-w-4xl">
@@ -165,6 +164,15 @@ export function UserProvisioningPage() {
         <h2 className="text-sm font-bold text-ink mb-4">
           {t('admin.users')} ({users?.length ?? 0})
         </h2>
+        <ListQueryBoundary
+          isLoading={list.isLoading}
+          isError={list.isError}
+          onRetry={list.onRetry}
+          retrying={list.retrying}
+          isEmpty={!users?.length}
+          skeletonRows={5}
+          empty={<></>}
+        >
         <div className="panel overflow-hidden">
           <table className="w-full text-sm">
             <thead>
@@ -176,7 +184,7 @@ export function UserProvisioningPage() {
               </tr>
             </thead>
             <tbody>
-              {users?.map((u) => (
+              {(users ?? []).map((u) => (
                 <tr key={u.id} className="border-b border-surface-border last:border-0">
                   <td className="px-4 py-3 font-medium text-ink">{u.name}</td>
                   <td className="px-4 py-3 text-ink-secondary">{u.email}</td>
@@ -197,6 +205,7 @@ export function UserProvisioningPage() {
             </tbody>
           </table>
         </div>
+        </ListQueryBoundary>
       </section>
     </div>
   );

@@ -1,22 +1,23 @@
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { MaterialRequestDto } from '@afios/shared';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/EmptyState';
+import { ListQueryBoundary } from '@/components/ListQueryBoundary';
+import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 import { cn } from '@/lib/utils';
 
 export function StorePendingRequestsPage() {
   const navigate = useNavigate();
 
-  const { data: pendingRequests, isLoading } = useQuery({
+  const { data: pendingRequests, list } = useListQuery({
     queryKey: ['store-pending-requests'],
     queryFn: async () => {
       const res = await api.get<{ data: MaterialRequestDto[] }>('/material-requests', {
         params: { tab: 'pending' },
       });
-      return res.data.data;
+      return normalizeListData<MaterialRequestDto>(res.data.data);
     },
   });
 
@@ -33,20 +34,22 @@ export function StorePendingRequestsPage() {
         <h1 className="font-semibold text-gray-900">Pending requests</h1>
       </header>
 
-      {isLoading ? (
+      <ListQueryBoundary
+        isLoading={list.isLoading}
+        isError={list.isError}
+        onRetry={list.onRetry}
+        retrying={list.retrying}
+        isEmpty={!pendingRequests?.length}
+        skeletonRows={3}
+        empty={
+          <EmptyState
+            title="No pending requests"
+            description="New site indents will appear here for allocation."
+          />
+        }
+      >
         <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-20 rounded-xl bg-gray-100 animate-pulse" />
-          ))}
-        </div>
-      ) : !pendingRequests?.length ? (
-        <EmptyState
-          title="No pending requests"
-          description="New site indents will appear here for allocation."
-        />
-      ) : (
-        <div className="space-y-2">
-          {pendingRequests.map((r) => (
+          {(pendingRequests ?? []).map((r) => (
             <Card
               key={r.id}
               className="cursor-pointer hover:shadow-card-hover transition-shadow"
@@ -64,7 +67,7 @@ export function StorePendingRequestsPage() {
             </Card>
           ))}
         </div>
-      )}
+      </ListQueryBoundary>
     </div>
   );
 }

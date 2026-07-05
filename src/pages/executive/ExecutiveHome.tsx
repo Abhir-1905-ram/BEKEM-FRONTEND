@@ -1,75 +1,109 @@
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, FileText, Users, ClipboardCheck, ChevronRight, HardHat } from 'lucide-react';
-import { getGreeting } from '@afios/shared';
-import type { PurchaseOrderDto, PurchaseRequestDto, WorkOrderDto } from '@afios/shared';
+import { ShoppingCart, ChevronRight, AlertTriangle } from 'lucide-react';
+import { getGreeting, formatCurrency } from '@afios/shared';
+import type { DeliveryAlertDto, ExecutiveDashboardDto, PurchaseOrderDto } from '@afios/shared';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/EmptyState';
+import { ListQueryBoundary } from '@/components/ListQueryBoundary';
+import { PaginationBar } from '@/components/ui/PaginationBar';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { ActionCard } from '@/components/ui/ActionCard';
-import { TodayPanel } from '@/components/layout/TodayPanel';
 import { DashboardSearch } from '@/components/layout/DashboardSearch';
-import { useTodayActions } from '@/hooks/useTodayActions';
-import { AgeingBadge, daysSince } from '@/components/ui/AgeingBadge';
-import { formatCurrency } from '@afios/shared';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { DashboardWidgetCards } from '@/components/DashboardWidgetCards';
+import { FulfillmentStatusChip } from '@/components/FulfillmentStatusChip';
+import { PoEmailStatusChip } from '@/components/PoEmailStatusChip';
+import { TodayPanel } from '@/components/layout/TodayPanel';
+import { useTodayActions } from '@/hooks/useTodayActions';
 
 export function ExecutiveHomePage() {
   const navigate = useNavigate();
+  const [projectFilter, setProjectFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [projectPage, setProjectPage] = useState(1);
   const { data: today, isLoading: todayLoading } = useTodayActions();
 
-  const { data: purchaseRequests } = useQuery({
-    queryKey: ['purchase-requests'],
+  const {
+    data: dashboard,
+    isLoading: dashboardLoading,
+    isError: dashboardError,
+    refetch: refetchDashboard,
+    isFetching: dashboardFetching,
+  } = useQuery({
+    queryKey: ['executive-dashboard', projectPage, projectFilter],
     queryFn: async () => {
-      const res = await api.get<{ data: PurchaseRequestDto[] }>('/purchase-requests');
+      const res = await api.get<{ data: ExecutiveDashboardDto }>('/dashboard/executive', {
+        params: {
+          page: projectPage,
+          limit: 20,
+          ...(projectFilter.trim() ? { q: projectFilter.trim() } : {}),
+        },
+      });
       return res.data.data;
     },
   });
 
-  const { data: pendingPos } = useQuery({
-    queryKey: ['po-queue-executive'],
+  const {
+    data: widgets,
+    isLoading: widgetsLoading,
+  } = useQuery({
+    queryKey: ['dashboard-widgets'],
+    queryFn: async () => {
+      const res = await api.get<{ data: import('@afios/shared').DashboardWidgetsDto }>(
+        '/dashboard/widgets'
+      );
+      return res.data.data;
+    },
+  });
+
+  const { data: deliveryAlerts } = useQuery({
+    queryKey: ['delivery-alerts'],
+    queryFn: async () => {
+      const res = await api.get<{ data: DeliveryAlertDto[] }>('/dashboard/delivery-alerts');
+      return res.data.data;
+    },
+  });
+
+  const {
+    data: pendingPos,
+    isLoading: pendingPosLoading,
+    isError: pendingPosError,
+    refetch: refetchPendingPos,
+    isFetching: pendingPosFetching,
+  } = useQuery({
+    queryKey: ['po-queue-executive', projectFilter, statusFilter],
     queryFn: async () => {
       const res = await api.get<{ data: PurchaseOrderDto[] }>('/purchase-orders', {
         params: { queue: 'executive' },
       });
-      return res.data.data;
+      return res.data.data ?? [];
     },
   });
 
-  const { data: allPos } = useQuery({
-    queryKey: ['purchase-orders-all'],
-    queryFn: async () => {
-      const res = await api.get<{ data: PurchaseOrderDto[] }>('/purchase-orders');
-      return res.data.data;
-    },
-  });
+  const filteredProjects = useMemo(() => {
+    let list = dashboard?.projects ?? [];
+    if (statusFilter) {
+      list = list.filter((p) => p.status === statusFilter);
+    }
+    return list;
+  }, [dashboard?.projects, statusFilter]);
 
-  const { data: workOrders } = useQuery({
-    queryKey: ['wo-queue-executive'],
-    queryFn: async () => {
-      const res = await api.get<{ data: WorkOrderDto[] }>('/work-orders', {
-        params: { queue: 'executive' },
-      });
-      return res.data.data;
-    },
-  });
-
-  const pendingApproval =
-    allPos?.filter((po) =>
-      ['PENDING_REVIEW', 'PENDING_APPROVAL', 'COORDINATOR_PENDING', 'CHAIRMAN_PENDING'].includes(
-        po.status
-      )
-    ).length ?? 0;
-
-  const openPrs = purchaseRequests?.filter((pr) => pr.status === 'OPEN').length ?? 0;
+  const filteredPos = useMemo(() => {
+    if (!pendingPos) return [];
+    return pendingPos.filter((po) => {
+      if (statusFilter && po.status !== statusFilter) return false;
+      return true;
+    });
+  }, [pendingPos, statusFilter]);
 
   return (
     <div className="page-container">
       <PageHeader
         eyebrow={getGreeting()}
-        title="Today's procurement"
-        subtitle="What needs your attention right now"
+        title="All projects"
+        subtitle="Company-wide procurement — no project switch required"
         action={
           <Button variant="primary" size="lg" onClick={() => navigate('/executive/po/new')}>
             <ShoppingCart className="h-4 w-4" />
@@ -78,107 +112,178 @@ export function ExecutiveHomePage() {
         }
       />
 
-      <DashboardSearch placeholder="Search POs, vendors, work orders, materials…" />
-
       <TodayPanel actions={today ?? []} loading={todayLoading} />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 lg:mb-10">
-        <ActionCard
-          title="Pending PO"
-          count={pendingPos?.length ?? 0}
-          subtitle="Drafts and in-progress orders"
-          icon={ShoppingCart}
-          tone="primary"
-          onClick={() => navigate('/executive/po/new')}
-        />
-        <ActionCard
-          title="Pending vendor"
-          count={0}
-          subtitle="Vendor scorecards"
-          icon={Users}
-          tone="neutral"
-          onClick={() => navigate('/vendors')}
-        />
-        <ActionCard
-          title="Pending RFQ"
-          count={openPrs}
-          subtitle="Open purchase requests"
-          icon={FileText}
-          tone="warning"
-          onClick={() => navigate('/executive/po/new')}
-        />
-        <ActionCard
-          title="Pending approval"
-          count={pendingApproval}
-          subtitle="With coordinator or chairman"
-          icon={ClipboardCheck}
-          tone="info"
-        />
-      </div>
+      <DashboardSearch placeholder="Search projects, materials, vendors, POs…" />
 
-      <div className="flex flex-wrap gap-3 mb-8" id="work-orders">
-        <Button variant="secondary" onClick={() => navigate('/executive/wo/new')}>
-          <HardHat className="h-4 w-4" />
-          Generate work order
-        </Button>
-      </div>
-
-      {(workOrders?.length ?? 0) > 0 && (
-        <section className="mb-8 lg:mb-10">
-          <h2 className="section-label mb-4">Awaiting contractor acceptance</h2>
-          <div className="space-y-2">
-            {workOrders?.map((wo) => (
-              <div
-                key={wo.id}
-                className="data-row"
-                onClick={() => navigate(`/work-orders/${wo.id}`)}
-              >
-                <div>
-                  <p className="font-semibold text-ink">{wo.woNumber}</p>
-                  <p className="text-sm text-ink-secondary mt-0.5">
-                    {wo.vendor?.name} · {wo.scope}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <StatusBadge status={wo.status} />
-                  <ChevronRight className="h-4 w-4 text-ink-muted" />
-                </div>
-              </div>
-            ))}
+      {!!deliveryAlerts?.length && (
+        <div className="mb-6 rounded-lg border border-danger/25 bg-danger-light px-4 py-3 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-danger shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold text-danger-dark">Pending delivery overdue</p>
+            <p className="text-sm text-danger-dark/90 mt-1">
+              {deliveryAlerts.length} PO{deliveryAlerts.length > 1 ? 's' : ''} past expected delivery
+              date without receipt — check notifications for details.
+            </p>
           </div>
-        </section>
+        </div>
       )}
+
+      <DashboardWidgetCards widgets={widgets?.widgets} loading={widgetsLoading} />
+
+      <div className="flex flex-wrap gap-3 mb-6">
+        <input
+          type="search"
+          placeholder="Filter projects by code or name…"
+          value={projectFilter}
+          onChange={(e) => {
+            setProjectFilter(e.target.value);
+            setProjectPage(1);
+          }}
+          className="rounded-lg border border-surface-border px-3 py-2 text-sm min-w-[200px] flex-1 max-w-xs"
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="rounded-lg border border-surface-border px-3 py-2 text-sm bg-white"
+          aria-label="Filter by status"
+        >
+          <option value="">All statuses</option>
+          <option value="ACTIVE">Active</option>
+          <option value="ON_HOLD">On hold</option>
+          <option value="DRAFT">Draft POs</option>
+          <option value="COORDINATOR_PENDING">Coordinator pending</option>
+        </select>
+      </div>
+
+      <ListQueryBoundary
+        isLoading={dashboardLoading}
+        isError={dashboardError}
+        onRetry={() => refetchDashboard()}
+        retrying={dashboardFetching && !dashboardLoading}
+        skeletonRows={6}
+        empty={<></>}
+      >
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+            <div className="panel p-4">
+              <p className="text-xs text-ink-muted uppercase tracking-wide">Projects</p>
+              <p className="text-2xl font-bold mt-1">{dashboard?.totals.projectCount ?? 0}</p>
+            </div>
+            <div className="panel p-4">
+              <p className="text-xs text-ink-muted uppercase tracking-wide">Open POs</p>
+              <p className="text-2xl font-bold mt-1">{dashboard?.totals.openPoCount ?? 0}</p>
+            </div>
+            <div className="panel p-4">
+              <p className="text-xs text-ink-muted uppercase tracking-wide">Open PRs</p>
+              <p className="text-2xl font-bold mt-1">{dashboard?.totals.openPrCount ?? 0}</p>
+            </div>
+            <div className="panel p-4">
+              <p className="text-xs text-ink-muted uppercase tracking-wide">Pending indents</p>
+              <p className="text-2xl font-bold mt-1">{dashboard?.totals.pendingIndentCount ?? 0}</p>
+            </div>
+          </div>
+
+          <h2 className="section-label mb-4">Projects (A–Z)</h2>
+          {!filteredProjects.length ? (
+            <EmptyState title="No projects match filters" description="Clear filters to see all projects." />
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                {filteredProjects.map((p) => (
+                  <div
+                    key={p.id}
+                    className="panel p-4 cursor-pointer hover:border-bekem-accent/30 transition-colors"
+                    onClick={() => navigate(`/admin/projects`)}
+                  >
+                    <div className="flex justify-between items-start gap-2">
+                      <div>
+                        <p className="font-semibold text-ink">
+                          {p.code} — {p.name}
+                        </p>
+                        <p className="text-xs text-ink-muted mt-0.5">{p.location}</p>
+                      </div>
+                      <StatusBadge status={p.status} />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
+                      <div>
+                        <p className="text-ink-muted">Open POs</p>
+                        <p className="font-semibold tabular-nums">{p.openPoCount}</p>
+                      </div>
+                      <div>
+                        <p className="text-ink-muted">Open PRs</p>
+                        <p className="font-semibold tabular-nums">{p.openPrCount}</p>
+                      </div>
+                      <div>
+                        <p className="text-ink-muted">Indents</p>
+                        <p className="font-semibold tabular-nums">{p.pendingIndentCount}</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-ink-secondary mt-2">
+                      PO value {formatCurrency(p.openPoValue)}
+                      {p.healthScore != null ? ` · Health ${p.healthScore}%` : ''}
+                      {p.deployPct != null ? ` · Budget ${p.deployPct}%` : ''}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              {dashboard?.pagination && (
+                <PaginationBar
+                  pagination={dashboard.pagination}
+                  onPageChange={setProjectPage}
+                  className="mb-10"
+                />
+              )}
+            </>
+          )}
+        </>
+      </ListQueryBoundary>
 
       <section>
         <h2 className="section-label mb-4">Pending purchase orders</h2>
-        {!pendingPos?.length ? (
-          <EmptyState
-            celebrate
-            title="No pending POs"
-            description="Everything is completed. Create a new PO when a request is ready."
-          />
-        ) : (
+        <ListQueryBoundary
+          isLoading={pendingPosLoading}
+          isError={pendingPosError}
+          onRetry={() => refetchPendingPos()}
+          retrying={pendingPosFetching && !pendingPosLoading}
+          isEmpty={!filteredPos?.length}
+          skeletonRows={3}
+          empty={
+            <EmptyState
+              celebrate
+              title="No pending POs"
+              description="Create a PO when a purchase request is ready."
+            />
+          }
+        >
           <div className="space-y-2">
-            {pendingPos.map((po) => (
+            {filteredPos.map((po) => (
               <div
                 key={po.id}
                 className="data-row"
                 onClick={() => navigate(`/purchase-orders/${po.id}`)}
               >
                 <div>
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold text-ink">{po.poNumber || 'Draft PO'}</p>
-                    <AgeingBadge days={daysSince(po.createdAt)} />
-                  </div>
+                  <p className="font-semibold text-ink">{po.poNumber || po.draftRef || 'Draft PO'}</p>
                   <p className="text-sm text-ink-secondary mt-0.5">
                     {po.vendor?.name ?? 'Vendor TBD'} · {formatCurrency(po.amount)}
                   </p>
+                  {po.fulfillmentStatus && po.status === 'APPROVED' && (
+                    <div className="mt-1">
+                      <FulfillmentStatusChip status={po.fulfillmentStatus} />
+                    </div>
+                  )}
+                  {po.status === 'APPROVED' && po.emailStatus && (
+                    <div className="mt-1">
+                      <PoEmailStatusChip status={po.emailStatus} sentAt={po.emailSentAt} />
+                    </div>
+                  )}
                 </div>
                 <ChevronRight className="h-4 w-4 text-ink-muted" />
               </div>
             ))}
           </div>
-        )}
+        </ListQueryBoundary>
       </section>
     </div>
   );

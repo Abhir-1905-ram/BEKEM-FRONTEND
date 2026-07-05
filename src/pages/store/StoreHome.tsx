@@ -8,12 +8,25 @@ import { getGreeting, getFirstName } from '@afios/shared';
 import type { MaterialRequestDto, SiteDto } from '@afios/shared';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/EmptyState';
+import { ListQueryBoundary } from '@/components/ListQueryBoundary';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { StatCard } from '@/components/ui/StatCard';
 import { TodayPanel } from '@/components/layout/TodayPanel';
 import { useTodayActions } from '@/hooks/useTodayActions';
+import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 import { AgeingBadge, daysSince } from '@/components/ui/AgeingBadge';
 import { Input } from '@/components/ui/Input';
+
+type StockRow = {
+  id: string;
+  materialId: string;
+  quantityOnHand: number;
+  quantityReserved: number;
+  availableQty: number;
+  lowStockThreshold: number;
+  isLowStock: boolean;
+  material: { name: string; unit: string; code: string; description?: string; grade?: string };
+};
 
 export function StoreHomePage() {
   const navigate = useNavigate();
@@ -40,32 +53,21 @@ export function StoreHomePage() {
     enabled: !!site?.id,
   });
 
-  const { data: pendingRequests } = useQuery({
+  const { data: pendingRequests, list: pendingList } = useListQuery({
     queryKey: ['store-pending-requests'],
     queryFn: async () => {
       const res = await api.get<{ data: MaterialRequestDto[] }>('/material-requests', {
         params: { tab: 'pending' },
       });
-      return res.data.data;
+      return normalizeListData<MaterialRequestDto>(res.data.data);
     },
   });
 
-  const { data: stock } = useQuery({
+  const { data: stock, list: stockList } = useListQuery<StockRow[]>({
     queryKey: ['stock', site?.id],
     queryFn: async () => {
-      const res = await api.get<{
-        data: Array<{
-          id: string;
-          materialId: string;
-          quantityOnHand: number;
-          quantityReserved: number;
-          availableQty: number;
-          lowStockThreshold: number;
-          isLowStock: boolean;
-          material: { name: string; unit: string; code: string; description?: string; grade?: string };
-        }>;
-      }>(`/stock/site/${site?.id}`);
-      return res.data.data;
+      const res = await api.get<{ data: StockRow[] }>(`/stock/site/${site?.id}`);
+      return normalizeListData<StockRow>(res.data.data);
     },
     enabled: !!site?.id,
   });
@@ -101,7 +103,7 @@ export function StoreHomePage() {
 
       <TodayPanel actions={today ?? []} loading={todayLoading} />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 lg:mb-8">
         <StatCard label="Waiting" value={summary?.waiting ?? '—'} hint="Needs allocation" tone="amber" />
         <StatCard
           label="Stock items"
@@ -131,6 +133,20 @@ export function StoreHomePage() {
             className="pl-10"
           />
         </div>
+        <ListQueryBoundary
+          isLoading={!site?.id || stockList.isLoading}
+          isError={stockList.isError}
+          onRetry={stockList.onRetry}
+          retrying={stockList.retrying}
+          skeletonRows={6}
+          isEmpty={!!site?.id && !(filteredStock?.length)}
+          empty={
+            <EmptyState
+              title="No stock on hand"
+              description="Stock levels will appear once inventory is recorded for this site."
+            />
+          }
+        >
         <div className="panel overflow-hidden">
           <table className="w-full text-sm">
             <thead>
@@ -142,7 +158,7 @@ export function StoreHomePage() {
               </tr>
             </thead>
             <tbody>
-              {filteredStock?.slice(0, 8).map((s) => (
+              {(filteredStock ?? []).slice(0, 8).map((s) => (
                 <tr key={s.id} className="border-b border-surface-border last:border-0">
                   <td className="px-3 py-2 font-mono text-xs">{s.material.code}</td>
                   <td className="px-3 py-2">{s.material.name}</td>
@@ -157,6 +173,7 @@ export function StoreHomePage() {
             </tbody>
           </table>
         </div>
+        </ListQueryBoundary>
       </div>
 
       <div>
@@ -170,14 +187,22 @@ export function StoreHomePage() {
           </button>
         </div>
 
-        {!pendingRequests?.length ? (
-          <EmptyState
-            title="You're all caught up"
-            description="No requests waiting for store action right now."
-          />
-        ) : (
+        <ListQueryBoundary
+          isLoading={pendingList.isLoading}
+          isError={pendingList.isError}
+          onRetry={pendingList.onRetry}
+          retrying={pendingList.retrying}
+          isEmpty={!pendingRequests?.length}
+          skeletonRows={3}
+          empty={
+            <EmptyState
+              title="You're all caught up"
+              description="No requests waiting for store action right now."
+            />
+          }
+        >
           <div className="space-y-2">
-            {pendingRequests.map((r) => {
+            {(pendingRequests ?? []).map((r) => {
               const itemCount = r.itemCount || r.items?.length || 1;
               const firstLabel =
                 r.items?.[0]?.material?.name || r.material?.name || '';
@@ -203,13 +228,13 @@ export function StoreHomePage() {
               );
             })}
           </div>
-        )}
+        </ListQueryBoundary>
       </div>
 
       {(summary?.lowStock ?? 0) > 0 && (
-        <div className="mt-6 rounded-card border border-amber-200 bg-amber-50 p-4 flex items-center gap-3">
-          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
-          <p className="text-sm text-amber-900 font-medium">
+        <div className="mt-6 rounded-lg border border-warning/25 bg-warning-light p-4 flex items-center gap-3">
+          <AlertTriangle className="h-5 w-5 text-warning shrink-0" />
+          <p className="text-sm text-warning-dark font-medium">
             {summary?.lowStock} material{summary?.lowStock !== 1 ? 's' : ''} below threshold
           </p>
         </div>

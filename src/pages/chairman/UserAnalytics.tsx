@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { BarChart3 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { ROLE_LABELS, UserRole, type UserAnalyticsRowDto } from '@afios/shared';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
+import { ListQueryBoundary } from '@/components/ListQueryBoundary';
+import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 import { Input } from '@/components/ui/Input';
 import { cn } from '@/lib/utils';
 
@@ -20,11 +21,11 @@ export function UserAnalyticsPage() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
 
-  const { data: rows, isLoading } = useQuery({
+  const { data: rows, list } = useListQuery({
     queryKey: ['user-analytics'],
     queryFn: async () => {
       const res = await api.get<{ data: UserAnalyticsRowDto[] }>('/dashboard/user-analytics');
-      return res.data.data;
+      return normalizeListData<UserAnalyticsRowDto>(res.data.data);
     },
   });
 
@@ -70,18 +71,20 @@ export function UserAnalyticsPage() {
         </select>
       </div>
 
-      {isLoading ? (
-        <div className="space-y-2">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-16 rounded-2xl bg-surface-muted animate-pulse" />
-          ))}
-        </div>
-      ) : !filtered.length ? (
-        <EmptyState
-          title="No users match"
-          description="Try a different search or role filter."
-        />
-      ) : (
+      <ListQueryBoundary
+        isLoading={list.isLoading}
+        isError={list.isError}
+        onRetry={list.onRetry}
+        retrying={list.retrying}
+        isEmpty={!filtered.length}
+        skeletonRows={4}
+        empty={
+          <EmptyState
+            title="No users match"
+            description="Try a different search or role filter."
+          />
+        }
+      >
         <div className="table-shell overflow-x-auto">
           <table className="data-table min-w-[880px]">
             <thead>
@@ -150,7 +153,7 @@ export function UserAnalyticsPage() {
             </tbody>
           </table>
         </div>
-      )}
+      </ListQueryBoundary>
 
       {rows && rows.length > 0 && (
         <p className="text-xs text-ink-muted mt-4 flex items-center gap-1.5">

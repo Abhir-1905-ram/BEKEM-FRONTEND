@@ -14,14 +14,20 @@ import {
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { PoEmailStatusChip } from '@/components/PoEmailStatusChip';
 import { StatusTimeline } from '@/components/StatusTimeline';
-import { Textarea } from '@/components/ui/Input';
+import { OverrideRemarkModal } from '@/components/OverrideRemarkModal';
+import { Input, Textarea } from '@/components/ui/Input';
 import { SuccessScreen } from '@/components/SuccessScreen';
 import { forbiddenQueryOptions, isForbiddenError, useRedirectOnForbidden } from '@/lib/forbiddenRedirect';
 import { getRoleHomePath } from '@/lib/rolePaths';
 import { downloadExport } from '@/lib/downloadExport';
 import { toast } from 'sonner';
-import type { DelegationStatusDto } from '@afios/shared';
+import { PoTrackingTimeline } from '@/components/PoTrackingTimeline';
+import { ProcurementRefField } from '@/components/ProcurementRefField';
+import { FulfillmentStatusChip } from '@/components/FulfillmentStatusChip';
+import { useApprovalShortcuts } from '@/hooks/useApprovalShortcuts';
+import type { DelegationStatusDto, PoGrnsDto } from '@afios/shared';
 
 const PO_PDF_AFTER_COORDINATOR_STATUSES = ['APPROVED'] as const;
 
@@ -32,6 +38,9 @@ export function PODetailPage() {
   const user = useAuthStore((s) => s.user)!;
   const role = user.role as UserRole;
   const [note, setNote] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [editPaymentTerms, setEditPaymentTerms] = useState('');
+  const [showOverrideModal, setShowOverrideModal] = useState(false);
   const [done, setDone] = useState(false);
   const [doneMessage, setDoneMessage] = useState('');
   const [exporting, setExporting] = useState(false);
@@ -47,7 +56,11 @@ export function PODetailPage() {
   const accent =
     role === UserRole.COORDINATOR
       ? ROLE_COLORS[UserRole.COORDINATOR].primary
-      : ROLE_COLORS[UserRole.CHAIRMAN].primary;
+      : role === UserRole.PROJECT_MANAGER
+        ? ROLE_COLORS[UserRole.PROJECT_MANAGER].primary
+        : role === UserRole.EXECUTIVE
+          ? ROLE_COLORS[UserRole.EXECUTIVE].primary
+          : ROLE_COLORS[UserRole.CHAIRMAN].primary;
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['purchase-order', id],
@@ -63,15 +76,20 @@ export function PODetailPage() {
 
   useRedirectOnForbidden(error);
 
+  const { data: grnData } = useQuery({
+    queryKey: ['po-grns', id],
+    queryFn: async () => {
+      const res = await api.get<{ data: PoGrnsDto }>(`/purchase-orders/${id}/grns`);
+      return res.data.data;
+    },
+    enabled: !!id,
+  });
+
   const verify = useMutation({
-    mutationFn: (payload: {
-      action: 'APPROVE' | 'RETURN' | 'CLARIFICATION';
-      chairmanUnavailable?: boolean;
-    }) =>
+    mutationFn: (payload: { action: 'APPROVE' | 'RETURN' | 'CLARIFICATION' }) =>
       api.post(`/purchase-orders/${id}/verify`, {
         action: payload.action,
         note,
-        chairmanUnavailable: payload.chairmanUnavailable,
       }),
     onMutate: async (payload) => {
       await queryClient.cancelQueries({ queryKey: ['purchase-order', id] });
@@ -97,9 +115,7 @@ export function PODetailPage() {
         payload.action === 'APPROVE'
           ? status === 'CHAIRMAN_PENDING'
             ? 'Verified — sent to Chairman for final approval'
-            : payload.chairmanUnavailable
-              ? 'Approved in Chairman absence'
-              : 'Purchase order approved'
+            : 'Purchase order approved'
           : payload.action === 'RETURN'
             ? 'Returned to Executive'
             : 'Clarification requested';
@@ -146,6 +162,31 @@ export function PODetailPage() {
     },
   });
 
+  const approveOverride = useMutation({
+    mutationFn: (remark: string) =>
+      api.post(`/purchase-orders/${id}/approve-override`, { remark }),
+    onSuccess: () => {
+      setShowOverrideModal(false);
+      setDoneMessage('Approved in Chairman\'s absence');
+      setDone(true);
+    },
+    onError: (e: Error & { response?: { data?: { message?: string } } }) => {
+      toast.error(e.response?.data?.message || 'Override approval failed');
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['purchase-order', id] }),
+  });
+
+  const patchPo = useMutation({
+    mutationFn: () =>
+      api.patch(`/purchase-orders/${id}`, { paymentTerms: editPaymentTerms }),
+    onSuccess: () => {
+      toast.success('PO updated');
+      setEditing(false);
+      queryClient.invalidateQueries({ queryKey: ['purchase-order', id] });
+    },
+    onError: () => toast.error('Could not save changes'),
+  });
+
   const reject = useMutation({
     mutationFn: () => api.post(`/purchase-orders/${id}/reject`, { note }),
     onMutate: async () => {
@@ -169,6 +210,42 @@ export function PODetailPage() {
     onSuccess: () => {
       setDoneMessage('Purchase order rejected');
       setDone(true);
+    },
+  });
+
+  useApprovalShortcuts({
+    enabled: !!data && !done && !isLoading,
+    onApprove: () => {
+      if (!data) return;
+      const po = data.data;
+      if (role === UserRole.PROJECT_MANAGER && po.status === 'PM_PENDING') {
+        pmApprove.mutate();
+      } else if (
+        role === UserRole.COORDINATOR &&
+        (po.status === 'PENDING_REVIEW' || po.status === 'COORDINATOR_PENDING')
+      ) {
+        verify.mutate({ action: 'APPROVE' });
+      } else if (
+        (po.status === 'PENDING_APPROVAL' || po.status === 'CHAIRMAN_PENDING') &&
+        (role === UserRole.CHAIRMAN || delegationStatus?.canActAsChairman)
+      ) {
+        approve.mutate();
+      }
+    },
+    onReject: () => {
+      if (!data) return;
+      const po = data.data;
+      if (
+        role === UserRole.COORDINATOR &&
+        (po.status === 'PENDING_REVIEW' || po.status === 'COORDINATOR_PENDING')
+      ) {
+        verify.mutate({ action: 'RETURN' });
+      } else if (
+        (po.status === 'PENDING_APPROVAL' || po.status === 'CHAIRMAN_PENDING') &&
+        (role === UserRole.CHAIRMAN || delegationStatus?.canActAsChairman)
+      ) {
+        reject.mutate();
+      }
     },
   });
 
@@ -208,13 +285,25 @@ export function PODetailPage() {
   const isCoordinator =
     role === UserRole.COORDINATOR &&
     (po.status === 'PENDING_REVIEW' || po.status === 'COORDINATOR_PENDING');
+  const isCoordinatorApproved = role === UserRole.COORDINATOR && po.status === 'APPROVED';
+  const canEditPo =
+    (role === UserRole.COORDINATOR &&
+      ['PENDING_REVIEW', 'COORDINATOR_PENDING', 'CHAIRMAN_PENDING', 'APPROVED'].includes(
+        po.status
+      )) ||
+    (role === UserRole.CHAIRMAN &&
+      ['PENDING_APPROVAL', 'CHAIRMAN_PENDING', 'APPROVED'].includes(po.status));
+  const canChairmanEditException =
+    role === UserRole.CHAIRMAN && po.status === 'APPROVED';
+  const isCoordinatorOverride =
+    role === UserRole.COORDINATOR && po.status === 'CHAIRMAN_PENDING';
   const isPmApprover = role === UserRole.PROJECT_MANAGER && po.status === 'PM_PENDING';
   const canFinalApprove =
     (po.status === 'PENDING_APPROVAL' || po.status === 'CHAIRMAN_PENDING') &&
     (role === UserRole.CHAIRMAN || delegationStatus?.canActAsChairman);
   const actingOnBehalf =
     role !== UserRole.CHAIRMAN && delegationStatus?.canActAsChairman
-      ? delegationStatus.asDelegate.find((d) => d.scope === 'PO_FINAL')?.principal?.name
+      ? delegationStatus.asDelegate.find((d: { scope: string; principal?: { name?: string } }) => d.scope === 'PO_FINAL')?.principal?.name
       : null;
 
   const canExportPdf =
@@ -247,7 +336,17 @@ export function PODetailPage() {
         </button>
         <div>
           <h1 className="font-semibold">{po.poNumber}</h1>
-          <StatusBadge status={po.status} className="mt-1" />
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            <StatusBadge status={po.status} />
+            {po.status === 'APPROVED' && (
+              <FulfillmentStatusChip status={grnData?.fulfillmentStatus || po.fulfillmentStatus} />
+            )}
+            {po.approvedAsChairmanOverride && (
+              <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                Approved in Chairman&apos;s absence
+              </span>
+            )}
+          </div>
         </div>
         {canExportPdf && (
           <Button variant="ghost" size="sm" onClick={exportPdf} disabled={exporting}>
@@ -257,10 +356,26 @@ export function PODetailPage() {
         )}
       </header>
 
+      {(po.procurementRef || po.poNumber) && (
+        <ProcurementRefField value={po.procurementRef || po.poNumber || '—'} />
+      )}
+
       {role === UserRole.EXECUTIVE && !canExportPdf && (
         <p className="text-xs text-ink-secondary bg-surface-muted border border-surface-border rounded-lg px-3 py-2 mb-4">
           PDF download unlocks after the coordinator approves this PO.
         </p>
+      )}
+
+      {po.approvedAsChairmanOverride && po.overrideRemark && (
+        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
+          Override remark: {po.overrideRemark}
+        </p>
+      )}
+
+      {po.status === 'APPROVED' && po.emailStatus && (
+        <div className="mb-4">
+          <PoEmailStatusChip status={po.emailStatus} sentAt={po.emailSentAt} />
+        </div>
       )}
 
       {po.approvalRoutingNote && (
@@ -318,7 +433,7 @@ export function PODetailPage() {
         <div className="mb-6">
           <h2 className="font-semibold text-sm mb-2">Line items</h2>
           <div className="space-y-2">
-            {po.lineItems.map((item, idx) => (
+            {(po.lineItems ?? []).map((item, idx) => (
               <Card key={item.id || idx} className="py-2">
                 <p className="text-sm font-medium">{item.description}</p>
                 <p className="text-xs text-gray-500 mt-1">
@@ -334,7 +449,7 @@ export function PODetailPage() {
         <div className="mb-6">
           <h2 className="font-semibold text-sm mb-2">Quotation comparison</h2>
           <div className="space-y-2">
-            {data.quotations.map((q) => (
+            {(data.quotations ?? []).map((q) => (
               <Card key={q.id} className="py-2 flex justify-between">
                 <span className="text-sm">{q.vendor?.name}</span>
                 <span className="font-medium text-sm">{formatCurrency(q.amount)}</span>
@@ -344,21 +459,106 @@ export function PODetailPage() {
         </div>
       )}
 
-      <h2 className="font-semibold text-sm mb-3">Timeline</h2>
+      <h2 className="font-semibold text-sm mb-3">PO tracking</h2>
+      <PoTrackingTimeline poId={po.id} className="mb-6" />
+
+      <h2 className="font-semibold text-sm mb-3">Approval history</h2>
       <StatusTimeline entityType="PurchaseOrder" entityId={po.id} />
 
-      {(isCoordinator || canFinalApprove || isPmApprover) && (
+      {po.status === 'APPROVED' && grnData && (
         <div className="mt-6 space-y-3">
+          <h2 className="font-semibold text-sm">Goods receipt notes</h2>
+          {!(grnData.grns?.length) ? (
+            <p className="text-sm text-ink-muted">No GRNs recorded yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {(grnData.grns ?? []).map((g) => (
+                <Card key={g.id} className="py-3">
+                  <div className="flex justify-between items-start gap-2">
+                    <div>
+                      <p className="font-medium text-sm">{g.grnNumber}</p>
+                      <p className="text-xs text-ink-muted">
+                        {g.receivedAt ? new Date(g.receivedAt).toLocaleDateString('en-IN') : '—'}
+                        {g.invoiceNo ? ` · Inv ${g.invoiceNo}` : ''}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <StatusBadge status={g.status} />
+                      {g.isPartialGrn && (
+                        <span className="text-[10px] font-bold text-red-600 uppercase">Partial GRN</span>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {(isCoordinator || isCoordinatorOverride || canFinalApprove || isPmApprover || isCoordinatorApproved || canChairmanEditException) && (
+        <div className="mt-6 space-y-3">
+          {grnData?.grns?.length ? (
+            <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              This PO has {grnData.grns.length} recorded GRN(s). Line quantity or rate changes may
+              conflict with receipts — the server will warn before saving.
+            </p>
+          ) : null}
+          {canEditPo && !editing && (
+            <div className="flex flex-wrap gap-2">
+              {role === UserRole.COORDINATOR && (
+                <Button
+                  variant={po.status === 'APPROVED' ? 'primary' : 'secondary'}
+                  size="sm"
+                  onClick={() => {
+                    setEditPaymentTerms(po.paymentTerms);
+                    setEditing(true);
+                  }}
+                >
+                  {po.status === 'APPROVED' ? 'Modify / Correct PO' : 'Edit PO'}
+                </Button>
+              )}
+              {role === UserRole.CHAIRMAN && (
+                <Button
+                  variant={po.status === 'APPROVED' ? 'ghost' : 'secondary'}
+                  size="sm"
+                  className={po.status === 'APPROVED' ? 'text-ink-muted' : undefined}
+                  onClick={() => {
+                    setEditPaymentTerms(po.paymentTerms);
+                    setEditing(true);
+                  }}
+                >
+                  {po.status === 'APPROVED' ? 'Edit (exception)' : 'Edit PO'}
+                </Button>
+              )}
+            </div>
+          )}
+          {editing && (
+            <div className="space-y-2 rounded-xl border border-surface-border p-3">
+              <label className="text-xs font-semibold text-ink-muted">Payment terms</label>
+              <Input
+                value={editPaymentTerms}
+                onChange={(e) => setEditPaymentTerms(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={patchPo.isPending}
+                  onClick={() => patchPo.mutate()}
+                >
+                  Save changes
+                </Button>
+              </div>
+            </div>
+          )}
           <Textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder={
-              isCoordinator && needsChairmanBand
-                ? 'Note required if approving while Chairman is not on premises…'
-                : canFinalApprove
-                  ? 'Optional note…'
-                  : 'Note or reason…'
-            }
+            placeholder="Note or reason…"
           />
           {isPmApprover && (
             <div className="flex flex-col gap-2">
@@ -378,42 +578,15 @@ export function PODetailPage() {
           )}
           {isCoordinator && (
             <div className="flex flex-col gap-2">
-              {needsChairmanBand ? (
-                <>
-                  <Button
-                    variant="accent"
-                    size="lg"
-                    accentColor={accent}
-                    disabled={verify.isPending}
-                    onClick={() => verify.mutate({ action: 'APPROVE' })}
-                  >
-                    Verify & send to Chairman
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="lg"
-                    disabled={verify.isPending || note.trim().length < 8}
-                    onClick={() =>
-                      verify.mutate({ action: 'APPROVE', chairmanUnavailable: true })
-                    }
-                  >
-                    Approve — Chairman not on premises
-                  </Button>
-                  <p className="text-xs text-ink-muted">
-                    Exception approval requires a written reason (min 8 characters). Audited.
-                  </p>
-                </>
-              ) : (
-                <Button
-                  variant="accent"
-                  size="lg"
-                  accentColor={accent}
-                  disabled={verify.isPending}
-                  onClick={() => verify.mutate({ action: 'APPROVE' })}
-                >
-                  Verify & approve PO
-                </Button>
-              )}
+              <Button
+                variant="accent"
+                size="lg"
+                accentColor={accent}
+                disabled={verify.isPending}
+                onClick={() => verify.mutate({ action: 'APPROVE' })}
+              >
+                {needsChairmanBand ? 'Verify & send to Chairman' : 'Verify & approve PO'}
+              </Button>
               <Button
                 variant="secondary"
                 size="lg"
@@ -425,10 +598,26 @@ export function PODetailPage() {
               <Button
                 variant="ghost"
                 size="lg"
-                disabled={verify.isPending}
+                disabled={verify.isPending || !note.trim()}
                 onClick={() => verify.mutate({ action: 'RETURN' })}
               >
                 Return to Executive
+              </Button>
+            </div>
+          )}
+          {isCoordinatorOverride && (
+            <div className="flex flex-col gap-2 border-t border-surface-border pt-3">
+              <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                Chairman unavailable? Use the separate override path — requires a mandatory remark
+                (max 300 characters), permanently audited.
+              </p>
+              <Button
+                variant="secondary"
+                size="lg"
+                className="border-amber-300 text-amber-900"
+                onClick={() => setShowOverrideModal(true)}
+              >
+                Approve in Chairman&apos;s absence
               </Button>
             </div>
           )}
@@ -455,6 +644,13 @@ export function PODetailPage() {
           )}
         </div>
       )}
+
+      <OverrideRemarkModal
+        open={showOverrideModal}
+        onClose={() => setShowOverrideModal(false)}
+        pending={approveOverride.isPending}
+        onSubmit={(remark) => approveOverride.mutate(remark)}
+      />
     </div>
   );
 }

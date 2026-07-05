@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Search, FileText, Package, Building2, Users, HardHat } from 'lucide-react';
+import { Search, FileText, Package, Building2, Users, HardHat, Truck, ArrowLeftRight } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { GlobalSearchDto } from '@afios/shared';
 import { cn } from '@/lib/utils';
@@ -13,6 +13,8 @@ const ICONS: Record<keyof GlobalSearchDto, typeof FileText> = {
   workOrders: HardHat,
   vendors: Users,
   projects: Building2,
+  grns: Truck,
+  branchTransfers: ArrowLeftRight,
 };
 
 const GROUP_LABELS: Record<keyof GlobalSearchDto, string> = {
@@ -22,6 +24,8 @@ const GROUP_LABELS: Record<keyof GlobalSearchDto, string> = {
   workOrders: 'Work orders',
   vendors: 'Vendors',
   projects: 'Projects',
+  grns: 'GRNs',
+  branchTransfers: 'Branch transfers',
 };
 
 interface DashboardSearchProps {
@@ -73,7 +77,7 @@ export function DashboardSearch({
   };
 
   return (
-    <div ref={wrapRef} className={cn('relative mb-8 lg:mb-10', className)}>
+    <div ref={wrapRef} className={cn('relative mb-6 lg:mb-8', className)}>
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-ink-muted pointer-events-none" />
         <input
@@ -86,9 +90,9 @@ export function DashboardSearch({
           onFocus={() => setOpen(true)}
           placeholder={placeholder}
           className={cn(
-            'w-full h-12 pl-12 pr-4 rounded-2xl border border-surface-border bg-white',
-            'text-[15px] text-ink placeholder:text-ink-muted shadow-card',
-            'focus:outline-none focus:ring-2 focus:ring-bekem-accent/20 focus:border-bekem-accent/40 transition-all'
+            'w-full h-11 pl-12 pr-4 rounded-lg border border-surface-border bg-white',
+            'text-sm text-ink placeholder:text-ink-muted',
+            'focus:outline-none focus:ring-2 focus:ring-bekem-accent/20 focus:border-bekem-accent/50 transition-colors'
           )}
           aria-label="Dashboard search"
           aria-expanded={showPanel}
@@ -96,7 +100,7 @@ export function DashboardSearch({
       </div>
 
       {showPanel && (
-        <div className="absolute z-20 left-0 right-0 mt-2 rounded-2xl border border-surface-border bg-white shadow-card-hover max-h-[360px] overflow-y-auto">
+        <div className="absolute z-20 left-0 right-0 mt-2 rounded-lg border border-surface-border bg-white max-h-[360px] overflow-y-auto animate-slide-down">
           {isFetching && (
             <p className="text-sm text-ink-muted px-4 py-6 text-center">Searching…</p>
           )}
@@ -116,7 +120,7 @@ export function DashboardSearch({
                       key={item.id}
                       type="button"
                       onClick={() => go(item.href)}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-bekem-accent-soft/60 text-left transition-colors"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-bekem-accent-soft/50 text-left transition-colors duration-200"
                     >
                       <Icon className="h-4 w-4 text-bekem-accent shrink-0" />
                       <div className="min-w-0">

@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ChevronLeft, ChevronRight, Pencil, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { formatDate, UserRole } from '@afios/shared';
 import { EmptyState } from '@/components/EmptyState';
+import { ListQueryBoundary } from '@/components/ListQueryBoundary';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { SearchSelect } from '@/components/SearchSelect';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -204,7 +206,13 @@ export function StockPage() {
     ? [...FIELDS_THROUGH_DELIVERY, ...FIELDS_AFTER_DELIVERY]
     : FIELDS_THROUGH_DELIVERY;
 
-  const { data, isLoading } = useQuery({
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    isFetching,
+  } = useQuery({
     queryKey: ['stock-inventory', page, search, project],
     queryFn: async () => {
       const res = await api.get<{
@@ -323,21 +331,16 @@ export function StockPage() {
             }}
             className="rounded-xl border border-border px-3 py-2 text-sm flex-1 min-w-[200px]"
           />
-          <select
-            className="rounded-xl border border-border px-3 py-2 text-sm bg-white min-w-[180px]"
-            value={project}
-            onChange={(e) => {
-              setProject(e.target.value);
+          <SearchSelect
+            value={project || null}
+            onChange={(id) => {
+              setProject(id);
               setPage(1);
             }}
-          >
-            <option value="">All projects</option>
-            {meta?.projects?.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
+            options={(meta?.projects ?? []).map((p) => ({ id: p, label: p }))}
+            placeholder="Filter by project…"
+            emptyMessage="No projects in index"
+          />
         </div>
         <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950">
           <p className="font-semibold">FY PO index — editable</p>
@@ -372,14 +375,20 @@ export function StockPage() {
         </div>
       </header>
 
-      {isLoading ? (
-        <div className="h-48 rounded-xl bg-gray-100 animate-pulse" />
-      ) : !rows.length ? (
-        <EmptyState
-          title="No inventory data"
-          description="Run: npm run import:po-index --workspace=apps/api — with your PO INDEX Excel file."
-        />
-      ) : (
+      <ListQueryBoundary
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
+        retrying={isFetching && !isLoading}
+        isEmpty={!rows.length}
+        skeletonRows={6}
+        empty={
+          <EmptyState
+            title="No inventory data"
+            description="Run: npm run import:po-index --workspace=apps/api — with your PO INDEX Excel file."
+          />
+        }
+      >
         <>
           <div className="overflow-x-auto rounded-xl border border-border bg-white shadow-sm">
             <table
@@ -625,7 +634,7 @@ export function StockPage() {
             </div>
           )}
         </>
-      )}
+      </ListQueryBoundary>
 
       {editing && form && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">

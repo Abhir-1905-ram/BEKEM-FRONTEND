@@ -22,6 +22,14 @@ import { StepIndicator } from '@/components/StepIndicator';
 import { SuccessScreen } from '@/components/SuccessScreen';
 import { EmptyState } from '@/components/EmptyState';
 import { cn } from '@/lib/utils';
+import { PoPreviewDocument } from '@/components/PoPreviewDocument';
+import { SearchSelect } from '@/components/SearchSelect';
+import { computePoLineTotals } from '@/lib/poLineTotals';
+import type {
+  BillingAddressType,
+  DeliveryAddressType,
+  MaterialSearchResultDto,
+} from '@afios/shared';
 
 const STEPS = [
   'Choose request',
@@ -30,6 +38,7 @@ const STEPS = [
   'Line items & GST',
   'Terms & addresses',
   'Review',
+  'Preview PO',
 ];
 
 interface LineVendorRow {
@@ -45,7 +54,14 @@ interface PoAttachment {
 }
 
 function lineTotal(item: PoLineItemDto) {
-  return item.quantity * item.rate;
+  return computePoLineTotals(item.quantity, item.rate, item.gstPercent ?? 18).lineTotal;
+}
+
+function grandTotalAll(lines: PoLineItemDto[]) {
+  return lines.reduce(
+    (s, row) => s + computePoLineTotals(row.quantity, row.rate, row.gstPercent ?? 18).grandTotal,
+    0
+  );
 }
 
 export function POWizardPage() {
@@ -60,8 +76,14 @@ export function POWizardPage() {
   const [vendorRows, setVendorRows] = useState<LineVendorRow[]>([]);
   const [quotations, setQuotations] = useState<QuotationDto[]>([]);
   const [lineItems, setLineItems] = useState<PoLineItemDto[]>([]);
+  const [registeredOfficeAddress, setRegisteredOfficeAddress] = useState('');
   const [billingAddress, setBillingAddress] = useState('');
+  const [billingAddressType, setBillingAddressType] = useState<BillingAddressType>('registered_office');
+  const [hasProjectBilling, setHasProjectBilling] = useState(false);
+  const [projectBillingAddress, setProjectBillingAddress] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [deliveryAddressType, setDeliveryAddressType] = useState<DeliveryAddressType>('site');
+  const [deliveryAddressOtherText, setDeliveryAddressOtherText] = useState('');
   const [referenceNote, setReferenceNote] = useState('');
   const [attachments, setAttachments] = useState<PoAttachment[]>([]);
   const [paymentTerms, setPaymentTerms] = useState('Net 30 days');
@@ -115,15 +137,18 @@ export function POWizardPage() {
         string,
         { vendorId: string; lineItems: Array<ReturnType<typeof mapLine>>; attachments: PoAttachment[] }
       >();
-      const mapLine = (row: PoLineItemDto) => ({
-        description: row.description,
-        materialId: row.materialId,
-        hsnCode: row.hsnCode,
-        quantity: row.quantity,
-        rate: row.rate,
-        gstPercent: row.gstPercent ?? 18,
-        amount: lineTotal(row),
-      });
+      const mapLine = (row: PoLineItemDto) => {
+        const totals = computePoLineTotals(row.quantity, row.rate, row.gstPercent ?? 18);
+        return {
+          description: row.description,
+          materialId: row.materialId,
+          hsnCode: row.hsnCode,
+          quantity: row.quantity,
+          rate: row.rate,
+          gstPercent: row.gstPercent ?? 18,
+          amount: totals.lineTotal,
+        };
+      };
 
       lineItems.forEach((row, index) => {
         const vendorId = lineVendorByIndex[index];
@@ -147,7 +172,12 @@ export function POWizardPage() {
         purchaseRequestId: selectedPr?.id,
         paymentTerms,
         billingAddress,
-        deliveryAddress,
+        billingAddressType,
+        deliveryAddress:
+          deliveryAddressType === 'other' ? deliveryAddressOtherText : deliveryAddress,
+        deliveryAddressType,
+        deliveryAddressOtherText:
+          deliveryAddressType === 'other' ? deliveryAddressOtherText : undefined,
         expectedDeliveryDate: expectedDeliveryDate || undefined,
         referenceNote:
           referenceNote || (selectedMr?.indentNumber ? `Indent ${selectedMr.indentNumber}` : ''),
@@ -178,10 +208,34 @@ export function POWizardPage() {
     onSuccess: (data) => {
       setQuotations(data.data);
       if (data.lineItems?.length) setLineItems(data.lineItems);
-      if (data.billingAddress) setBillingAddress(data.billingAddress);
+      if (data.billingAddress) {
+        setRegisteredOfficeAddress(data.billingAddress);
+        setBillingAddress(data.billingAddress);
+        setProjectBillingAddress('');
+        setHasProjectBilling(false);
+        setBillingAddressType('registered_office');
+      }
       if (data.deliveryAddress) setDeliveryAddress(data.deliveryAddress);
     },
   });
+
+  const loadProjectBilling = async (projectId: string) => {
+    try {
+      const res = await api.get<{
+        data: { hasProjectBillingAddress: boolean; billingAddress: string | null; registeredOfficeAddress: string };
+      }>(`/projects/${projectId}/billing-address`);
+      const { hasProjectBillingAddress, billingAddress: projAddr, registeredOfficeAddress } =
+        res.data.data;
+      setHasProjectBilling(hasProjectBillingAddress);
+      setProjectBillingAddress(projAddr || '');
+      setBillingAddress(
+        billingAddressType === 'project_billing' && projAddr ? projAddr : registeredOfficeAddress
+      );
+      if (!billingAddress) setBillingAddress(registeredOfficeAddress);
+    } catch {
+      setHasProjectBilling(false);
+    }
+  };
 
   const updateLineItem = (index: number, patch: Partial<PoLineItemDto>) => {
     setLineItems((rows) =>
@@ -189,7 +243,44 @@ export function POWizardPage() {
     );
   };
 
-  const subtotal = lineItems.reduce((s, row) => s + lineTotal(row), 0);
+  const addLineFromMaterial = async (_id: string, material: MaterialSearchResultDto) => {
+    const newLine: PoLineItemDto = {
+      materialId: material.id,
+      description: material.description || material.name || '',
+      itemCode: material.itemCode,
+      hsnCode: material.hsnCode,
+      gstPercent: material.gstRate ?? 18,
+      quantity: 1,
+      rate: 0,
+      amount: 0,
+    };
+    const nextLines = [...lineItems, newLine];
+    setLineItems(nextLines);
+    const materialIds = nextLines.map((l) => l.materialId).filter(Boolean) as string[];
+    await loadVendorRows(materialIds);
+  };
+
+  const removeLineItem = (index: number) => {
+    setLineItems((rows) => rows.filter((_, i) => i !== index));
+    setLineVendorByIndex((prev) => {
+      const next: Record<number, string> = {};
+      Object.entries(prev).forEach(([k, v]) => {
+        const i = Number(k);
+        if (i < index) next[i] = v;
+        else if (i > index) next[i - 1] = v;
+      });
+      return next;
+    });
+    setSkippedLines((prev) => {
+      const next: Record<number, boolean> = {};
+      Object.entries(prev).forEach(([k, v]) => {
+        const i = Number(k);
+        if (i < index) next[i] = v;
+        else if (i > index) next[i - 1] = v;
+      });
+      return next;
+    });
+  };
 
   if (success) {
     return (
@@ -255,6 +346,7 @@ export function POWizardPage() {
           mr.items?.map((i) => i.materialId || i.material?.id).filter(Boolean) ||
           (mr.materialId || mr.material?.id ? [mr.materialId || mr.material?.id] : []);
         await loadVendorRows(ids as string[]);
+        if (mr.projectId) await loadProjectBilling(mr.projectId);
       } else {
         setVendorRows([]);
       }
@@ -287,6 +379,7 @@ export function POWizardPage() {
         mr.items?.map((i) => i.materialId || i.material?.id).filter(Boolean) ||
         (mr.materialId || mr.material?.id ? [mr.materialId || mr.material?.id] : []);
       await loadVendorRows(ids as string[]);
+      if (mr.projectId) await loadProjectBilling(mr.projectId);
       setStep(1);
     } finally {
       setSelectingPr(false);
@@ -451,21 +544,19 @@ export function POWizardPage() {
                         )}
                       </p>
                       {!isSkipped && (
-                        <select
-                          className="w-full rounded-xl border border-border px-3 py-2 text-sm bg-white"
-                          value={selectedId}
-                          onChange={(e) =>
-                            setLineVendorByIndex((prev) => ({ ...prev, [i]: e.target.value }))
+                        <SearchSelect
+                          value={selectedId || null}
+                          onChange={(id) =>
+                            setLineVendorByIndex((prev) => ({ ...prev, [i]: id }))
                           }
-                        >
-                          <option value="">Select vendor…</option>
-                          {options.map((v) => (
-                            <option key={v.id} value={v.id}>
-                              {v.name}
-                              {v.gstNumber ? ` · GST ${v.gstNumber}` : ''}
-                            </option>
-                          ))}
-                        </select>
+                          options={options.map((v) => ({
+                            id: v.id,
+                            label: v.name,
+                            sublabel: v.gstNumber ? `GST ${v.gstNumber}` : undefined,
+                          }))}
+                          placeholder="Search vendor…"
+                          emptyMessage="No vendors found for this material"
+                        />
                       )}
                       {(options.length === 0 || isSkipped) && (
                         <Button
@@ -556,34 +647,66 @@ export function POWizardPage() {
           {step === 3 && (
             <motion.div key="s3" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}>
               <p className="text-sm text-ink-secondary mb-3">
-                Edit HSN, GST%, rate and quantity per line item
+                Enter quantity and unit price. Description, HSN, GST, and item code are from Material
+                Master (read-only).
               </p>
               <div className="space-y-3">
                 {lineItems.map((row, i) => {
                   const vendor = vendorsForLineIndex(i).find((v) => v.id === lineVendorByIndex[i]);
+                  const totals = computePoLineTotals(row.quantity, row.rate, row.gstPercent ?? 18);
                   return (
                   <Card key={i} className="space-y-2">
-                    <p className="font-medium text-sm">{row.description}</p>
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-medium text-sm">{row.description}</p>
+                      {lineItems.length > 1 && (
+                        <button
+                          type="button"
+                          className="text-xs text-ink-muted hover:text-danger shrink-0"
+                          onClick={() => removeLineItem(i)}
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
                     {vendor && (
                       <p className="text-xs text-ink-muted">Vendor: {vendor.name}</p>
                     )}
-                    <div className="grid grid-cols-2 gap-2">
+                    {!lineVendorByIndex[i] && vendorsForLineIndex(i).length > 0 && (
                       <div>
-                        <label className="text-xs text-ink-muted">HSN</label>
-                        <Input
-                          value={row.hsnCode || ''}
-                          onChange={(e) => updateLineItem(i, { hsnCode: e.target.value })}
+                        <label className="text-xs text-ink-muted mb-1 block">Assign vendor</label>
+                        <SearchSelect
+                          value={null}
+                          onChange={(id) =>
+                            setLineVendorByIndex((prev) => ({ ...prev, [i]: id }))
+                          }
+                          options={vendorsForLineIndex(i).map((v) => ({
+                            id: v.id,
+                            label: v.name,
+                            sublabel: v.gstNumber ? `GST ${v.gstNumber}` : undefined,
+                          }))}
+                          placeholder="Search vendor…"
+                          emptyMessage="No vendors found for this material"
                         />
                       </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="text-xs text-ink-muted">GST %</label>
-                        <Input
-                          type="number"
-                          value={row.gstPercent ?? 18}
-                          onChange={(e) =>
-                            updateLineItem(i, { gstPercent: parseFloat(e.target.value) || 0 })
-                          }
-                        />
+                        <p className="field-readonly-label mb-1">Item code</p>
+                        <div className="field-readonly tabular-nums">{row.itemCode || '—'}</div>
+                        <p className="text-[10px] text-ink-muted mt-0.5">Auto-filled</p>
+                      </div>
+                      <div>
+                        <p className="field-readonly-label mb-1">HSN</p>
+                        <div className="field-readonly">{row.hsnCode || '—'}</div>
+                        <p className="text-[10px] text-ink-muted mt-0.5">Auto-filled</p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="field-readonly-label mb-1">Description</p>
+                        <div className="field-readonly">{row.description}</div>
+                      </div>
+                      <div>
+                        <p className="field-readonly-label mb-1">GST %</p>
+                        <div className="field-readonly tabular-nums">{row.gstPercent ?? 18}%</div>
                       </div>
                       <div>
                         <label className="text-xs text-ink-muted">Qty</label>
@@ -596,7 +719,7 @@ export function POWizardPage() {
                         />
                       </div>
                       <div>
-                        <label className="text-xs text-ink-muted">Rate (₹)</label>
+                        <label className="text-xs text-ink-muted">Unit price (₹)</label>
                         <Input
                           type="number"
                           value={row.rate}
@@ -606,14 +729,48 @@ export function POWizardPage() {
                         />
                       </div>
                     </div>
-                    <p className="text-xs text-ink-secondary">
-                      Line amount: {formatCurrency(lineTotal(row))}
-                    </p>
+                    <div className="grid grid-cols-3 gap-2 text-xs border-t border-surface-border pt-2">
+                      <div>
+                        <p className="text-ink-muted">Line total</p>
+                        <p className="font-semibold tabular-nums">{formatCurrency(totals.lineTotal)}</p>
+                      </div>
+                      <div>
+                        <p className="text-ink-muted">Tax</p>
+                        <p className="font-semibold tabular-nums">{formatCurrency(totals.tax)}</p>
+                      </div>
+                      <div>
+                        <p className="text-ink-muted">Grand total</p>
+                        <p className="font-semibold tabular-nums">{formatCurrency(totals.grandTotal)}</p>
+                      </div>
+                    </div>
                   </Card>
                   );
                 })}
               </div>
-              <p className="text-sm font-semibold mt-3">Subtotal: {formatCurrency(subtotal)}</p>
+              <div className="mt-4 border border-dashed border-surface-border rounded-xl p-3">
+                <p className="text-xs font-semibold text-ink-muted mb-2">Add line from Material Master</p>
+                <SearchSelect<MaterialSearchResultDto & { id: string; label: string }>
+                  value={null}
+                  onChange={(id, option) => addLineFromMaterial(id, option as MaterialSearchResultDto)}
+                  searchPath="/materials/search"
+                  mapResult={(raw) => {
+                    const m = raw as MaterialSearchResultDto;
+                    return {
+                      ...m,
+                      id: m.id,
+                      label: m.description || m.name || m.itemCode,
+                      sublabel: [m.itemCode, m.hsnCode ? `HSN ${m.hsnCode}` : '', `${m.gstRate ?? 18}% GST`]
+                        .filter(Boolean)
+                        .join(' · '),
+                    };
+                  }}
+                  placeholder="Search material by code, name, or HSN…"
+                  emptyMessage="No materials found — check spelling or ask Coordinator to add it to Material Master"
+                />
+              </div>
+              <p className="text-sm font-semibold mt-3">
+                Order grand total: {formatCurrency(grandTotalAll(lineItems))}
+              </p>
               <Button
                 className="mt-4"
                 variant="accent"
@@ -637,22 +794,87 @@ export function POWizardPage() {
               />
 
               <label className="text-sm font-medium text-ink-secondary mt-4 block">
-                Buyer billing address
+                Billing address
               </label>
-              <textarea
-                className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm min-h-[100px]"
-                value={billingAddress}
-                onChange={(e) => setBillingAddress(e.target.value)}
-              />
+              <div className="flex flex-wrap gap-2 mt-2">
+                <button
+                  type="button"
+                  className={cn(
+                    'rounded-xl px-3 py-2 text-sm border',
+                    billingAddressType === 'registered_office'
+                      ? 'border-bekem-accent bg-bekem-accent/10 font-semibold'
+                      : 'border-surface-border'
+                  )}
+                  onClick={() => {
+                    setBillingAddressType('registered_office');
+                    setBillingAddress(registeredOfficeAddress || billingAddress);
+                  }}
+                >
+                  Registered Office
+                </button>
+                <button
+                  type="button"
+                  disabled={!hasProjectBilling}
+                  className={cn(
+                    'rounded-xl px-3 py-2 text-sm border',
+                    billingAddressType === 'project_billing'
+                      ? 'border-bekem-accent bg-bekem-accent/10 font-semibold'
+                      : 'border-surface-border',
+                    !hasProjectBilling && 'opacity-50 cursor-not-allowed'
+                  )}
+                  onClick={() => {
+                    if (projectBillingAddress) {
+                      setBillingAddressType('project_billing');
+                      setBillingAddress(projectBillingAddress);
+                    }
+                  }}
+                >
+                  Project billing address
+                </button>
+              </div>
+              {!hasProjectBilling && (
+                <p className="text-xs text-ink-muted mt-1">
+                  Project billing address not configured — using Registered Office only.
+                </p>
+              )}
+              <div className="field-readonly mt-2 min-h-[80px] whitespace-pre-wrap text-xs">
+                {billingAddress}
+              </div>
 
               <label className="text-sm font-medium text-ink-secondary mt-4 block">
-                Consignee / delivery address
+                Delivery address
               </label>
-              <textarea
-                className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm min-h-[100px]"
-                value={deliveryAddress}
-                onChange={(e) => setDeliveryAddress(e.target.value)}
-              />
+              <div className="flex flex-wrap gap-2 mt-2">
+                {(['site', 'workshop', 'global', 'other'] as DeliveryAddressType[]).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    className={cn(
+                      'rounded-xl px-3 py-2 text-sm border capitalize',
+                      deliveryAddressType === t
+                        ? 'border-bekem-accent bg-bekem-accent/10 font-semibold'
+                        : 'border-surface-border'
+                    )}
+                    onClick={() => setDeliveryAddressType(t)}
+                  >
+                    {t === 'site' ? 'Site' : t === 'other' ? 'Other' : t}
+                  </button>
+                ))}
+              </div>
+              {deliveryAddressType === 'other' ? (
+                <textarea
+                  className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm min-h-[80px]"
+                  value={deliveryAddressOtherText}
+                  onChange={(e) => setDeliveryAddressOtherText(e.target.value)}
+                  placeholder="Enter delivery location…"
+                />
+              ) : (
+                <p className="text-xs text-ink-muted mt-2">
+                  {deliveryAddressType === 'site' && (deliveryAddress || 'Site address from indent')}
+                  {deliveryAddressType === 'workshop' && 'Central workshop (auto-filled on save)'}
+                  {deliveryAddressType === 'global' && 'Global warehouse (auto-filled on save)'}
+                </p>
+              )}
 
               <label className="text-sm font-medium text-ink-secondary mt-4 block">
                 Expected delivery date
@@ -781,15 +1003,70 @@ export function POWizardPage() {
                 variant="accent"
                 size="lg"
                 accentColor={accent}
-                disabled={createPo.isPending}
-                onClick={() => createPo.mutate()}
+                onClick={() => setStep(6)}
               >
-                {createPo.isPending
-                  ? 'Creating…'
-                  : assignedVendorIds.length > 1
-                    ? `Create ${assignedVendorIds.length} purchase orders`
-                    : 'Create purchase order'}
+                Continue to preview
               </Button>
+            </motion.div>
+          )}
+
+          {step === 6 && selectedMr && allActiveLinesHaveVendor && (
+            <motion.div key="s6" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}>
+              <p className="text-sm text-ink-secondary mb-3">
+                Review the purchase order exactly as the vendor will receive it. Confirm only when
+                every line, address, and total is correct.
+              </p>
+              <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+                {assignedVendorIds.map((vendorId) => {
+                  const vendor =
+                    vendorRows.flatMap((r) => r.vendors).find((v) => v.id === vendorId) ||
+                    quotations.find((q) => q.vendorId === vendorId)?.vendor;
+                  const vendorLines = lineItems
+                    .map((row, i) => ({ row, i }))
+                    .filter(({ i }) => lineVendorByIndex[i] === vendorId)
+                    .map(({ row }) => row);
+                  return (
+                    <PoPreviewDocument
+                      key={vendorId}
+                      data={{
+                        vendorName: vendor?.name || 'Vendor',
+                        vendorAddress: vendor?.address,
+                        vendorGst: vendor?.gstNumber,
+                        vendorEmail: vendor?.email,
+                        vendorContact: vendor?.contactPerson,
+                        vendorPhone: vendor?.phone,
+                        paymentTerms,
+                        billingAddress,
+                        deliveryAddress:
+                          deliveryAddressType === 'other'
+                            ? deliveryAddressOtherText
+                            : deliveryAddress,
+                        referenceNote: referenceNote || selectedMr.indentNumber,
+                        expectedDeliveryDate,
+                        lineItems: vendorLines,
+                      }}
+                    />
+                  );
+                })}
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 mt-4">
+                <Button variant="secondary" size="lg" onClick={() => setStep(4)}>
+                  Back to edit
+                </Button>
+                <Button
+                  variant="accent"
+                  size="lg"
+                  accentColor={accent}
+                  disabled={createPo.isPending}
+                  onClick={() => createPo.mutate()}
+                >
+                  {createPo.isPending
+                    ? 'Submitting…'
+                    : assignedVendorIds.length > 1
+                      ? `Confirm & submit ${assignedVendorIds.length} POs`
+                      : 'Confirm & submit PO'}
+                </Button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

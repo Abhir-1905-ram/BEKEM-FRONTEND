@@ -21,6 +21,7 @@ import { SuccessScreen } from '@/components/SuccessScreen';
 import { forbiddenQueryOptions, isForbiddenError, useRedirectOnForbidden } from '@/lib/forbiddenRedirect';
 import { getRoleHomePath } from '@/lib/rolePaths';
 import { downloadExport } from '@/lib/downloadExport';
+import { useApprovalShortcuts } from '@/hooks/useApprovalShortcuts';
 
 export function WorkOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -32,11 +33,6 @@ export function WorkOrderDetailPage() {
   const [done, setDone] = useState(false);
   const [doneMessage, setDoneMessage] = useState('');
 
-  const [certQty, setCertQty] = useState('');
-  const [certNote, setCertNote] = useState('');
-  const [certEvidence, setCertEvidence] = useState('');
-  const [issueMaterialId, setIssueMaterialId] = useState('');
-  const [issueQty, setIssueQty] = useState('');
   const [progressQty, setProgressQty] = useState('');
   const [exporting, setExporting] = useState(false);
 
@@ -45,7 +41,9 @@ export function WorkOrderDetailPage() {
       ? ROLE_COLORS[UserRole.COORDINATOR].primary
       : role === UserRole.CHAIRMAN
         ? ROLE_COLORS[UserRole.CHAIRMAN].primary
-        : ROLE_COLORS[UserRole.EXECUTIVE].primary;
+        : role === UserRole.PROJECT_MANAGER
+          ? ROLE_COLORS[UserRole.PROJECT_MANAGER].primary
+          : ROLE_COLORS[UserRole.EXECUTIVE].primary;
 
   const { data: delegationStatus } = useQuery({
     queryKey: ['delegation-status'],
@@ -65,27 +63,39 @@ export function WorkOrderDetailPage() {
     ...forbiddenQueryOptions,
   });
 
-  const { data: stock } = useQuery({
-    queryKey: ['stock-for-wo', wo?.siteId],
-    queryFn: async () => {
-      const res = await api.get<{
-        data: Array<{
-          materialId: string;
-          quantityOnHand: number;
-          material: { name: string; unit: string };
-        }>;
-      }>(`/stock/site/${wo!.siteId}`);
-      return res.data.data;
-    },
-    enabled: !!wo?.siteId && role === UserRole.STORE_INCHARGE,
-  });
-
   useRedirectOnForbidden(error);
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['work-order', id] });
     queryClient.invalidateQueries({ queryKey: ['wo-queue'] });
+    queryClient.invalidateQueries({ queryKey: ['wo-queue-pm'] });
+    queryClient.invalidateQueries({ queryKey: ['wo-queue-executive'] });
+    queryClient.invalidateQueries({ queryKey: ['wo-queue-coordinator'] });
+    queryClient.invalidateQueries({ queryKey: ['wo-queue-chairman'] });
   };
+
+  const pmApprove = useMutation({
+    mutationFn: () => api.post(`/work-orders/${id}/pm-approve`, { note }),
+    onSuccess: () => {
+      setDoneMessage('Work order approved — sent to Executive for review');
+      setDone(true);
+    },
+    onError: () => toast.error('PM approval failed'),
+    onSettled: invalidate,
+  });
+
+  const executiveReview = useMutation({
+    mutationFn: (action: 'APPROVE' | 'RETURN') =>
+      api.post(`/work-orders/${id}/executive-review`, { action, note }),
+    onSuccess: (_, action) => {
+      setDoneMessage(
+        action === 'APPROVE' ? 'Sent to Coordinator for verification' : 'Returned to draft'
+      );
+      setDone(true);
+    },
+    onError: () => toast.error('Executive review failed'),
+    onSettled: invalidate,
+  });
 
   const verify = useMutation({
     mutationFn: (action: 'APPROVE' | 'RETURN') =>
@@ -128,46 +138,6 @@ export function WorkOrderDetailPage() {
     onSettled: invalidate,
   });
 
-  const certify = useMutation({
-    mutationFn: () =>
-      api.post(`/work-orders/${id}/certify`, {
-        quantity: parseFloat(certQty),
-        note: certNote,
-        evidenceNote: certEvidence,
-      }),
-    onSuccess: () => {
-      toast.success('Work certified — pending PM verification');
-      setCertQty('');
-      setCertNote('');
-      setCertEvidence('');
-    },
-    onError: () => toast.error('Certification failed'),
-    onSettled: invalidate,
-  });
-
-  const verifyCert = useMutation({
-    mutationFn: ({ certId, action }: { certId: string; action: 'VERIFY' | 'REJECT' }) =>
-      api.post(`/work-orders/${id}/certifications/${certId}/verify`, { action, pmNote: note }),
-    onSuccess: () => toast.success('Certification processed'),
-    onError: () => toast.error('Failed to process certification'),
-    onSettled: invalidate,
-  });
-
-  const issueMaterial = useMutation({
-    mutationFn: () =>
-      api.post(`/work-orders/${id}/issue-material`, {
-        materialId: issueMaterialId,
-        quantity: parseFloat(issueQty),
-      }),
-    onSuccess: () => {
-      toast.success('Material issued to work order');
-      setIssueMaterialId('');
-      setIssueQty('');
-    },
-    onError: () => toast.error('Material issue failed'),
-    onSettled: invalidate,
-  });
-
   const updateProgress = useMutation({
     mutationFn: (payload: { completedQuantity?: number; milestones?: Array<{ id: string; status: string }> }) =>
       api.post(`/work-orders/${id}/progress`, payload),
@@ -184,6 +154,35 @@ export function WorkOrderDetailPage() {
     },
     onError: () => toast.error('Cannot close work order yet'),
     onSettled: invalidate,
+  });
+
+  useApprovalShortcuts({
+    enabled: !!wo && !done && !isLoading,
+    onApprove: () => {
+      if (!wo) return;
+      if (role === UserRole.PROJECT_MANAGER && wo.status === 'PM_PENDING') pmApprove.mutate();
+      else if (role === UserRole.EXECUTIVE && wo.status === 'EXECUTIVE_PENDING')
+        executiveReview.mutate('APPROVE');
+      else if (role === UserRole.COORDINATOR && wo.status === 'COORDINATOR_PENDING')
+        verify.mutate('APPROVE');
+      else if (
+        wo.status === 'CHAIRMAN_PENDING' &&
+        (role === UserRole.CHAIRMAN || delegationStatus?.canActAsChairman)
+      )
+        approve.mutate();
+    },
+    onReject: () => {
+      if (!wo) return;
+      if (role === UserRole.EXECUTIVE && wo.status === 'EXECUTIVE_PENDING')
+        executiveReview.mutate('RETURN');
+      else if (role === UserRole.COORDINATOR && wo.status === 'COORDINATOR_PENDING')
+        verify.mutate('RETURN');
+      else if (
+        wo.status === 'CHAIRMAN_PENDING' &&
+        (role === UserRole.CHAIRMAN || delegationStatus?.canActAsChairman)
+      )
+        reject.mutate();
+    },
   });
 
   if (done) {
@@ -208,16 +207,14 @@ export function WorkOrderDetailPage() {
   if (isError && isForbiddenError(error)) return null;
   if (!wo) return null;
 
+  const isPmApprove = role === UserRole.PROJECT_MANAGER && wo.status === 'PM_PENDING';
+  const isExecutiveReview = role === UserRole.EXECUTIVE && wo.status === 'EXECUTIVE_PENDING';
   const isCoordinatorVerify =
     role === UserRole.COORDINATOR && wo.status === 'COORDINATOR_PENDING';
   const canFinalApprove =
     wo.status === 'CHAIRMAN_PENDING' &&
-    (role === UserRole.COORDINATOR || delegationStatus?.canActAsChairman);
+    (role === UserRole.CHAIRMAN || delegationStatus?.canActAsChairman);
   const canAccept = role === UserRole.EXECUTIVE && wo.status === 'PENDING_ACCEPTANCE';
-  const canCertify =
-    role === UserRole.SITE_INCHARGE && ['ACCEPTED', 'IN_PROGRESS'].includes(wo.status);
-  const canIssue =
-    role === UserRole.STORE_INCHARGE && ['ACCEPTED', 'IN_PROGRESS'].includes(wo.status);
   const canTrack =
     role === UserRole.PROJECT_MANAGER && ['ACCEPTED', 'IN_PROGRESS'].includes(wo.status);
   const canClose =
@@ -314,11 +311,11 @@ export function WorkOrderDetailPage() {
         </Card>
       )}
 
-      {wo.milestones.length > 0 && (
+      {(wo.milestones?.length ?? 0) > 0 && (
         <div className="mb-6">
           <h2 className="font-semibold text-sm mb-2">Milestones</h2>
           <div className="space-y-2">
-            {wo.milestones.map((ms) => (
+            {(wo.milestones ?? []).map((ms) => (
               <div
                 key={ms.id}
                 className="flex items-center justify-between rounded-lg border border-surface-border px-3 py-2"
@@ -347,11 +344,11 @@ export function WorkOrderDetailPage() {
         </div>
       )}
 
-      {wo.materialIssues.length > 0 && (
+      {(wo.materialIssues?.length ?? 0) > 0 && (
         <div className="mb-6">
           <h2 className="font-semibold text-sm mb-2">Materials issued</h2>
           <div className="space-y-2">
-            {wo.materialIssues.map((issue) => (
+            {(wo.materialIssues ?? []).map((issue) => (
               <Card key={issue.id} className="py-2 flex justify-between text-sm">
                 <span>{issue.materialName}</span>
                 <span className="font-medium">
@@ -363,11 +360,11 @@ export function WorkOrderDetailPage() {
         </div>
       )}
 
-      {wo.certifications.length > 0 && (
+      {(wo.certifications?.length ?? 0) > 0 && (
         <div className="mb-6">
           <h2 className="font-semibold text-sm mb-2">Certifications</h2>
           <div className="space-y-2">
-            {wo.certifications.map((cert) => (
+            {(wo.certifications ?? []).map((cert) => (
               <Card key={cert.id} className="py-3 space-y-2">
                 <div className="flex justify-between items-start">
                   <div>
@@ -381,25 +378,6 @@ export function WorkOrderDetailPage() {
                   </div>
                   <StatusBadge status={cert.status} />
                 </div>
-                {canTrack && cert.status === 'PENDING_PM' && (
-                  <div className="flex gap-2 pt-1">
-                    <Button
-                      size="sm"
-                      variant="accent"
-                      accentColor={ROLE_COLORS[UserRole.PROJECT_MANAGER].primary}
-                      onClick={() => verifyCert.mutate({ certId: cert.id, action: 'VERIFY' })}
-                    >
-                      Verify
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => verifyCert.mutate({ certId: cert.id, action: 'REJECT' })}
-                    >
-                      Reject
-                    </Button>
-                  </div>
-                )}
               </Card>
             ))}
           </div>
@@ -408,68 +386,6 @@ export function WorkOrderDetailPage() {
 
       <h2 className="font-semibold text-sm mb-3">Timeline</h2>
       <StatusTimeline entityType="WorkOrder" entityId={wo.id} />
-
-      {canCertify && (
-        <div className="mt-6 space-y-3 border-t border-surface-border pt-6">
-          <h2 className="font-semibold text-sm">Certify completed work</h2>
-          <Input
-            type="number"
-            placeholder={`Quantity (${wo.quantityUnit})`}
-            value={certQty}
-            onChange={(e) => setCertQty(e.target.value)}
-          />
-          <Textarea
-            placeholder="What was completed?"
-            value={certNote}
-            onChange={(e) => setCertNote(e.target.value)}
-          />
-          <Input
-            placeholder="Evidence note (photos, survey ref…)"
-            value={certEvidence}
-            onChange={(e) => setCertEvidence(e.target.value)}
-          />
-          <Button
-            variant="accent"
-            accentColor={ROLE_COLORS[UserRole.SITE_INCHARGE].primary}
-            disabled={!certQty || !certNote.trim() || certify.isPending}
-            onClick={() => certify.mutate()}
-          >
-            Submit certification
-          </Button>
-        </div>
-      )}
-
-      {canIssue && (
-        <div className="mt-6 space-y-3 border-t border-surface-border pt-6">
-          <h2 className="font-semibold text-sm">Issue material</h2>
-          <select
-            className="w-full border border-surface-border rounded-lg px-3 py-2 text-sm"
-            value={issueMaterialId}
-            onChange={(e) => setIssueMaterialId(e.target.value)}
-          >
-            <option value="">Select material</option>
-            {stock?.map((s) => (
-              <option key={s.materialId} value={s.materialId}>
-                {s.material.name} — {s.quantityOnHand} {s.material.unit} available
-              </option>
-            ))}
-          </select>
-          <Input
-            type="number"
-            placeholder="Quantity"
-            value={issueQty}
-            onChange={(e) => setIssueQty(e.target.value)}
-          />
-          <Button
-            variant="accent"
-            accentColor={ROLE_COLORS[UserRole.STORE_INCHARGE].primary}
-            disabled={!issueMaterialId || !issueQty || issueMaterial.isPending}
-            onClick={() => issueMaterial.mutate()}
-          >
-            Issue to work order
-          </Button>
-        </div>
-      )}
 
       {canTrack && (
         <div className="mt-6 space-y-3 border-t border-surface-border pt-6">
@@ -492,13 +408,45 @@ export function WorkOrderDetailPage() {
         </div>
       )}
 
-      {(isCoordinatorVerify || canFinalApprove || canAccept) && (
+      {(isPmApprove || isExecutiveReview || isCoordinatorVerify || canFinalApprove || canAccept) && (
         <div className="mt-6 space-y-3 border-t border-surface-border pt-6">
           <Textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Note or reason…"
           />
+          {isPmApprove && (
+            <Button
+              variant="accent"
+              size="lg"
+              accentColor={accent}
+              disabled={pmApprove.isPending}
+              onClick={() => pmApprove.mutate()}
+            >
+              Approve & send to Executive
+            </Button>
+          )}
+          {isExecutiveReview && (
+            <div className="flex flex-col gap-2">
+              <Button
+                variant="accent"
+                size="lg"
+                accentColor={accent}
+                disabled={executiveReview.isPending}
+                onClick={() => executiveReview.mutate('APPROVE')}
+              >
+                Approve & send to Coordinator
+              </Button>
+              <Button
+                variant="ghost"
+                size="lg"
+                disabled={executiveReview.isPending}
+                onClick={() => executiveReview.mutate('RETURN')}
+              >
+                Return to draft
+              </Button>
+            </div>
+          )}
           {isCoordinatorVerify && (
             <div className="flex flex-col gap-2">
               <Button
