@@ -72,10 +72,11 @@ export function VendorAdminPage() {
           ...f,
           name: result.name || f.name,
           address: result.address || f.address,
+          panNumber: result.panNumber || f.panNumber,
         }));
-        toast.success('Vendor details applied from GST registry');
+        toast.success(result.message || 'Vendor details applied from GST registry');
       } else {
-        toast.info(result.message || 'GST auto-fetch will be available when portal API is connected');
+        toast.info(result.message || 'No taxpayer found for this GSTIN');
       }
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } } };
@@ -458,7 +459,7 @@ export function VendorAdminPage() {
                 />
                 <Button type="button" variant="secondary" size="sm" className="gap-1.5" onClick={previewGst}>
                   <Search className="h-3.5 w-3.5" />
-                  Fetch from GST (coming soon)
+                  Fetch from GST portal
                 </Button>
                 {gstLookupMessage && (
                   <p className="text-[11px] text-ink-muted">{gstLookupMessage}</p>

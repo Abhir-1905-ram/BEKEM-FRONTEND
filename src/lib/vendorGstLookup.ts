@@ -1,5 +1,5 @@
 /**
- * Future GST portal lookup — UI calls this when auto-fetch is enabled server-side.
+ * GST portal lookup — calls backend GSP provider (sandbox.co.in when configured).
  */
 import { api } from '@/lib/api';
 import type { VendorGstDetailsDto } from '@afios/shared';
@@ -8,6 +8,7 @@ export interface GstLookupResult {
   available: boolean;
   name?: string;
   address?: string;
+  panNumber?: string;
   gstDetails?: VendorGstDetailsDto;
   message?: string;
 }
