@@ -1,11 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  Package,
   Plus,
   Search,
-  Boxes,
-  AlertTriangle,
   ArrowUpCircle,
   Pencil,
   Trash2,
@@ -23,7 +20,6 @@ import type {
   UpdateMaterialDto,
 } from '@afios/shared';
 import { MaterialCategorySelect } from '@/components/MaterialCategorySelect';
-import { groupMaterialsByCategory } from '@/lib/groupMaterialsByCategory';
 import { MATERIAL_CATEGORY_NAMES, DEFAULT_GST_PERCENT, snapGstPercent } from '@afios/shared';
 import { useAuthStore } from '@/stores/authStore';
 import { UserRole, PERMISSION_MATRIX } from '@afios/shared';
@@ -32,7 +28,6 @@ import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
 import { GstPercentSelect } from '@/components/GstPercentSelect';
 import { Modal } from '@/components/ui/Modal';
-import { ActionCard } from '@/components/ui/ActionCard';
 import { EmptyState } from '@/components/EmptyState';
 import { cn } from '@/lib/utils';
 
@@ -165,10 +160,15 @@ export function CreateMaterialPage() {
     };
   }, [meta, catalog]);
 
-  const groupedCatalog = useMemo(
-    () => groupMaterialsByCategory(catalog ?? [], [...MATERIAL_CATEGORY_NAMES]),
-    [catalog]
-  );
+  const sortedCatalog = useMemo(() => {
+    const order = new Map<string, number>(MATERIAL_CATEGORY_NAMES.map((c, i) => [c, i]));
+    return [...(catalog ?? [])].sort((a, b) => {
+      const ca = order.get(a.category || 'Others') ?? 99;
+      const cb = order.get(b.category || 'Others') ?? 99;
+      if (ca !== cb) return ca - cb;
+      return a.code.localeCompare(b.code);
+    });
+  }, [catalog]);
 
   const create = useMutation({
     mutationFn: async () => {
@@ -280,33 +280,40 @@ export function CreateMaterialPage() {
     : mySite?.chainageLabel;
 
   return (
-    <div className="page-container max-w-6xl">
+    <div className="page-container max-w-[1600px]">
       <PageHeader
         title="Product catalog"
-        subtitle="Manage materials, descriptions, and site stock before indents are raised"
+        subtitle="Manage materials, descriptions, and site stock"
         action={
-          <Button variant="primary" onClick={() => setShowCreateModal(true)}>
+          <Button variant="primary" size="sm" onClick={() => setShowCreateModal(true)}>
             <Plus className="h-4 w-4" />
             Add product
           </Button>
         }
       />
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <ActionCard title="Products" count={stats.total} icon={Package} tone="primary" />
-        <ActionCard title="In stock" count={stats.inStock} icon={Boxes} tone="success" />
-        <ActionCard title="Low stock" count={stats.lowStock} icon={AlertTriangle} tone="warning" />
-        <ActionCard
-          title="Total qty on hand"
-          count={stats.totalQty}
-          icon={Boxes}
-          tone="primary"
-        />
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-secondary mb-2 px-0.5">
+        <span>
+          <strong className="text-ink tabular-nums">{stats.total.toLocaleString('en-IN')}</strong>{' '}
+          products
+        </span>
+        <span>
+          <strong className="text-success-dark tabular-nums">{stats.inStock.toLocaleString('en-IN')}</strong>{' '}
+          in stock
+        </span>
+        <span>
+          <strong className="text-warning-dark tabular-nums">{stats.lowStock.toLocaleString('en-IN')}</strong>{' '}
+          low
+        </span>
+        <span>
+          <strong className="text-ink tabular-nums">{stats.totalQty.toLocaleString('en-IN')}</strong>{' '}
+          total qty
+        </span>
       </div>
 
-      <div className="panel p-4 mb-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+      <div className="panel px-2 py-1.5 mb-2 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted" />
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-ink-muted" />
           <input
             type="search"
             value={search}
@@ -314,8 +321,8 @@ export function CreateMaterialPage() {
               setSearch(e.target.value);
               setPage(1);
             }}
-            placeholder="Search by code, name, description…"
-            className="w-full h-10 pl-10 pr-4 rounded-xl border border-surface-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-bekem-accent/20 focus:border-bekem-accent"
+            placeholder="Search code, name, description…"
+            className="w-full h-8 pl-8 pr-3 rounded border border-surface-border bg-white text-xs focus:outline-none focus:ring-1 focus:ring-bekem-accent/30"
           />
         </div>
         {isHq && (
@@ -325,7 +332,7 @@ export function CreateMaterialPage() {
               setSiteFilter(e.target.value);
               setPage(1);
             }}
-            className="h-10 rounded-xl border border-surface-border px-3 text-sm min-w-[200px]"
+            className="h-8 rounded border border-surface-border px-2 text-xs min-w-[180px]"
           >
             <option value="">All sites — total stock</option>
             {sites?.map((s) => (
@@ -335,131 +342,127 @@ export function CreateMaterialPage() {
             ))}
           </select>
         )}
-        {!isHq && (
-          <p className="text-sm text-ink-secondary">
-            Stock qty = on-hand from inventory / GRN
-            {stockSiteLabel ? (
-              <>
-                {' '}
-                · Primary site: <span className="font-semibold text-ink">{stockSiteLabel}</span>
-              </>
-            ) : null}
+        {!isHq && stockSiteLabel && (
+          <p className="text-[11px] text-ink-muted">
+            Stock from inventory/GRN · Site: <span className="font-semibold text-ink">{stockSiteLabel}</span>
           </p>
         )}
       </div>
 
-      <div className="table-shell overflow-hidden">
+      <div className="overflow-x-auto border border-surface-border bg-white">
         {isLoading ? (
-          <div className="p-6 space-y-2">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-12 rounded-xl bg-surface-muted animate-pulse" />
+          <div className="p-4 space-y-1">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <div key={i} className="h-6 bg-surface-muted animate-pulse" />
             ))}
           </div>
         ) : !catalog?.length ? (
-          <div className="p-10">
+          <div className="p-8">
             <EmptyState
               title="No products yet"
               description="Add your first material to the catalog so site teams can raise indents."
             />
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Item code</th>
-                  <th>Description</th>
-                  <th>Category</th>
-                  <th>Unit</th>
-                  <th className="text-right">Stock</th>
-                  <th className="text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {groupedCatalog.map((group) => (
-                  <>
-                    <tr key={`cat-${group.category}`} className="bg-surface-muted/60">
-                      <td colSpan={6} className="py-2 font-semibold text-sm text-ink">
-                        {group.category}
-                      </td>
-                    </tr>
-                    {group.items.map((item) => (
+          <table className="excel-grid min-w-[900px]">
+            <thead>
+              <tr>
+                <th className="w-28">Item code</th>
+                <th>Description</th>
+                <th className="w-24">Category</th>
+                <th className="w-14">Unit</th>
+                <th className="w-16">HSN</th>
+                <th className="w-12 text-right">GST</th>
+                <th className="w-20 text-right">Stock</th>
+                <th className="w-16 text-center">Status</th>
+                <th className="w-20 text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedCatalog.map((item) => {
+                const status =
+                  item.stock.isLowStock
+                    ? 'Low'
+                    : !item.stock.hasLedger && item.stock.quantityOnHand === 0
+                      ? 'No stock'
+                      : item.stock.quantityOnHand > 0
+                        ? 'OK'
+                        : '—';
+                const desc =
+                  item.description && item.description !== item.name
+                    ? `${item.name} — ${item.description}`
+                    : item.name;
+                return (
                   <tr key={item.id}>
-                    <td>
-                      <p className="font-semibold text-ink font-mono text-[13px]">{item.code}</p>
-                      {item.hsnCode && (
-                        <p className="text-xs text-ink-muted mt-0.5">HSN {item.hsnCode}</p>
+                    <td className="cell-code" title={item.code}>
+                      {item.code}
+                    </td>
+                    <td className="cell-text" title={desc}>
+                      {desc}
+                    </td>
+                    <td className="truncate max-w-[100px]" title={item.category || 'General'}>
+                      {item.category || 'General'}
+                    </td>
+                    <td>{item.unit}</td>
+                    <td className="text-ink-muted">{item.hsnCode || '—'}</td>
+                    <td className="text-right">{item.gstRate != null ? `${item.gstRate}%` : '—'}</td>
+                    <td
+                      className={cn(
+                        'text-right font-semibold',
+                        item.stock.isLowStock
+                          ? 'text-warning-dark'
+                          : item.stock.quantityOnHand > 0
+                            ? 'text-ink'
+                            : 'text-ink-muted'
                       )}
+                    >
+                      {item.stock.quantityOnHand.toLocaleString('en-IN')}
                     </td>
-                    <td className="max-w-xs">
-                      <p className="font-medium text-ink">{item.name}</p>
-                      <p className="text-sm text-ink-secondary mt-0.5 line-clamp-2">
-                        {item.description || item.grade || '—'}
-                      </p>
+                    <td
+                      className={cn(
+                        'text-center text-[10px] font-semibold',
+                        status === 'Low' && 'text-warning-dark',
+                        status === 'No stock' && 'text-ink-muted',
+                        status === 'OK' && 'text-success-dark'
+                      )}
+                    >
+                      {status}
                     </td>
                     <td>
-                      <span className="text-sm text-ink-secondary">{item.category || 'General'}</span>
-                    </td>
-                    <td>
-                      <span className="text-sm font-medium text-ink">{item.unit}</span>
-                    </td>
-                    <td className="text-right">
-                      <span
-                        className={cn(
-                          'text-sm font-bold tabular-nums',
-                          item.stock.isLowStock
-                            ? 'text-warning-dark'
-                            : item.stock.quantityOnHand > 0
-                              ? 'text-success-dark'
-                              : 'text-ink-muted'
-                        )}
-                      >
-                        {item.stock.quantityOnHand.toLocaleString('en-IN')}
-                      </span>
-                      {item.stock.isLowStock && (
-                        <p className="text-[11px] text-warning-dark font-semibold mt-0.5">Low</p>
-                      )}
-                      {!item.stock.hasLedger && item.stock.quantityOnHand === 0 && (
-                        <p className="text-[11px] text-ink-muted mt-0.5">No stock</p>
-                      )}
-                    </td>
-                    <td className="text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Button
-                          size="sm"
-                          variant="secondary"
+                      <div className="flex items-center justify-center gap-0.5">
+                        <button
+                          type="button"
                           onClick={() => openStockModal(item)}
+                          className="h-6 w-6 inline-flex items-center justify-center rounded border border-surface-border text-ink-secondary hover:text-bekem-accent hover:border-bekem-accent/40"
+                          title="Add stock"
                         >
-                          <ArrowUpCircle className="h-3.5 w-3.5" />
-                          Stock
-                        </Button>
+                          <ArrowUpCircle className="h-3 w-3" />
+                        </button>
                         <button
                           type="button"
                           onClick={() => openEditModal(item)}
-                          className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-surface-border text-ink-secondary hover:text-bekem-accent hover:border-bekem-accent/30 transition-colors"
-                          aria-label={`Edit ${item.code}`}
+                          className="h-6 w-6 inline-flex items-center justify-center rounded border border-surface-border text-ink-secondary hover:text-bekem-accent hover:border-bekem-accent/40"
+                          title={`Edit ${item.code}`}
                         >
-                          <Pencil className="h-3.5 w-3.5" />
+                          <Pencil className="h-3 w-3" />
                         </button>
                         {canDelete && (
                           <button
                             type="button"
                             onClick={() => setDeleteTarget(item)}
-                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-surface-border text-ink-secondary hover:text-danger hover:border-danger/30 hover:bg-danger-light/50 transition-colors"
-                            aria-label={`Delete ${item.code}`}
+                            className="h-6 w-6 inline-flex items-center justify-center rounded border border-surface-border text-ink-secondary hover:text-danger hover:border-danger/40"
+                            title={`Delete ${item.code}`}
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <Trash2 className="h-3 w-3" />
                           </button>
                         )}
                       </div>
                     </td>
                   </tr>
-                    ))}
-                  </>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                );
+              })}
+            </tbody>
+          </table>
         )}
       </div>
 

@@ -178,6 +178,35 @@
   .procurement-landscape-table td:first-child {
     @apply pr-2 text-ink-muted;
   }
+
+  .excel-grid {
+    @apply w-full border-collapse text-xs tabular-nums;
+  }
+
+  .excel-grid th,
+  .excel-grid td {
+    @apply border border-surface-border px-2 py-0.5 align-middle;
+  }
+
+  .excel-grid thead th {
+    @apply bg-slate-100 text-[10px] font-bold uppercase tracking-wide text-ink-muted sticky top-0 z-10 py-1.5 whitespace-nowrap;
+  }
+
+  .excel-grid tbody tr:nth-child(even) {
+    @apply bg-slate-50/60;
+  }
+
+  .excel-grid tbody tr:hover {
+    @apply bg-bekem-accent-soft/15;
+  }
+
+  .excel-grid .cell-text {
+    @apply truncate max-w-[220px];
+  }
+
+  .excel-grid .cell-code {
+    @apply font-mono font-semibold text-ink whitespace-nowrap;
+  }
 }
 
 @layer utilities {
