@@ -13,7 +13,7 @@ const TableDensityContext = createContext<{
 export function TableDensityProvider({ children }: { children: ReactNode }) {
   const [density, setDensityState] = useState<Density>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    return saved === 'compact' ? 'compact' : 'comfortable';
+    return saved === 'comfortable' ? 'comfortable' : 'compact';
   });
 
   useEffect(() => {

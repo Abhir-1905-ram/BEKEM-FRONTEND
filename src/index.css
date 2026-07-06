@@ -34,8 +34,12 @@
 
 @layer components {
   .page-container {
-    @apply py-6 lg:py-8 w-full;
+    @apply py-3 lg:py-4 w-full;
     animation: bekem-fade-in 200ms ease-out;
+  }
+
+  .input-compact {
+    @apply h-8 px-2 py-1 text-xs;
   }
 
   .data-row {

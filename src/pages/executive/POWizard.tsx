@@ -35,8 +35,6 @@ import type {
 } from '@afios/shared';
 import { QuotationComparisonTable } from '@/components/QuotationComparisonTable';
 import { PurchaseHistoryPanel } from '@/components/PurchaseHistoryPanel';
-import { ProcurementWorkflowBanner } from '@/components/ProcurementWorkflowBanner';
-import { GstSummaryBar } from '@/components/GstSummaryBar';
 import { GstPercentSelect } from '@/components/GstPercentSelect';
 import { pickL1VendorId } from '@/lib/quotationTotals';
 
@@ -429,7 +427,7 @@ export function POWizardPage() {
     (!hasNonL1Vendor || vendorSelectionReason.trim().length >= 10);
 
   return (
-    <div className="min-h-screen flex flex-col max-w-lg mx-auto bg-[#F8FAFC]">
+    <div className="min-h-screen flex flex-col w-full max-w-lg lg:max-w-6xl mx-auto bg-[#F8FAFC]">
       <header className="flex items-center gap-3 px-4 pt-4 pb-2">
         <button
           onClick={() => (step > 0 ? setStep(step - 1) : navigate('/'))}
@@ -442,11 +440,7 @@ export function POWizardPage() {
       </header>
 
       <StepIndicator current={step} total={STEPS.length} accentColor={accent} labels={STEPS} />
-      <p className="text-center text-xs text-ink-secondary mb-2">{STEPS[step]}</p>
-      <ProcurementWorkflowBanner
-        className="mb-4"
-        highlightFrom={step <= 1 ? 0 : step === 2 ? 7 : step === 3 ? 9 : 10}
-      />
+      <p className="text-center text-xs text-ink-secondary mb-2 px-4">{STEPS[step]}</p>
 
       <div className="flex-1 px-4 pb-6">
         <AnimatePresence mode="sync">
@@ -505,75 +499,86 @@ export function POWizardPage() {
                   {selectedMr?.indentNumber ? ` · Indent ${selectedMr.indentNumber}` : ''}
                 </p>
               )}
-              <p className="text-sm text-ink-secondary mb-3">
-                Assign a vendor per material line. Only vendors with that product assigned in
-                Vendors admin are listed. Different lines can use different vendors.
+              <p className="text-xs text-ink-secondary mb-2">
+                Assign a vendor per line — different vendors allowed per material.
               </p>
-              <div className="space-y-3">
-                {lineItems.map((row, i) => {
-                  const options = vendorsForLineIndex(i);
-                  const selectedId = lineVendorByIndex[i] || '';
-                  const isSkipped = !!skippedLines[i];
-                  return (
-                    <Card
-                      key={i}
-                      className={cn('space-y-2', isSkipped && 'opacity-60 border-dashed')}
-                    >
-                      <p className="font-medium text-sm">{row.description}</p>
-                      <p className="text-xs text-ink-muted">
-                        Qty {row.quantity}
-                        {options.length === 0 && !isSkipped && (
-                          <span className="text-danger ml-2">
-                            No vendor for this product — skip this line or add in Vendors admin
-                          </span>
-                        )}
-                        {isSkipped && (
-                          <span className="text-amber-700 ml-2 font-medium">Skipped for this PO</span>
-                        )}
-                      </p>
-                      {!isSkipped && (
-                        <SearchSelect
-                          value={selectedId || null}
-                          onChange={(id) =>
-                            setLineVendorByIndex((prev) => ({ ...prev, [i]: id }))
-                          }
-                          options={options.map((v) => ({
-                            id: v.id,
-                            label: v.name,
-                            sublabel: v.gstNumber ? `GST ${v.gstNumber}` : undefined,
-                          }))}
-                          placeholder="Search vendor…"
-                          emptyMessage="No vendors found for this material"
-                        />
-                      )}
-                      {(options.length === 0 || isSkipped) && (
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => {
-                            setSkippedLines((prev) => {
-                              const next = { ...prev };
-                              if (next[i]) {
-                                delete next[i];
-                              } else {
-                                next[i] = true;
-                                setLineVendorByIndex((v) => {
-                                  const nv = { ...v };
-                                  delete nv[i];
-                                  return nv;
-                                });
-                              }
-                              return next;
-                            });
-                          }}
-                        >
-                          {isSkipped ? 'Include this line again' : 'Skip this line / order separately'}
-                        </Button>
-                      )}
-                    </Card>
-                  );
-                })}
+              <div className="procurement-landscape-scroll panel overflow-hidden">
+                <table className="procurement-landscape-table min-w-[640px]">
+                  <thead>
+                    <tr className="bg-surface-muted/40">
+                      <th>Material</th>
+                      <th className="w-16">Qty</th>
+                      <th className="min-w-[200px]">Vendor</th>
+                      <th className="w-28" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lineItems.map((row, i) => {
+                      const options = vendorsForLineIndex(i);
+                      const selectedId = lineVendorByIndex[i] || '';
+                      const isSkipped = !!skippedLines[i];
+                      return (
+                        <tr key={i} className={cn(isSkipped && 'opacity-60')}>
+                          <td>
+                            <p className="font-medium">{row.description}</p>
+                            {options.length === 0 && !isSkipped && (
+                              <p className="text-[10px] text-danger">No vendor mapped</p>
+                            )}
+                            {isSkipped && (
+                              <p className="text-[10px] text-amber-700 font-medium">Skipped</p>
+                            )}
+                          </td>
+                          <td className="tabular-nums">{row.quantity}</td>
+                          <td>
+                            {!isSkipped && (
+                              <SearchSelect
+                                compact
+                                value={selectedId || null}
+                                onChange={(id) =>
+                                  setLineVendorByIndex((prev) => ({ ...prev, [i]: id }))
+                                }
+                                options={options.map((v) => ({
+                                  id: v.id,
+                                  label: v.name,
+                                  sublabel: v.gstNumber ? `GST ${v.gstNumber}` : undefined,
+                                }))}
+                                placeholder="Vendor…"
+                                emptyMessage="No vendors for this material"
+                              />
+                            )}
+                          </td>
+                          <td>
+                            {(options.length === 0 || isSkipped) && (
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => {
+                                  setSkippedLines((prev) => {
+                                    const next = { ...prev };
+                                    if (next[i]) {
+                                      delete next[i];
+                                    } else {
+                                      next[i] = true;
+                                      setLineVendorByIndex((v) => {
+                                        const nv = { ...v };
+                                        delete nv[i];
+                                        return nv;
+                                      });
+                                    }
+                                    return next;
+                                  });
+                                }}
+                              >
+                                {isSkipped ? 'Include' : 'Skip'}
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
               <Button
                 className="mt-4"
@@ -615,103 +620,110 @@ export function POWizardPage() {
 
           {step === 3 && (
             <motion.div key="s3" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}>
-              <p className="text-sm text-ink-secondary mb-3">
-                Enter quantity and unit price. Description, HSN, and item code are from Material
-                Master (read-only). Choose GST 5% or 18% per line.
+              <p className="text-xs text-ink-secondary mb-2">
+                Line items from Material Master — GST 5% or 18% per line.
               </p>
-              <div className="space-y-3">
-                {lineItems.map((row, i) => {
-                  const vendor = vendorsForLineIndex(i).find((v) => v.id === lineVendorByIndex[i]);
-                  return (
-                  <Card key={i} className="space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="font-medium text-sm">{row.description}</p>
-                      {lineItems.length > 1 && (
-                        <button
-                          type="button"
-                          className="text-xs text-ink-muted hover:text-danger shrink-0"
-                          onClick={() => removeLineItem(i)}
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                    {vendor && (
-                      <p className="text-xs text-ink-muted">Vendor: {vendor.name}</p>
-                    )}
-                    {!lineVendorByIndex[i] && vendorsForLineIndex(i).length > 0 && (
-                      <div>
-                        <label className="text-xs text-ink-muted mb-1 block">Assign vendor</label>
-                        <SearchSelect
-                          value={null}
-                          onChange={(id) =>
-                            setLineVendorByIndex((prev) => ({ ...prev, [i]: id }))
-                          }
-                          options={vendorsForLineIndex(i).map((v) => ({
-                            id: v.id,
-                            label: v.name,
-                            sublabel: v.gstNumber ? `GST ${v.gstNumber}` : undefined,
-                          }))}
-                          placeholder="Search vendor…"
-                          emptyMessage="No vendors found for this material"
-                        />
-                      </div>
-                    )}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <p className="field-readonly-label mb-1">Item code</p>
-                        <div className="field-readonly tabular-nums">{row.itemCode || '—'}</div>
-                        <p className="text-[10px] text-ink-muted mt-0.5">Auto-filled</p>
-                      </div>
-                      <div>
-                        <p className="field-readonly-label mb-1">HSN</p>
-                        <div className="field-readonly">{row.hsnCode || '—'}</div>
-                        <p className="text-[10px] text-ink-muted mt-0.5">Auto-filled</p>
-                      </div>
-                      <div className="col-span-2">
-                        <p className="field-readonly-label mb-1">Description</p>
-                        <div className="field-readonly">{row.description}</div>
-                      </div>
-                      <div>
-                        <p className="field-readonly-label mb-1">GST %</p>
-                        <GstPercentSelect
-                          value={row.gstPercent}
-                          onChange={(gstPercent) => updateLineItem(i, { gstPercent })}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-ink-muted">Qty</label>
-                        <Input
-                          type="number"
-                          value={row.quantity}
-                          onChange={(e) =>
-                            updateLineItem(i, { quantity: parseFloat(e.target.value) || 0 })
-                          }
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-ink-muted">Unit price (₹)</label>
-                        <Input
-                          type="number"
-                          value={row.rate}
-                          onChange={(e) =>
-                            updateLineItem(i, { rate: parseFloat(e.target.value) || 0 })
-                          }
-                        />
-                      </div>
-                    </div>
-                    <GstSummaryBar
-                      quantity={row.quantity}
-                      rate={row.rate}
-                      gstPercent={row.gstPercent ?? 18}
-                    />
-                  </Card>
-                  );
-                })}
+              <div className="procurement-landscape-scroll panel overflow-hidden">
+                <table className="procurement-landscape-table min-w-[900px]">
+                  <thead>
+                    <tr className="bg-surface-muted/40">
+                      <th>Item</th>
+                      <th className="w-20">Code</th>
+                      <th className="w-20">HSN</th>
+                      <th className="min-w-[140px]">Vendor</th>
+                      <th className="w-16">Qty</th>
+                      <th className="w-24">Rate</th>
+                      <th className="w-20">GST</th>
+                      <th className="w-28">Total</th>
+                      <th className="w-8" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lineItems.map((row, i) => {
+                      const vendor = vendorsForLineIndex(i).find((v) => v.id === lineVendorByIndex[i]);
+                      const totals = computePoLineTotals(row.quantity, row.rate, row.gstPercent ?? 18);
+                      return (
+                        <tr key={i}>
+                          <td className="max-w-[180px]">
+                            <p className="font-medium truncate" title={row.description}>
+                              {row.description}
+                            </p>
+                          </td>
+                          <td className="tabular-nums text-[11px]">{row.itemCode || '—'}</td>
+                          <td className="text-[11px]">{row.hsnCode || '—'}</td>
+                          <td>
+                            {vendor ? (
+                              <span className="text-[11px]">{vendor.name}</span>
+                            ) : vendorsForLineIndex(i).length > 0 ? (
+                              <SearchSelect
+                                compact
+                                value={null}
+                                onChange={(id) =>
+                                  setLineVendorByIndex((prev) => ({ ...prev, [i]: id }))
+                                }
+                                options={vendorsForLineIndex(i).map((v) => ({
+                                  id: v.id,
+                                  label: v.name,
+                                  sublabel: v.gstNumber ? `GST ${v.gstNumber}` : undefined,
+                                }))}
+                                placeholder="Vendor…"
+                                emptyMessage="No vendors"
+                              />
+                            ) : (
+                              <span className="text-[10px] text-ink-muted">—</span>
+                            )}
+                          </td>
+                          <td>
+                            <Input
+                              type="number"
+                              className="input-compact"
+                              value={row.quantity}
+                              onChange={(e) =>
+                                updateLineItem(i, { quantity: parseFloat(e.target.value) || 0 })
+                              }
+                            />
+                          </td>
+                          <td>
+                            <Input
+                              type="number"
+                              className="input-compact"
+                              value={row.rate}
+                              onChange={(e) =>
+                                updateLineItem(i, { rate: parseFloat(e.target.value) || 0 })
+                              }
+                            />
+                          </td>
+                          <td>
+                            <GstPercentSelect
+                              compact
+                              value={row.gstPercent}
+                              onChange={(gstPercent) => updateLineItem(i, { gstPercent })}
+                            />
+                          </td>
+                          <td className="tabular-nums font-semibold whitespace-nowrap">
+                            {formatCurrency(totals.grandTotal)}
+                          </td>
+                          <td>
+                            {lineItems.length > 1 && (
+                              <button
+                                type="button"
+                                className="text-[10px] text-ink-muted hover:text-danger"
+                                onClick={() => removeLineItem(i)}
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-              <div className="mt-4 border border-dashed border-surface-border rounded-xl p-3">
-                <p className="text-xs font-semibold text-ink-muted mb-2">Add line from Material Master</p>
+              <div className="mt-2 border border-dashed border-surface-border rounded-lg p-2">
+                <p className="text-[10px] font-semibold text-ink-muted mb-1">Add line from Material Master</p>
                 <SearchSelect<MaterialSearchResultDto & { id: string; label: string }>
+                  compact
                   value={null}
                   onChange={(id, option) => addLineFromMaterial(id, option as MaterialSearchResultDto)}
                   searchPath="/materials/search"
@@ -726,13 +738,12 @@ export function POWizardPage() {
                         .join(' · '),
                     };
                   }}
-                  placeholder="Search material by code, name, or HSN…"
-                  emptyMessage="No materials found — check spelling or ask Coordinator to add it to Material Master"
+                  placeholder="Search material…"
+                  emptyMessage="No materials found"
                 />
               </div>
-              <div className="mt-3 panel p-3 text-xs space-y-1">
-                <p className="font-semibold text-ink">Order GST summary</p>
-                <div className="flex flex-wrap gap-x-4 gap-y-1 tabular-nums">
+              <div className="mt-2 panel p-2 text-xs">
+                <div className="flex flex-wrap gap-x-4 gap-y-0.5 tabular-nums">
                   <span>
                     Subtotal{' '}
                     <strong>
@@ -746,7 +757,7 @@ export function POWizardPage() {
                     </strong>
                   </span>
                   <span>
-                    GST amount{' '}
+                    GST{' '}
                     <strong>
                       {formatCurrency(
                         lineItems.reduce(
@@ -758,7 +769,7 @@ export function POWizardPage() {
                     </strong>
                   </span>
                   <span>
-                    Final amount{' '}
+                    Final{' '}
                     <strong className="text-bekem-navy">{formatCurrency(grandTotalAll(lineItems))}</strong>
                   </span>
                 </div>

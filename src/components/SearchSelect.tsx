@@ -24,6 +24,7 @@ interface SearchSelectProps<T extends SearchSelectOption> {
   emptyMessage?: string;
   disabled?: boolean;
   className?: string;
+  compact?: boolean;
 }
 
 function defaultMap(raw: unknown): SearchSelectOption {
@@ -44,6 +45,7 @@ export function SearchSelect<T extends SearchSelectOption = SearchSelectOption>(
   emptyMessage = 'No results found',
   disabled,
   className,
+  compact = false,
 }: SearchSelectProps<T>) {
   const listId = useId();
   const [query, setQuery] = useState('');
@@ -126,7 +128,12 @@ export function SearchSelect<T extends SearchSelectOption = SearchSelectOption>(
   return (
     <div ref={containerRef} className={cn('relative', className)}>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted pointer-events-none" />
+        <Search
+          className={cn(
+            'absolute left-2 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none',
+            compact ? 'h-3.5 w-3.5' : 'h-4 w-4 left-3'
+          )}
+        />
         <input
           type="text"
           role="combobox"
@@ -143,7 +150,11 @@ export function SearchSelect<T extends SearchSelectOption = SearchSelectOption>(
             if (!e.target.value) onChange('', {} as T);
           }}
           onKeyDown={onKeyDown}
-          className={cn(SEARCH_SELECT_INPUT, disabled && 'opacity-60 cursor-not-allowed')}
+          className={cn(
+            SEARCH_SELECT_INPUT,
+            compact && 'h-8 py-1 pl-7 pr-2 text-xs',
+            disabled && 'opacity-60 cursor-not-allowed'
+          )}
         />
       </div>
       {open && (

@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/Input';
 import { SearchSelect } from '@/components/SearchSelect';
 import { GstPercentSelect } from '@/components/GstPercentSelect';
 import { computeFinalCost } from '@/lib/quotationTotals';
-import { GstSummaryBar } from '@/components/GstSummaryBar';
 
 export interface VendorQuotationDraft {
   vendorId: string;
@@ -70,86 +69,95 @@ export function VendorQuotationEditor({
   const usedVendorIds = new Set(quotations.map((q) => q.vendorId).filter(Boolean));
 
   return (
-    <div className="space-y-3">
-      {quotations.map((row, index) => (
-        <div key={index} className="panel p-3 space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-semibold text-ink-muted">Vendor {index + 1}</p>
-            {quotations.length > minRows && (
-              <button
-                type="button"
-                onClick={() => removeRow(index)}
-                className="text-ink-muted hover:text-danger p-1"
-                aria-label="Remove vendor"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-          <SearchSelect
-            value={row.vendorId || null}
-            onChange={(id) => {
-              const v = vendors?.find((x) => x.id === id);
-              updateRow(index, { vendorId: id, vendorName: v?.name });
-            }}
-            options={(vendors ?? [])
-              .filter((v) => v.id === row.vendorId || !usedVendorIds.has(v.id))
-              .map((v) => ({
-                id: v.id,
-                label: v.name,
-                sublabel: v.code || v.gstNumber || undefined,
-              }))}
-            placeholder="Vendor name"
-            emptyMessage="No vendors in master"
-          />
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <div>
-              <p className="text-[11px] font-medium text-ink-muted mb-1">Rate</p>
-              <Input
-                type="number"
-                min={0}
-                step="any"
-                value={row.rate || ''}
-                onChange={(e) => updateRow(index, { rate: parseFloat(e.target.value) || 0 })}
-              />
-            </div>
-            <div>
-              <p className="text-[11px] font-medium text-ink-muted mb-1">GST %</p>
-              <GstPercentSelect
-                value={row.gstPercent}
-                onChange={(gstPercent) => updateRow(index, { gstPercent })}
-              />
-            </div>
-            <div className="col-span-2">
-              <p className="text-[11px] font-medium text-ink-muted mb-1">Total amount</p>
-              <p className="h-10 flex items-center px-3 rounded-lg bg-surface-muted text-sm font-semibold tabular-nums">
-                {formatCurrency(computeDraftFinalCost(row, quantity))}
-              </p>
-              <GstSummaryBar
-                quantity={quantity}
-                rate={row.rate}
-                gstPercent={row.gstPercent}
-                compact
-                className="mt-1.5"
-              />
-            </div>
-          </div>
-          <div>
-            <p className="text-[11px] font-medium text-ink-muted mb-1">Payment terms</p>
-            <Input
-              value={row.paymentTerms}
-              onChange={(e) => updateRow(index, { paymentTerms: e.target.value })}
-            />
-          </div>
-          <div>
-            <p className="text-[11px] font-medium text-ink-muted mb-1">Delivery terms</p>
-            <Input
-              value={row.deliveryTerms}
-              onChange={(e) => updateRow(index, { deliveryTerms: e.target.value })}
-            />
-          </div>
-        </div>
-      ))}
+    <div className="space-y-2">
+      <div className="procurement-landscape-scroll panel overflow-hidden">
+        <table className="procurement-landscape-table min-w-[880px]">
+          <thead>
+            <tr className="bg-surface-muted/40">
+              <th className="w-8">#</th>
+              <th className="min-w-[160px]">Vendor</th>
+              <th className="w-24">Rate</th>
+              <th className="w-20">GST</th>
+              <th className="w-28">Total</th>
+              <th className="min-w-[180px]">Payment terms</th>
+              <th className="min-w-[160px]">Delivery terms</th>
+              <th className="w-8" />
+            </tr>
+          </thead>
+          <tbody>
+            {quotations.map((row, index) => (
+              <tr key={index}>
+                <td className="text-ink-muted font-medium">{index + 1}</td>
+                <td>
+                  <SearchSelect
+                    compact
+                    value={row.vendorId || null}
+                    onChange={(id) => {
+                      const v = vendors?.find((x) => x.id === id);
+                      updateRow(index, { vendorId: id, vendorName: v?.name });
+                    }}
+                    options={(vendors ?? [])
+                      .filter((v) => v.id === row.vendorId || !usedVendorIds.has(v.id))
+                      .map((v) => ({
+                        id: v.id,
+                        label: v.name,
+                        sublabel: v.code || v.gstNumber || undefined,
+                      }))}
+                    placeholder="Vendor"
+                    emptyMessage="No vendors"
+                  />
+                </td>
+                <td>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="any"
+                    className="input-compact"
+                    value={row.rate || ''}
+                    onChange={(e) => updateRow(index, { rate: parseFloat(e.target.value) || 0 })}
+                  />
+                </td>
+                <td>
+                  <GstPercentSelect
+                    compact
+                    value={row.gstPercent}
+                    onChange={(gstPercent) => updateRow(index, { gstPercent })}
+                  />
+                </td>
+                <td className="tabular-nums font-semibold whitespace-nowrap">
+                  {formatCurrency(computeDraftFinalCost(row, quantity))}
+                </td>
+                <td>
+                  <Input
+                    className="input-compact"
+                    value={row.paymentTerms}
+                    onChange={(e) => updateRow(index, { paymentTerms: e.target.value })}
+                  />
+                </td>
+                <td>
+                  <Input
+                    className="input-compact"
+                    value={row.deliveryTerms}
+                    onChange={(e) => updateRow(index, { deliveryTerms: e.target.value })}
+                  />
+                </td>
+                <td>
+                  {quotations.length > minRows && (
+                    <button
+                      type="button"
+                      onClick={() => removeRow(index)}
+                      className="text-ink-muted hover:text-danger p-0.5"
+                      aria-label="Remove vendor"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <Button type="button" variant="secondary" size="sm" onClick={addRow}>
         <Plus className="h-4 w-4" />
         Add vendor
