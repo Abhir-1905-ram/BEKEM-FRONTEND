@@ -12,11 +12,13 @@ import { PmDailyCapBanner } from '@/components/PmDailyCapBanner';
 import { TodayPanel } from '@/components/layout/TodayPanel';
 import { ListQueryBoundary } from '@/components/ListQueryBoundary';
 import { useTodayActions } from '@/hooks/useTodayActions';
+import { useApprovalLimits, fmtInrLimit } from '@/hooks/useApprovalLimits';
 
 export function PMHomePage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user)!;
   const { data: today, isLoading: todayLoading } = useTodayActions();
+  const { data: limits } = useApprovalLimits();
 
   const {
     data: dashboard,
@@ -112,7 +114,7 @@ export function PMHomePage() {
           onClick={() => navigate('/pm/approvals')}
         />
         <ActionCard
-          title="Approve POs (under ₹5k)"
+          title={`Approve POs (under ${limits ? fmtInrLimit(limits.poPmMaxInr) : 'PM limit'})`}
           count={poApprovalCount}
           subtitle="Low-value purchase orders"
           icon={ShoppingCart}

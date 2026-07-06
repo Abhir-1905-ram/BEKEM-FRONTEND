@@ -35,6 +35,7 @@ import type {
 } from '@afios/shared';
 import { QuotationComparisonTable } from '@/components/QuotationComparisonTable';
 import { PurchaseHistoryPanel } from '@/components/PurchaseHistoryPanel';
+import { PoWizardStockPanel } from '@/components/PoWizardStockPanel';
 import { GstPercentSelect } from '@/components/GstPercentSelect';
 import { pickL1VendorId } from '@/lib/quotationTotals';
 
@@ -494,11 +495,16 @@ export function POWizardPage() {
           {step === 1 && (
             <motion.div key="s1" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} className="pointer-events-auto">
               {selectedPr && (
-                <p className="text-xs font-semibold text-bekem-accent bg-bekem-accent/10 border border-bekem-accent/20 rounded-lg px-3 py-2 mb-3">
+                <p className="text-xs font-semibold text-bekem-accent bg-bekem-accent/10 border border-bekem-accent/20 rounded-lg px-3 py-2 mb-2">
                   Lines from purchase request {selectedPr.prNumber}
                   {selectedMr?.indentNumber ? ` · Indent ${selectedMr.indentNumber}` : ''}
                 </p>
               )}
+              <PoWizardStockPanel
+                materialIds={vendorRows.map((r) => r.materialId).filter(Boolean)}
+                requestingProjectId={selectedPr?.projectId || selectedMr?.projectId}
+                className="mb-2"
+              />
               <p className="text-xs text-ink-secondary mb-2">
                 Assign a vendor per line — different vendors allowed per material.
               </p>

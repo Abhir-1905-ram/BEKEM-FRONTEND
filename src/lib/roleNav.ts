@@ -130,7 +130,7 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
 
         { id: 'approvals', label: 'Indent approvals', href: '/pm/approvals', icon: CheckSquare },
 
-        { id: 'po-approvals', label: 'Approve POs (under ₹5k)', href: '/pm/approve-pos', icon: ShoppingCart },
+        { id: 'po-approvals', label: 'Approve POs (PM band)', href: '/pm/approve-pos', icon: ShoppingCart },
 
         { id: 'incidents', label: 'Material indents', href: '/pm/material-indents', icon: FileText },
 

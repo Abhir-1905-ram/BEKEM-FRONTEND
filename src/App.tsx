@@ -511,6 +511,9 @@ export default function App() {
                 }
               />
 
+              <Route path="/executive/rfq" element={<Navigate to="/executive/ho-indents" replace />} />
+              <Route path="/executive/rfqs" element={<Navigate to="/executive/ho-indents" replace />} />
+
               <Route
                 path="/executive/ho-indents"
                 element={

@@ -128,7 +128,7 @@ export function PODetailPage() {
   const pmApprove = useMutation({
     mutationFn: () => api.post(`/purchase-orders/${id}/pm-approve`, { note }),
     onSuccess: () => {
-      setDoneMessage('PO approved by Project Manager (under ₹5,000)');
+      setDoneMessage(po?.approvalRoutingNote || 'PO approved by Project Manager');
       setDone(true);
     },
     onError: (e: Error & { response?: { data?: { message?: string } } }) => {
@@ -602,7 +602,7 @@ export function PODetailPage() {
           {isPmApprover && (
             <div className="flex flex-col gap-2">
               <p className="text-xs text-ink-secondary">
-                Amount under ₹5,000 — you are the final approver for this PO.
+                {po?.approvalRoutingNote || 'You are the final approver for this PO (PM band).'}
               </p>
               <Button
                 variant="accent"

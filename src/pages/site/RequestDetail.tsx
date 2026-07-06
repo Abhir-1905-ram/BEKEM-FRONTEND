@@ -236,8 +236,8 @@ export function RequestDetailPage() {
 
       {request.escalatedToHo && (
         <div className="mb-4 rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-sm">
-          This indent was escalated to Head Office — it exceeds the PM&apos;s ₹5,000 daily approval
-          limit.
+          This indent was escalated to Head Office — it exceeds the PM&apos;s configurable daily
+          approval limit (see Admin settings).
         </div>
       )}
 
