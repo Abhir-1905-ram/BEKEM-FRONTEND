@@ -35,6 +35,19 @@ interface GrnCreateResponse {
   approvalStage?: string;
 }
 
+function mapPoLinesToReceiptLines(po: PurchaseOrderDto): PoGrnReceiptLineDto[] {
+  return (po.lineItems ?? []).map((li, lineIndex) => ({
+    lineIndex,
+    materialId: li.materialId,
+    description: li.description,
+    unit: '',
+    orderedQty: li.quantity,
+    previouslyReceived: 0,
+    remainingQty: li.quantity,
+    poRate: li.rate,
+  }));
+}
+
 function lineKey(line: PoGrnReceiptLineDto) {
   return line.materialId || `line-${line.lineIndex}`;
 }
@@ -77,7 +90,12 @@ export function GrnReceivePage() {
     },
   });
 
-  const { data: grnContext } = useQuery({
+  const {
+    data: grnContext,
+    isLoading: grnLoading,
+    isError: grnError,
+    refetch: refetchGrnContext,
+  } = useQuery({
     queryKey: ['po-grn-counter', selectedPo?.id],
     queryFn: async () => {
       const res = await api.get<{ data: ProjectGrnCounterDto }>(
@@ -103,18 +121,23 @@ export function GrnReceivePage() {
   const hasChallanUpload = hasAttachmentCategory(attachments, 'CHALLAN');
 
   useEffect(() => {
-    if (!grnContext?.lines?.length) return;
-    setReceiptLines(grnContext.lines);
+    const lines = grnContext?.lines?.length
+      ? grnContext.lines
+      : selectedPo?.lineItems?.length
+        ? mapPoLinesToReceiptLines(selectedPo)
+        : [];
+    if (!lines.length) return;
+    setReceiptLines(lines);
     const received: Record<string, number> = {};
     const prices: Record<string, number> = {};
-    grnContext.lines.forEach((line) => {
+    lines.forEach((line) => {
       const key = lineKey(line);
       received[key] = receiveType === 'FULL' ? line.remainingQty : 0;
       prices[key] = line.poRate;
     });
     setReceivedByLine(received);
     setInvoicePriceByLine(prices);
-  }, [grnContext, receiveType]);
+  }, [grnContext, receiveType, selectedPo]);
 
   const resetForm = () => {
     setSelectedPo(null);
@@ -300,6 +323,18 @@ export function GrnReceivePage() {
                 )}
               </div>
 
+              {grnLoading && (
+                <p className="text-sm text-ink-muted">Loading PO line items…</p>
+              )}
+              {grnError && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 flex flex-wrap items-center justify-between gap-2">
+                  <span>Could not load GRN balances — showing PO lines. Previously received qty may be incomplete.</span>
+                  <Button type="button" variant="secondary" size="sm" onClick={() => refetchGrnContext()}>
+                    Retry
+                  </Button>
+                </div>
+              )}
+
               <div className="overflow-x-auto rounded-xl border border-surface-border">
                 <table className="data-table min-w-[760px]">
                   <thead>
@@ -315,6 +350,13 @@ export function GrnReceivePage() {
                     </tr>
                   </thead>
                   <tbody>
+                    {!receiptLines.length && !grnLoading ? (
+                      <tr>
+                        <td colSpan={8} className="text-center text-sm text-ink-muted py-6">
+                          No line items on this PO.
+                        </td>
+                      </tr>
+                    ) : null}
                     {receiptLines.map((row) => {
                       const key = lineKey(row);
                       const received = receivedByLine[key] ?? 0;

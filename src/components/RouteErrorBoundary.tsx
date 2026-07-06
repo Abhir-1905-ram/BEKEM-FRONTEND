@@ -35,6 +35,14 @@ export class RouteErrorBoundary extends Component<
   }
 
   private retry = () => {
+    const isChunkError =
+      this.state.error?.message?.includes('Failed to fetch dynamically imported module') ||
+      this.state.error?.message?.includes('Loading chunk') ||
+      this.state.error?.message?.includes('Loading CSS chunk');
+    if (isChunkError) {
+      window.location.reload();
+      return;
+    }
     this.setState({ error: null });
   };
 

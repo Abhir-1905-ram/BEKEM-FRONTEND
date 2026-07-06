@@ -132,24 +132,6 @@ export function POWizardPage() {
     setVendorRows(res.data.data);
   };
 
-  useEffect(() => {
-    if (!preselectedPrId || selectedPr || prLoading) return;
-    const pr = openPurchaseRequests.find((p) => p.id === preselectedPrId);
-    if (!pr) return;
-    void (async () => {
-      setSelectedPr(pr);
-      if (pr.materialRequestId) {
-        const res = await api.get<{ data: MaterialRequestDto }>(
-          `/material-requests/${pr.materialRequestId}`
-        );
-        setSelectedMr(res.data.data);
-        const materialIds = res.data.data.items?.map((i) => i.materialId) || [];
-        await loadVendorRows(materialIds);
-      }
-      setStep(1);
-    })();
-  }, [preselectedPrId, openPurchaseRequests, prLoading, selectedPr]);
-
   const createPo = useMutation({
     mutationFn: async () => {
       const ordersMap = new Map<
@@ -385,6 +367,14 @@ export function POWizardPage() {
       setSelectingPr(false);
     }
   };
+
+  useEffect(() => {
+    if (!preselectedPrId || selectedPr || prLoading || selectingPr) return;
+    const pr = openPurchaseRequests.find((p) => p.id === preselectedPrId);
+    if (!pr) return;
+    void selectPurchaseRequest(pr);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once when PR list is ready
+  }, [preselectedPrId, openPurchaseRequests, prLoading, selectedPr, selectingPr]);
 
   const continueFromVendorAssign = () => {
     if (!allActiveLinesHaveVendor) {

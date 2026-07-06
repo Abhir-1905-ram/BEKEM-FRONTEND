@@ -7,6 +7,11 @@ import { TableDensityProvider } from '@/hooks/useTableDensity';
 import { RouteErrorBoundary } from '@/components/RouteErrorBoundary';
 import { DashboardSkeleton } from '@/components/ui/DashboardSkeleton';
 
+window.addEventListener('vite:preloadError', (event) => {
+  event.preventDefault();
+  window.location.reload();
+});
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <RouteErrorBoundary>

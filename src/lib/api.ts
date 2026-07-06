@@ -1,6 +1,6 @@
-import axios, { type AxiosError } from 'axios';
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { toast } from 'sonner';
-import type { ApiErrorDto } from '@afios/shared';
+import type { ApiErrorDto, AuthTokensDto } from '@afios/shared';
 import { useAuthStore } from '@/stores/authStore';
 
 // Dev: /api (Vite proxy → localhost:4000). Prod: set in .env.production (Railway).
@@ -10,6 +10,22 @@ export const api = axios.create({
   baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
 });
+
+type RetryConfig = InternalAxiosRequestConfig & { _retry?: boolean };
+
+let refreshPromise: Promise<AuthTokensDto> | null = null;
+
+async function refreshAccessToken(): Promise<AuthTokensDto> {
+  const refreshToken = useAuthStore.getState().refreshToken;
+  if (!refreshToken) {
+    throw new Error('No refresh token');
+  }
+  const res = await axios.post<{ tokens: AuthTokensDto }>(`${API_BASE}/auth/refresh`, {
+    refreshToken,
+  });
+  useAuthStore.getState().setTokens(res.data.tokens);
+  return res.data.tokens;
+}
 
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken;
@@ -27,8 +43,30 @@ api.interceptors.response.use(
     const text = Array.isArray(message)
       ? message.join(', ')
       : message || error.message || 'Something went wrong';
+    const original = error.config as RetryConfig | undefined;
+    const isAuthRoute =
+      original?.url?.includes('/auth/login') || original?.url?.includes('/auth/refresh');
 
-    if (status === 401 && !error.config?.url?.includes('/auth/login')) {
+    if (status === 401 && original && !original._retry && !isAuthRoute) {
+      const refreshToken = useAuthStore.getState().refreshToken;
+      if (refreshToken) {
+        try {
+          original._retry = true;
+          if (!refreshPromise) {
+            refreshPromise = refreshAccessToken().finally(() => {
+              refreshPromise = null;
+            });
+          }
+          const tokens = await refreshPromise;
+          original.headers = original.headers ?? {};
+          original.headers.Authorization = `Bearer ${tokens.accessToken}`;
+          return api(original);
+        } catch {
+          useAuthStore.getState().logout();
+          toast.error('Session expired. Please log in again.');
+          return Promise.reject(error);
+        }
+      }
       useAuthStore.getState().logout();
       toast.error('Session expired. Please log in again.');
     } else if (status !== 403) {
