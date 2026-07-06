@@ -424,8 +424,8 @@ export function POWizardPage() {
   const hasNonL1Vendor = assignedVendorIds.some((vid) => l1VendorId && vid !== l1VendorId);
 
   const canSubmitPo =
-    whyWeChoseThisVendor.trim().length >= 10 &&
-    (!hasNonL1Vendor || vendorSelectionReason.trim().length >= 10);
+    whyWeChoseThisVendor.trim().length > 0 &&
+    (!hasNonL1Vendor || vendorSelectionReason.trim().length > 0);
 
   return (
     <div className="min-h-screen flex flex-col w-full max-w-lg lg:max-w-6xl mx-auto bg-[#F8FAFC]">
