@@ -10,11 +10,20 @@ import {
   formatCurrency,
   MATERIAL_CATEGORY_NAMES,
   MATERIAL_CATEGORY_OTHERS,
+  INDENT_REQUEST_TYPES,
+  INDENT_REQUEST_TYPE_LABELS,
+  INDENT_VALUE_CAP_INR,
+  INDENT_CAP_REACHED_MESSAGE,
+  computeIndentRunningTotal,
+  computeIndentLineTotal,
+  resolveMaterialUnitPrice,
+  type IndentRequestType,
   type MaterialDto,
   type CreateIndentDto,
   type CreateSiteMaterialDto,
   type SiteDto,
 } from '@afios/shared';
+import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { SuccessScreen } from '@/components/SuccessScreen';
@@ -41,8 +50,14 @@ function unitPriceSuffix(unit: string) {
 export function RequestWizardPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const accent = ROLE_COLORS[UserRole.SITE_INCHARGE].primary;
+  const user = useAuthStore((s) => s.user)!;
+  const role = user.role as UserRole;
+  const isStore = role === UserRole.STORE_INCHARGE;
+  const accent = ROLE_COLORS[isStore ? UserRole.STORE_INCHARGE : UserRole.SITE_INCHARGE].primary;
+  const homePath = isStore ? '/store' : '/site';
+  const roleLabel = isStore ? 'Store Manager' : 'Site Manager';
   const [step, setStep] = useState<'project' | 'materials'>('project');
+  const [indentRequestType, setIndentRequestType] = useState<IndentRequestType | ''>('');
   const [selectedSiteId, setSelectedSiteId] = useState('');
   const [search, setSearch] = useState('');
   const [lines, setLines] = useState<LineDraft[]>([]);
@@ -92,6 +107,19 @@ export function RequestWizardPage() {
     [materials]
   );
 
+  const runningTotal = useMemo(() => computeIndentRunningTotal(lines), [lines]);
+  const showPricing = indentRequestType === 'BELOW_5000';
+  const atCap = showPricing && runningTotal >= INDENT_VALUE_CAP_INR;
+  const canAddMaterials = Boolean(indentRequestType) && !atCap;
+  const belowCapInvalid = showPricing && runningTotal >= INDENT_VALUE_CAP_INR;
+
+  const projectedTotal = (
+    nextLines: LineDraft[]
+  ) => computeIndentRunningTotal(nextLines);
+
+  const wouldExceedCap = (nextLines: LineDraft[]) =>
+    indentRequestType === 'BELOW_5000' && projectedTotal(nextLines) >= INDENT_VALUE_CAP_INR;
+
   const mutation = useMutation({
     mutationFn: async (data: CreateIndentDto) => {
       const res = await api.post<{ data: { indentNumber: string } }>('/material-requests', data);
@@ -116,17 +144,25 @@ export function RequestWizardPage() {
 
   const addLine = (material: MaterialDto, qty = pickQty, unit = pickUnit) => {
     if (qty <= 0) return;
+    if (!indentRequestType) {
+      toast.error('Select indent request type first');
+      return;
+    }
     const lineUnit = (unit || material.unit || 'Nos').trim() || 'Nos';
     setLines((prev) => {
       const existing = prev.find((l) => l.material.id === material.id);
-      if (existing) {
-        return prev.map((l) =>
-          l.material.id === material.id
-            ? { ...l, quantity: l.quantity + qty, unit: lineUnit }
-            : l
-        );
+      const next = existing
+        ? prev.map((l) =>
+            l.material.id === material.id
+              ? { ...l, quantity: l.quantity + qty, unit: lineUnit }
+              : l
+          )
+        : [...prev, { material, quantity: qty, unit: lineUnit }];
+      if (wouldExceedCap(next)) {
+        toast.error('This would exceed the ₹5,000 limit for Below ₹5,000 indents');
+        return prev;
       }
-      return [...prev, { material, quantity: qty, unit: lineUnit }];
+      return next;
     });
     setSelectedMaterial(null);
     setPickQty(1);
@@ -180,9 +216,14 @@ export function RequestWizardPage() {
       setLines((prev) => prev.filter((l) => l.material.id !== materialId));
       return;
     }
-    setLines((prev) =>
-      prev.map((l) => (l.material.id === materialId ? { ...l, quantity } : l))
-    );
+    setLines((prev) => {
+      const next = prev.map((l) => (l.material.id === materialId ? { ...l, quantity } : l));
+      if (wouldExceedCap(next)) {
+        toast.error('Quantity would exceed the ₹5,000 limit');
+        return prev;
+      }
+      return next;
+    });
   };
 
   const updateLineUnit = (materialId: string, unit: string) => {
@@ -196,8 +237,9 @@ export function RequestWizardPage() {
   };
 
   const selectMaterial = (material: MaterialDto) => {
-    setSelectedMaterial(material);
     const inCart = lines.find((l) => l.material.id === material.id);
+    if (!inCart && !canAddMaterials) return;
+    setSelectedMaterial(material);
     setPickQty(inCart?.quantity ?? 1);
     setPickUnit(inCart?.unit || material.unit || 'Nos');
   };
@@ -208,7 +250,7 @@ export function RequestWizardPage() {
         title="Indent submitted!"
         message={`${indentNumber} sent to store. You'll be notified at each step.`}
         accentColor={accent}
-        primaryAction={{ label: 'Back to home', onClick: () => navigate('/site') }}
+        primaryAction={{ label: 'Back to home', onClick: () => navigate(homePath) }}
         secondaryAction={{ label: 'View my indents', onClick: () => navigate('/requests') }}
       />
     );
@@ -220,7 +262,7 @@ export function RequestWizardPage() {
     return (
       <div className="page-container max-w-2xl">
         <PageHeader
-          eyebrow="Site Manager · Step 1 of 2"
+          eyebrow={`${roleLabel} · Step 1 of 2`}
           title="Select project"
           subtitle="Confirm which project and site this material indent is for before adding items."
         />
@@ -305,7 +347,7 @@ export function RequestWizardPage() {
   return (
     <div className="page-container max-w-5xl">
       <PageHeader
-        eyebrow="Site Manager · Step 2 of 2"
+        eyebrow={`${roleLabel} · Step 2 of 2`}
         title="Raise material indent"
         subtitle="Search the catalog, or add a product name if it is not listed yet."
         action={
@@ -314,6 +356,40 @@ export function RequestWizardPage() {
           </Button>
         }
       />
+
+      <div className="panel p-3 mb-3 space-y-2">
+        <label className="text-xs font-semibold text-ink">
+          Indent request type <span className="text-danger">*</span>
+        </label>
+        <select
+          value={indentRequestType}
+          onChange={(e) => {
+            const next = e.target.value as IndentRequestType | '';
+            setIndentRequestType(next);
+            if (next === 'BELOW_5000' && computeIndentRunningTotal(lines) >= INDENT_VALUE_CAP_INR) {
+              toast.message('Reduce items or quantities to stay under ₹5,000');
+            }
+          }}
+          className="w-full h-8 rounded border border-surface-border px-2 text-xs bg-white"
+        >
+          <option value="">Select type…</option>
+          {INDENT_REQUEST_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {INDENT_REQUEST_TYPE_LABELS[t]}
+            </option>
+          ))}
+        </select>
+        {indentRequestType === 'BELOW_5000' && (
+          <p className="text-[11px] text-ink-secondary">
+            Unit prices and line totals are shown. Total must stay below ₹5,000.
+          </p>
+        )}
+        {indentRequestType === 'ABOVE_5000' && (
+          <p className="text-[11px] text-ink-secondary">
+            No value limit. Pricing is hidden from site and store — visible to approvers only.
+          </p>
+        )}
+      </div>
 
       {selectedSite && (
         <div className="mb-3 rounded-2xl border border-bekem-accent/20 bg-gradient-to-r from-bekem-navy/5 to-bekem-accent/5 px-3 py-2.5 flex flex-wrap items-center gap-x-6 gap-y-2">
@@ -400,12 +476,18 @@ export function RequestWizardPage() {
                         />
                       </div>
                     </div>
-                    {line.material.unitPrice != null && (
-                      <p className="text-xs text-ink-secondary">
-                        <span className="font-semibold text-ink-muted">Unit Price:</span>{' '}
-                        {formatCurrency(line.material.unitPrice)}
-                        {line.unit ? ` / ${unitPriceSuffix(line.unit)}` : ''}
-                      </p>
+                    {showPricing && (
+                      <div className="flex items-center justify-between text-xs pt-1 border-t border-dashed border-surface-border">
+                        <span className="text-ink-muted">
+                          {formatCurrency(resolveMaterialUnitPrice(line.material))}
+                          {line.unit ? ` / ${unitPriceSuffix(line.unit)}` : ''} × {line.quantity}
+                        </span>
+                        <span className="font-semibold tabular-nums text-ink">
+                          {formatCurrency(
+                            computeIndentLineTotal(line.quantity, resolveMaterialUnitPrice(line.material))
+                          )}
+                        </span>
+                      </div>
                     )}
                   </li>
                 ))}
@@ -428,14 +510,39 @@ export function RequestWizardPage() {
                 <span className="text-ink-secondary">Total quantity</span>
                 <span className="font-semibold text-ink tabular-nums">{totalItems}</span>
               </div>
+              {showPricing && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-ink-secondary">Running total</span>
+                  <span
+                    className={cn(
+                      'font-semibold tabular-nums',
+                      atCap ? 'text-warning' : 'text-ink'
+                    )}
+                  >
+                    {formatCurrency(runningTotal)}
+                  </span>
+                </div>
+              )}
+              {atCap && (
+                <p className="text-[11px] text-warning-dark bg-warning/10 border border-warning/30 rounded px-2 py-1.5">
+                  {INDENT_CAP_REACHED_MESSAGE}
+                </p>
+              )}
               <Button
                 variant="accent"
                 size="lg"
                 accentColor={accent}
                 className="w-full"
-                disabled={lines.length === 0 || !purpose.trim() || mutation.isPending}
+                disabled={
+                  lines.length === 0 ||
+                  !purpose.trim() ||
+                  !indentRequestType ||
+                  belowCapInvalid ||
+                  mutation.isPending
+                }
                 onClick={() =>
                   mutation.mutate({
+                    indentRequestType: indentRequestType as IndentRequestType,
                     purpose: purpose.trim(),
                     items: lines.map((l) => ({
                       materialId: l.material.id,
@@ -477,9 +584,9 @@ export function RequestWizardPage() {
                     {selectedMaterial.code}
                     {selectedMaterial.grade ? ` · ${selectedMaterial.grade}` : ''}
                   </p>
-                  {selectedMaterial.unitPrice != null && (
+                  {showPricing && selectedMaterial && (
                     <p className="text-xs text-ink-muted mt-1">
-                      Unit price (reference): {formatCurrency(selectedMaterial.unitPrice)}
+                      Unit price: {formatCurrency(resolveMaterialUnitPrice(selectedMaterial))}
                       {pickUnit ? ` / ${unitPriceSuffix(pickUnit)}` : ''}
                     </p>
                   )}
@@ -514,6 +621,7 @@ export function RequestWizardPage() {
                     variant="accent"
                     accentColor={accent}
                     className="flex-1"
+                    disabled={!canAddMaterials}
                     onClick={() => addLine(selectedMaterial, pickQty, pickUnit)}
                   >
                     Add to indent
@@ -533,6 +641,10 @@ export function RequestWizardPage() {
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="h-16 rounded-2xl bg-surface-muted animate-pulse" />
                 ))}
+              </div>
+            ) : !indentRequestType ? (
+              <div className="rounded-2xl border border-dashed border-surface-border bg-surface-muted/40 px-4 py-6 text-center text-sm text-ink-secondary">
+                Select an indent request type above to browse materials.
               </div>
             ) : search && !materials?.length ? (
               <div className="rounded-2xl border border-dashed border-amber-200 bg-amber-50/50 px-4 py-6 text-center space-y-3">
@@ -567,8 +679,10 @@ export function RequestWizardPage() {
                       key={m.id}
                       type="button"
                       onClick={() => selectMaterial(m)}
+                      disabled={!inCart && !canAddMaterials}
                       className={cn(
                         'w-full text-left rounded-2xl border px-3 py-2 transition-all duration-200',
+                        !inCart && !canAddMaterials && 'opacity-50 cursor-not-allowed',
                         isSelected
                           ? 'border-bekem-accent bg-bekem-accent/5 shadow-sm'
                           : 'border-surface-border bg-white hover:border-bekem-accent/40 hover:shadow-sm'
@@ -614,7 +728,12 @@ export function RequestWizardPage() {
                   </p>
                 </div>
                 {!showCustomForm && (
-                  <Button variant="secondary" size="sm" onClick={() => setShowCustomForm(true)}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={!canAddMaterials}
+                    onClick={() => setShowCustomForm(true)}
+                  >
                     Add new material
                   </Button>
                 )}
@@ -716,7 +835,7 @@ export function RequestWizardPage() {
                       accentColor={accent}
                       className="flex-1"
                       onClick={() => void addCustomLine()}
-                      disabled={createSiteMaterial.isPending}
+                      disabled={createSiteMaterial.isPending || !canAddMaterials}
                     >
                       {createSiteMaterial.isPending ? 'Saving…' : 'Save & add to indent'}
                     </Button>

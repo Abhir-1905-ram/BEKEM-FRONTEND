@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { forbiddenQueryOptions, isForbiddenError, useRedirectOnForbidden } from '@/lib/forbiddenRedirect';
 import { useAuthStore } from '@/stores/authStore';
-import { formatDate, formatCurrency, ROLE_COLORS, UserRole } from '@afios/shared';
+import { formatDate, formatCurrency, ROLE_COLORS, UserRole, hideIndentPricingForRole, INDENT_REQUEST_TYPE_LABELS } from '@afios/shared';
 import type { MaterialRequestDto } from '@afios/shared';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -193,6 +193,7 @@ export function RequestDetailPage() {
     );
   const canConfirmReceipt = role === UserRole.SITE_INCHARGE && request.status === 'ISSUED';
   const destProjectId = request.projectId;
+  const hidePricing = hideIndentPricingForRole(role, request.indentRequestType);
 
   const requirePmRemark = () => {
     if (!pmRemark.trim()) {
@@ -265,7 +266,15 @@ export function RequestDetailPage() {
             </p>
           </div>
         )}
-        {request.estimatedValue != null && request.estimatedValue > 0 && (
+        {request.indentRequestType && (
+          <div>
+            <p className="text-xs text-gray-500">Indent type</p>
+            <p className="font-medium">
+              {INDENT_REQUEST_TYPE_LABELS[request.indentRequestType]}
+            </p>
+          </div>
+        )}
+        {!hidePricing && request.estimatedValue != null && request.estimatedValue > 0 && (
           <div>
             <p className="text-xs text-gray-500">Estimated value</p>
             <p className="font-medium">{formatCurrency(request.estimatedValue)}</p>
@@ -289,8 +298,8 @@ export function RequestDetailPage() {
       <StockComparisonTable
         items={items}
         className="mb-3"
-        showPricing
-        totalEstimatedValue={request.estimatedValue}
+        showPricing={!hidePricing}
+        totalEstimatedValue={hidePricing ? undefined : request.estimatedValue}
       />
 
       {role === UserRole.PROJECT_MANAGER && request.crossProjectStock?.length ? (

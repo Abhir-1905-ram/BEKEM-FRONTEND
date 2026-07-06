@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { forbiddenQueryOptions, isForbiddenError, useRedirectOnForbidden } from '@/lib/forbiddenRedirect';
-import { ROLE_COLORS, UserRole } from '@afios/shared';
+import { ROLE_COLORS, UserRole, hideIndentPricingForRole, INDENT_REQUEST_TYPE_LABELS } from '@afios/shared';
 import type { MaterialRequestDto } from '@afios/shared';
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Input';
@@ -115,6 +115,7 @@ export function AllocateFlowPage() {
         ]
       : [];
 
+  const hidePricing = hideIndentPricingForRole(UserRole.STORE_INCHARGE, request?.indentRequestType);
   const canIssue = request.canFullyIssue ?? !request.hasShortfall;
 
   return (
@@ -129,7 +130,11 @@ export function AllocateFlowPage() {
         <div>
           <h1 className="font-semibold">{request.indentNumber}</h1>
           <p className="text-xs text-ink-secondary">
-            {items.length} item(s) — full indent only, no partial allocation
+            {items.length} item(s)
+            {request.indentRequestType
+              ? ` · ${INDENT_REQUEST_TYPE_LABELS[request.indentRequestType]}`
+              : ''}{' '}
+            — full indent only, no partial allocation
           </p>
         </div>
       </header>
@@ -147,7 +152,12 @@ export function AllocateFlowPage() {
           </div>
         )}
 
-      <StockComparisonTable items={items} className="mb-3" />
+      <StockComparisonTable
+        items={items}
+        className="mb-3"
+        showPricing={!hidePricing}
+        totalEstimatedValue={hidePricing ? undefined : request.estimatedValue}
+      />
 
       <div className="mb-4">
         <label className="text-sm font-medium text-ink-secondary block mb-2">

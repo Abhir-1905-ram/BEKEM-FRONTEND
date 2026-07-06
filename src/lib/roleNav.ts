@@ -100,6 +100,8 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
 
         { id: 'add-material', label: 'Product catalog', href: '/materials/new', icon: Package },
 
+        { id: 'new-request', label: 'Request material', href: '/request/new', icon: FilePlus },
+
         { id: 'pending', label: 'Pending indents', href: '/store/requests', icon: FileText },
 
         { id: 'completed', label: 'Complete indents', href: '/store/completed', icon: CheckSquare },
