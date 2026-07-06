@@ -545,27 +545,25 @@ export function ProcurementDecisionDetailPage({ listPath }: ProcurementDecisionD
                 </p>
 
                 {role === UserRole.EXECUTIVE && (
-
-                  <Button
-
-                    variant="accent"
-
-                    accentColor={accent}
-
-                    className="mt-3"
-
-                    onClick={() =>
-
-                      navigate(`/executive/po/new?purchaseRequestId=${decision.purchaseRequestId}`)
-
-                    }
-
-                  >
-
-                    Open Create PO
-
-                  </Button>
-
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <Button
+                      variant="accent"
+                      accentColor={accent}
+                      onClick={() =>
+                        navigate(`/executive/rfq/new?purchaseRequestId=${decision.purchaseRequestId}`)
+                      }
+                    >
+                      Create RFQ
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() =>
+                        navigate(`/executive/po/new?purchaseRequestId=${decision.purchaseRequestId}`)
+                      }
+                    >
+                      Open Create PO
+                    </Button>
+                  </div>
                 )}
 
               </Card>

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -51,8 +52,12 @@ export function SearchSelect<T extends SearchSelectOption = SearchSelectOption>(
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
-  const debouncedQ = useDebounced(query, 250);
+  const debouncedQ = useDebounced(query, 200);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [menuRect, setMenuRect] = useState<{ top: number; left: number; width: number } | null>(
+    null
+  );
 
   const { data: fetched = [], isFetching } = useQuery({
     queryKey: ['search-select', searchPath, debouncedQ, searchParams],
@@ -62,7 +67,7 @@ export function SearchSelect<T extends SearchSelectOption = SearchSelectOption>(
       });
       return res.data.data.map(mapResult);
     },
-    enabled: !!searchPath && open && debouncedQ.length >= 0,
+    enabled: !!searchPath && open,
     staleTime: 30_000,
   });
 
@@ -78,24 +83,63 @@ export function SearchSelect<T extends SearchSelectOption = SearchSelectOption>(
       })
     : [];
 
-  const results: T[] = searchPath ? (fetched as T[]) : (filteredStatic as T[]);
-  const selected = staticOptions?.find((o) => o.id === value) || results.find((o) => o.id === value);
+  const apiResults = (fetched as T[]) ?? [];
+  const displayResults: T[] = searchPath
+    ? debouncedQ.trim()
+      ? apiResults
+      : ([
+          ...(staticOptions ?? []).filter((o) => !apiResults.some((f) => f.id === o.id)),
+          ...apiResults,
+        ] as T[])
+    : (filteredStatic as T[]);
+
+  const selected =
+    staticOptions?.find((o) => o.id === value) ||
+    displayResults.find((o) => o.id === value) ||
+    apiResults.find((o) => o.id === value);
+
+  const updateMenuPosition = useCallback(() => {
+    const input = inputRef.current;
+    if (!input) return;
+    const rect = input.getBoundingClientRect();
+    setMenuRect({
+      top: rect.bottom + 4,
+      left: rect.left,
+      width: Math.max(rect.width, 260),
+    });
+  }, []);
 
   useEffect(() => {
     if (selected) setQuery(selected.label);
-  }, [selected?.id]);
+  }, [selected?.id, selected?.label]);
 
   useEffect(() => {
     setHighlight(0);
-  }, [results.length, debouncedQ]);
+  }, [displayResults.length, debouncedQ]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    updateMenuPosition();
+    const onReflow = () => updateMenuPosition();
+    window.addEventListener('resize', onReflow);
+    window.addEventListener('scroll', onReflow, true);
+    return () => {
+      window.removeEventListener('resize', onReflow);
+      window.removeEventListener('scroll', onReflow, true);
+    };
+  }, [open, updateMenuPosition, displayResults.length]);
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
-      if (!containerRef.current?.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (containerRef.current?.contains(target)) return;
+      const portal = document.getElementById(listId);
+      if (portal?.contains(target)) return;
+      setOpen(false);
     };
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
-  }, []);
+  }, [listId]);
 
   const pick = useCallback(
     (opt: T) => {
@@ -109,21 +153,70 @@ export function SearchSelect<T extends SearchSelectOption = SearchSelectOption>(
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (!open && (e.key === 'ArrowDown' || e.key === 'Enter')) {
       setOpen(true);
+      updateMenuPosition();
       return;
     }
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setHighlight((h) => Math.min(h + 1, Math.max(0, results.length - 1)));
+      setHighlight((h) => Math.min(h + 1, Math.max(0, displayResults.length - 1)));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setHighlight((h) => Math.max(h - 1, 0));
-    } else if (e.key === 'Enter' && results[highlight]) {
+    } else if (e.key === 'Enter' && displayResults[highlight]) {
       e.preventDefault();
-      pick(results[highlight]);
+      pick(displayResults[highlight]);
     } else if (e.key === 'Escape') {
       setOpen(false);
     }
   };
+
+  const dropdown =
+    open && menuRect
+      ? createPortal(
+          <ul
+            id={listId}
+            role="listbox"
+            className={cn(SEARCH_SELECT_DROPDOWN, 'fixed')}
+            style={{
+              top: menuRect.top,
+              left: menuRect.left,
+              width: menuRect.width,
+            }}
+          >
+            {isFetching && searchPath && displayResults.length === 0 && (
+              <li className="px-3 py-2 text-xs text-ink-muted">Loading vendors…</li>
+            )}
+            {!isFetching && displayResults.length === 0 && (
+              <li className="px-3 py-2 text-xs text-ink-muted">
+                {query.trim()
+                  ? `${emptyMessage} for "${query.trim()}"`
+                  : emptyMessage}
+              </li>
+            )}
+            {displayResults.map((opt, i) => (
+              <li key={opt.id} role="option" aria-selected={value === opt.id}>
+                <button
+                  type="button"
+                  className={cn(
+                    'w-full text-left px-3 py-2 text-sm hover:bg-surface-muted',
+                    highlight === i && 'bg-surface-muted',
+                    value === opt.id && 'font-semibold text-bekem-accent'
+                  )}
+                  onMouseEnter={() => setHighlight(i)}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => pick(opt)}
+                >
+                  <span className="block">{opt.label}</span>
+                  {opt.sublabel && (
+                    <span className="block text-xs text-ink-muted">{opt.sublabel}</span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>,
+          document.body
+        )
+      : null;
 
   return (
     <div ref={containerRef} className={cn('relative', className)}>
@@ -135,6 +228,7 @@ export function SearchSelect<T extends SearchSelectOption = SearchSelectOption>(
           )}
         />
         <input
+          ref={inputRef}
           type="text"
           role="combobox"
           aria-expanded={open}
@@ -143,10 +237,14 @@ export function SearchSelect<T extends SearchSelectOption = SearchSelectOption>(
           disabled={disabled}
           value={query}
           placeholder={placeholder}
-          onFocus={() => setOpen(true)}
+          onFocus={() => {
+            setOpen(true);
+            updateMenuPosition();
+          }}
           onChange={(e) => {
             setQuery(e.target.value);
             setOpen(true);
+            updateMenuPosition();
             if (!e.target.value) onChange('', {} as T);
           }}
           onKeyDown={onKeyDown}
@@ -157,43 +255,7 @@ export function SearchSelect<T extends SearchSelectOption = SearchSelectOption>(
           )}
         />
       </div>
-      {open && (
-        <ul
-          id={listId}
-          role="listbox"
-          className={SEARCH_SELECT_DROPDOWN}
-        >
-          {isFetching && searchPath && (
-            <li className="px-3 py-2 text-xs text-ink-muted">Searching…</li>
-          )}
-          {!isFetching && results.length === 0 && (
-            <li className="px-3 py-2 text-xs text-ink-muted">
-              {query.trim()
-                ? `${emptyMessage}${query.trim() ? ` for "${query.trim()}"` : ''} — check spelling or ask Coordinator to add it`
-                : 'Type to search'}
-            </li>
-          )}
-          {results.map((opt, i) => (
-            <li key={opt.id} role="option" aria-selected={value === opt.id}>
-              <button
-                type="button"
-                className={cn(
-                  'w-full text-left px-3 py-2 text-sm hover:bg-surface-muted',
-                  highlight === i && 'bg-surface-muted',
-                  value === opt.id && 'font-semibold text-bekem-accent'
-                )}
-                onMouseEnter={() => setHighlight(i)}
-                onClick={() => pick(opt)}
-              >
-                <span className="block">{opt.label}</span>
-                {opt.sublabel && (
-                  <span className="block text-xs text-ink-muted">{opt.sublabel}</span>
-                )}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      {dropdown}
     </div>
   );
 }

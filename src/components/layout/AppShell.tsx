@@ -50,7 +50,7 @@ export function AppShell() {
     location.pathname.includes('/allocate') ||
     location.pathname.includes('/forward') ||
     location.pathname.includes('/executive/po/new') ||
-    location.pathname.includes('/pm/approvals');
+    location.pathname.includes('/executive/rfq/new');
 
   const roleBadgeClass =
     role === UserRole.CHAIRMAN

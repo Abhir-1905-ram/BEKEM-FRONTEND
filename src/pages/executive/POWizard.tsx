@@ -127,7 +127,7 @@ export function POWizardPage() {
       return;
     }
     const res = await api.get<{ data: LineVendorRow[] }>('/vendors/for-materials', {
-      params: { materialIds: materialIds.join(','), strict: 'true' },
+      params: { materialIds: materialIds.join(',') },
     });
     setVendorRows(res.data.data);
   };
@@ -376,6 +376,24 @@ export function POWizardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once when PR list is ready
   }, [preselectedPrId, openPurchaseRequests, prLoading, selectedPr, selectingPr]);
 
+  useEffect(() => {
+    if (step !== 1 || !lineItems.length || !vendorRows.length) return;
+    setLineVendorByIndex((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      lineItems.forEach((row, i) => {
+        if (skippedLines[i] || next[i]) return;
+        const opts =
+          vendorRows.find((r) => r.materialId === row.materialId)?.vendors ?? [];
+        if (opts.length === 1) {
+          next[i] = opts[0].id;
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [step, lineItems, vendorRows, skippedLines]);
+
   const continueFromVendorAssign = () => {
     if (!allActiveLinesHaveVendor) {
       toast.error('Select a vendor for each line you are ordering (or skip lines with no vendor)');
@@ -530,13 +548,13 @@ export function POWizardPage() {
                   Split PO by vendor
                 </Button>
               </div>
-              <div className="procurement-landscape-scroll panel overflow-hidden">
+              <div className="procurement-landscape-scroll panel overflow-x-auto overflow-y-visible">
                 <table className="data-table min-w-[640px]">
                   <thead>
                     <tr className="bg-surface-muted/40">
                       <th>Material</th>
                       <th className="w-16">Qty</th>
-                      <th className="min-w-[200px]">Vendor</th>
+                      <th className="min-w-[280px]">Vendor</th>
                       <th className="w-28" />
                     </tr>
                   </thead>
@@ -557,22 +575,65 @@ export function POWizardPage() {
                             )}
                           </td>
                           <td className="tabular-nums">{row.quantity}</td>
-                          <td>
+                          <td className="align-top min-w-[280px]">
                             {!isSkipped && (
-                              <SearchSelect
-                                compact
-                                value={selectedId || null}
-                                onChange={(id) =>
-                                  setLineVendorByIndex((prev) => ({ ...prev, [i]: id }))
-                                }
-                                options={options.map((v) => ({
-                                  id: v.id,
-                                  label: v.name,
-                                  sublabel: v.gstNumber ? `GST ${v.gstNumber}` : undefined,
-                                }))}
-                                placeholder="Vendor…"
-                                emptyMessage="No vendors for this material"
-                              />
+                              <div className="space-y-2 py-1">
+                                {options.length > 0 && (
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {options.map((v) => (
+                                      <button
+                                        key={v.id}
+                                        type="button"
+                                        onClick={() =>
+                                          setLineVendorByIndex((prev) => ({ ...prev, [i]: v.id }))
+                                        }
+                                        className={cn(
+                                          'text-[11px] leading-tight px-2.5 py-1.5 rounded-lg border text-left max-w-full',
+                                          selectedId === v.id
+                                            ? 'border-bekem-accent bg-bekem-accent/10 text-bekem-accent font-semibold'
+                                            : 'border-surface-border text-ink-secondary hover:border-bekem-accent/40'
+                                        )}
+                                      >
+                                        <span className="block truncate">{v.name}</span>
+                                        {v.gstNumber && (
+                                          <span className="block text-[10px] opacity-70 truncate">
+                                            {v.gstNumber}
+                                          </span>
+                                        )}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                                <SearchSelect
+                                  compact
+                                  value={selectedId || null}
+                                  onChange={(id) =>
+                                    setLineVendorByIndex((prev) => ({ ...prev, [i]: id }))
+                                  }
+                                  searchPath="/vendors/search"
+                                  searchParams={
+                                    row.materialId ? { materialId: row.materialId } : undefined
+                                  }
+                                  options={options.map((v) => ({
+                                    id: v.id,
+                                    label: v.name,
+                                    sublabel: v.gstNumber ? `GST ${v.gstNumber}` : undefined,
+                                  }))}
+                                  placeholder={
+                                    options.length
+                                      ? 'Or search another vendor…'
+                                      : 'Search vendor by name or GST…'
+                                  }
+                                  emptyMessage="No vendors found"
+                                />
+                                {selectedId && (
+                                  <p className="text-[10px] text-emerald-700 font-medium">
+                                    Selected:{' '}
+                                    {options.find((v) => v.id === selectedId)?.name ||
+                                      'Vendor assigned'}
+                                  </p>
+                                )}
+                              </div>
                             )}
                           </td>
                           <td>

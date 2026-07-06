@@ -113,6 +113,7 @@ const RfqDetailPage = lazy(() =>
   import('@/pages/rfq/RfqDetailPage').then((m) => ({ default: m.RfqDetailPage }))
 );
 const POWizardPage = lazy(() => import('@/pages/executive/POWizard').then((m) => ({ default: m.POWizardPage })));
+const RfqWizardPage = lazy(() => import('@/pages/executive/RfqWizard').then((m) => ({ default: m.RfqWizardPage })));
 const PODetailPage = lazy(() => import('@/pages/procurement/PODetail').then((m) => ({ default: m.PODetailPage })));
 const AuditLogViewerPage = lazy(() =>
   import('@/pages/audit/AuditLogViewer').then((m) => ({ default: m.AuditLogViewerPage }))
@@ -521,7 +522,8 @@ export default function App() {
               />
 
               <Route path="/executive/rfq" element={<Navigate to="/executive/ho-indents" replace />} />
-              <Route path="/executive/rfqs" element={<Navigate to="/executive/ho-indents" replace />} />
+              <Route path="/executive/rfq" element={<Navigate to="/executive/rfq/new" replace />} />
+              <Route path="/executive/rfqs" element={<Navigate to="/executive/rfq/new" replace />} />
 
               <Route
                 path="/executive/ho-indents"
@@ -1115,6 +1117,22 @@ export default function App() {
                   <RoleGuard roles={[UserRole.EXECUTIVE]}>
 
                     <POWizardPage />
+
+                  </RoleGuard>
+
+                }
+
+              />
+
+              <Route
+
+                path="/executive/rfq/new"
+
+                element={
+
+                  <RoleGuard roles={[UserRole.EXECUTIVE]}>
+
+                    <RfqWizardPage />
 
                   </RoleGuard>
 

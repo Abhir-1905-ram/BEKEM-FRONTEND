@@ -27,4 +27,4 @@ export const TABLE_NUM = 'text-right tabular-nums';
 export const SEARCH_SELECT_INPUT =
   'w-full rounded border border-surface-border pl-8 pr-2 py-1.5 text-xs bg-white transition-colors focus:outline-none focus:ring-1 focus:ring-bekem-accent/30 focus:border-bekem-accent/50';
 export const SEARCH_SELECT_DROPDOWN =
-  'absolute z-50 mt-1 w-full max-h-56 overflow-auto rounded-lg border border-surface-border bg-white py-1 animate-slide-down';
+  'z-[9999] max-h-56 overflow-auto rounded-lg border border-surface-border bg-white py-1 shadow-lg animate-slide-down';

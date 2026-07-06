@@ -166,6 +166,8 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
 
         { id: 'create-po', label: 'Create PO', href: '/executive/po/new', icon: ShoppingCart },
 
+        { id: 'create-rfq', label: 'Create RFQ', href: '/executive/rfq/new', icon: FileStack },
+
         { id: 'create-wo', label: 'Generate WO', href: '/executive/wo/new', icon: HardHat },
 
         { id: 'review-wos', label: 'Review work orders', href: '/executive/review-wos', icon: HardHat },

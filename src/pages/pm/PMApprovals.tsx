@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { MaterialRequestDto } from '@afios/shared';
 import { Card } from '@/components/ui/Card';
@@ -24,20 +24,10 @@ export function PMApprovalsPage() {
   });
 
   return (
-    <div className="page-container max-w-2xl">
+    <div className="page-container max-w-3xl">
       <PageHeader
         title="Indent approvals"
         subtitle="Review stock across your projects — forward to Head Office, request branch transfer, or reject"
-        action={
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-gray-100"
-            aria-label="Go back"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-        }
       />
 
       <PmDailyCapBanner />
