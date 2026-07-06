@@ -1,5 +1,5 @@
 import { formatCurrency } from '@afios/shared';
-import { computeGstBreakdown } from '@afios/shared';
+import { computeGstBreakdown, DEFAULT_GST_PERCENT } from '@afios/shared';
 import { cn } from '@/lib/utils';
 
 interface GstSummaryBarProps {
@@ -13,7 +13,7 @@ interface GstSummaryBarProps {
 export function GstSummaryBar({
   quantity,
   rate,
-  gstPercent = 18,
+  gstPercent = DEFAULT_GST_PERCENT,
   className,
   compact = false,
 }: GstSummaryBarProps) {

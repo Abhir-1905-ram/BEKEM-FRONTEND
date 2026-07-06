@@ -9,6 +9,7 @@ import {
   ROLE_COLORS,
   UserRole,
   formatCurrency,
+  snapGstPercent,
   type MaterialRequestDto,
   type PoLineItemDto,
   type PurchaseRequestDto,
@@ -36,6 +37,7 @@ import { QuotationComparisonTable } from '@/components/QuotationComparisonTable'
 import { PurchaseHistoryPanel } from '@/components/PurchaseHistoryPanel';
 import { ProcurementWorkflowBanner } from '@/components/ProcurementWorkflowBanner';
 import { GstSummaryBar } from '@/components/GstSummaryBar';
+import { GstPercentSelect } from '@/components/GstPercentSelect';
 import { pickL1VendorId } from '@/lib/quotationTotals';
 
 const STEPS = [
@@ -278,7 +280,7 @@ export function POWizardPage() {
       description: material.description || material.name || '',
       itemCode: material.itemCode,
       hsnCode: material.hsnCode,
-      gstPercent: material.gstRate ?? 18,
+      gstPercent: snapGstPercent(material.gstRate),
       quantity: 1,
       rate: 0,
       amount: 0,
@@ -614,8 +616,8 @@ export function POWizardPage() {
           {step === 3 && (
             <motion.div key="s3" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}>
               <p className="text-sm text-ink-secondary mb-3">
-                Enter quantity and unit price. Description, HSN, GST, and item code are from Material
-                Master (read-only).
+                Enter quantity and unit price. Description, HSN, and item code are from Material
+                Master (read-only). Choose GST 5% or 18% per line.
               </p>
               <div className="space-y-3">
                 {lineItems.map((row, i) => {
@@ -672,7 +674,10 @@ export function POWizardPage() {
                       </div>
                       <div>
                         <p className="field-readonly-label mb-1">GST %</p>
-                        <div className="field-readonly tabular-nums">{row.gstPercent ?? 18}%</div>
+                        <GstPercentSelect
+                          value={row.gstPercent}
+                          onChange={(gstPercent) => updateLineItem(i, { gstPercent })}
+                        />
                       </div>
                       <div>
                         <label className="text-xs text-ink-muted">Qty</label>

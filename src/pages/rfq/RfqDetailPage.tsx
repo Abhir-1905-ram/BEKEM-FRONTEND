@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, Mail, MessageCircle } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { RfqComparisonDto, RfqDetailDto } from '@afios/shared';
+import { DEFAULT_GST_PERCENT } from '@afios/shared';
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Input';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -170,7 +171,7 @@ export function RfqDetailPage() {
             <div>
               <h2 className="section-label mb-3">Vendor quotations</h2>
               <VendorQuotationEditor
-                quotations={drafts.length ? drafts : [{ vendorId: '', rate: 0, gstPercent: 18, paymentTerms: '', deliveryTerms: '' }]}
+                quotations={drafts.length ? drafts : [{ vendorId: '', rate: 0, gstPercent: DEFAULT_GST_PERCENT, paymentTerms: '', deliveryTerms: '' }]}
                 quantity={quantity}
                 onChange={setDrafts}
               />

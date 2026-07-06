@@ -24,12 +24,13 @@ import type {
 } from '@afios/shared';
 import { MaterialCategorySelect } from '@/components/MaterialCategorySelect';
 import { groupMaterialsByCategory } from '@/lib/groupMaterialsByCategory';
-import { MATERIAL_CATEGORY_NAMES } from '@afios/shared';
+import { MATERIAL_CATEGORY_NAMES, DEFAULT_GST_PERCENT, snapGstPercent } from '@afios/shared';
 import { useAuthStore } from '@/stores/authStore';
 import { UserRole, PERMISSION_MATRIX } from '@afios/shared';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
+import { GstPercentSelect } from '@/components/GstPercentSelect';
 import { Modal } from '@/components/ui/Modal';
 import { ActionCard } from '@/components/ui/ActionCard';
 import { EmptyState } from '@/components/EmptyState';
@@ -68,6 +69,7 @@ export function CreateMaterialPage() {
     categoryId: '',
     categoryRemarks: '',
     hsnCode: '',
+    gstRate: DEFAULT_GST_PERCENT,
     initialQuantity: 0,
     lowStockThreshold: 20,
   });
@@ -89,6 +91,7 @@ export function CreateMaterialPage() {
     categoryId: '',
     categoryRemarks: '',
     hsnCode: '',
+    gstRate: DEFAULT_GST_PERCENT,
   });
 
   const { data: categories } = useQuery({
@@ -268,6 +271,7 @@ export function CreateMaterialPage() {
       categoryId: item.categoryId || categories?.find((c) => c.name === item.category)?.id || '',
       categoryRemarks: item.categoryRemarks || '',
       hsnCode: item.hsnCode || '',
+      gstRate: snapGstPercent(item.gstRate),
     });
   };
 
@@ -560,6 +564,13 @@ export function CreateMaterialPage() {
               onChange={(e) => setCreateForm({ ...createForm, hsnCode: e.target.value })}
             />
           </div>
+          <div>
+            <label className="text-xs font-semibold text-ink-muted mb-1 block">GST %</label>
+            <GstPercentSelect
+              value={createForm.gstRate}
+              onChange={(gstRate) => setCreateForm({ ...createForm, gstRate })}
+            />
+          </div>
           {(activeSiteId || !isHq) && (
             <div className="grid sm:grid-cols-2 gap-3 pt-2 border-t border-surface-border">
               <div>
@@ -752,6 +763,13 @@ export function CreateMaterialPage() {
             <Input
               value={editForm.hsnCode}
               onChange={(e) => setEditForm({ ...editForm, hsnCode: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-ink-muted mb-1 block">GST %</label>
+            <GstPercentSelect
+              value={editForm.gstRate}
+              onChange={(gstRate) => setEditForm({ ...editForm, gstRate })}
             />
           </div>
           <Button

@@ -1,11 +1,12 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { formatCurrency } from '@afios/shared';
+import { formatCurrency, DEFAULT_GST_PERCENT } from '@afios/shared';
 import type { VendorDto } from '@afios/shared';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { SearchSelect } from '@/components/SearchSelect';
+import { GstPercentSelect } from '@/components/GstPercentSelect';
 import { computeFinalCost } from '@/lib/quotationTotals';
 import { GstSummaryBar } from '@/components/GstSummaryBar';
 
@@ -54,7 +55,7 @@ export function VendorQuotationEditor({
       {
         vendorId: '',
         rate: 0,
-        gstPercent: 18,
+        gstPercent: DEFAULT_GST_PERCENT,
         paymentTerms: '100% payment within 30 days from the date of supply',
         deliveryTerms: 'Delivery as per project schedule',
       },
@@ -114,11 +115,9 @@ export function VendorQuotationEditor({
             </div>
             <div>
               <p className="text-[11px] font-medium text-ink-muted mb-1">GST %</p>
-              <Input
-                type="number"
-                min={0}
-                value={row.gstPercent ?? 18}
-                onChange={(e) => updateRow(index, { gstPercent: parseFloat(e.target.value) || 0 })}
+              <GstPercentSelect
+                value={row.gstPercent}
+                onChange={(gstPercent) => updateRow(index, { gstPercent })}
               />
             </div>
             <div className="col-span-2">
