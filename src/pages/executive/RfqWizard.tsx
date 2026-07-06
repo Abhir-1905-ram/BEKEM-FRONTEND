@@ -51,6 +51,7 @@ function draftsFromComparison(data: RfqComparisonDto): VendorQuotationDraft[] {
   while (rows.length < 3) {
     rows.push({
       vendorId: '',
+      vendorName: '',
       rate: 0,
       gstPercent: 18,
       paymentTerms: '100% payment within 30 days from the date of supply',
@@ -306,7 +307,7 @@ export function RfqWizardPage() {
                     <tbody>
                       {selectedMr.items.map((item, idx) => (
                         <tr key={idx}>
-                          <td>{item.material?.name || item.description || '—'}</td>
+                          <td>{item.material?.name || item.material?.description || '—'}</td>
                           <td className="text-right tabular-nums">{item.quantityRequested}</td>
                           <td>{item.unit || item.material?.unit || '—'}</td>
                         </tr>
