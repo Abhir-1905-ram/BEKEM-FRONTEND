@@ -143,7 +143,7 @@ export function BranchTransferDetailPage() {
 
   return (
     <div className="px-4 pt-4 pb-6 max-w-lg mx-auto">
-      <header className="flex items-center gap-3 mb-6">
+      <header className="flex items-center gap-3 mb-3">
         <button
           onClick={() => navigate(-1)}
           className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-gray-100"
@@ -157,7 +157,7 @@ export function BranchTransferDetailPage() {
         </div>
       </header>
 
-      <Card className="space-y-3 mb-6">
+      <Card className="space-y-3 mb-3">
         <div>
           <p className="text-xs text-gray-500">Route</p>
           <p className="font-medium">
@@ -197,7 +197,7 @@ export function BranchTransferDetailPage() {
       <StatusTimeline entityType="BranchTransfer" entityId={transfer.id} />
 
       {transfer.canExecutiveApprove && (
-        <div className="mt-6 space-y-4 border-t border-surface-border pt-6">
+        <div className="mt-6 space-y-3 border-t border-surface-border pt-6">
           <h2 className="font-semibold text-sm">Executive review</h2>
           <Textarea
             value={note}
@@ -228,7 +228,7 @@ export function BranchTransferDetailPage() {
       )}
 
       {transfer.canCoordinatorDecide && (
-        <div className="mt-6 space-y-4 border-t border-surface-border pt-6">
+        <div className="mt-6 space-y-3 border-t border-surface-border pt-6">
           <h2 className="font-semibold text-sm">Head Office decision</h2>
           <p className="text-sm text-ink-secondary">
             Approve the inter-project transfer, raise a PO instead, or reject the request.

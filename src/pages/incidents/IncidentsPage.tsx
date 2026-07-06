@@ -91,7 +91,7 @@ export function IncidentsPage() {
       />
 
       {!isSite && pendingCount > 0 && tab === 'all' && !isError && (
-        <div className="mb-6 rounded-lg border border-warning/30 bg-warning-light px-5 py-4 flex items-center gap-3">
+        <div className="mb-3 rounded-lg border border-warning/30 bg-warning-light px-3 py-2.5 flex items-center gap-3">
           <FileText className="h-5 w-5 text-warning shrink-0" />
           <p className="text-sm font-medium text-ink">
             {pendingCount} indent{pendingCount > 1 ? 's' : ''} awaiting action
@@ -99,7 +99,7 @@ export function IncidentsPage() {
         </div>
       )}
 
-      <div className="flex gap-1 bg-surface-muted rounded-lg p-1 mb-6 w-full sm:w-fit overflow-x-auto">
+      <div className="flex gap-1 bg-surface-muted rounded-lg p-1 mb-3 w-full sm:w-fit overflow-x-auto">
         {TABS.map((t) => (
           <button
             key={t.key}

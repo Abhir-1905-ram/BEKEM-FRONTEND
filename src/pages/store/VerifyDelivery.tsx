@@ -76,7 +76,7 @@ export function VerifyDeliveryPage() {
           subtitle={selectedPo.procurementRef || selectedPo.poNumber}
         />
 
-        <div className="panel p-4 mb-4 space-y-2 text-sm">
+        <div className="panel p-3 mb-4 space-y-2 text-sm">
           <p>
             <span className="text-ink-muted">Project:</span> {project?.name || '—'}
           </p>
@@ -91,7 +91,7 @@ export function VerifyDeliveryPage() {
         <p className="text-sm font-medium mb-3">Verify quantities received at store gate</p>
         <div className="space-y-3 mb-4">
           {selectedPo.lineItems?.map((line) => (
-            <div key={line.id || line.materialId} className="panel p-4">
+            <div key={line.id || line.materialId} className="panel p-3">
               <p className="font-medium text-sm">{line.description}</p>
               <p className="text-xs text-ink-muted mb-2">Ordered: {line.quantity}</p>
               <QuantityStepper

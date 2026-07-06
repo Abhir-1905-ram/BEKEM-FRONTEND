@@ -79,7 +79,7 @@ export function SiteHomePage() {
 
       <TodayPanel actions={today ?? []} loading={todayLoading} />
 
-      <section className="mb-6 lg:mb-8">
+      <section className="section-gap">
         <ActionCard
           title="Request material"
           subtitle="Create a new indent for your site"
@@ -88,7 +88,7 @@ export function SiteHomePage() {
           featured
           onClick={() => navigate('/request/new')}
         />
-        <div className="grid gap-4 sm:grid-cols-2 mt-4">
+        <div className="grid gap-2.5 sm:grid-cols-2 mt-4">
           <ActionCard
             title="Pending requests"
             subtitle={pending > 0 ? 'Awaiting store verification' : 'Nothing in queue'}
@@ -108,7 +108,7 @@ export function SiteHomePage() {
         </div>
       </section>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 lg:mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 section-gap">
         <ActionCard
           title="Waiting at store"
           count={pending}

@@ -60,14 +60,14 @@ export function PMHomePage() {
 
       <PmDailyCapBanner cap={dashboard?.dailyCap} />
 
-      <div className="flex flex-col sm:flex-row gap-3 mb-6 lg:mb-8">
+      <div className="flex flex-col sm:flex-row gap-3 section-gap">
         <button
           type="button"
           onClick={() => navigate('/pm/material-lookup')}
-          className="flex-1 panel p-4 text-left border-2 border-bekem-accent/40 bg-bekem-accent-soft/40 hover:bg-bekem-accent-soft/60 transition-colors"
+          className="flex-1 panel p-3 text-left border-2 border-bekem-accent/40 bg-bekem-accent-soft/40 hover:bg-bekem-accent-soft/60 transition-colors"
         >
-          <div className="flex items-center gap-3">
-            <ShoppingCart className="h-5 w-5 text-bekem-accent shrink-0" />
+          <div className="flex items-center gap-2.5">
+            <ShoppingCart className="h-4 w-4 text-bekem-accent shrink-0" />
             <div>
               <p className="font-semibold text-ink">New procurement</p>
               <p className="text-xs text-ink-secondary mt-0.5">Search materials and request purchase</p>
@@ -77,10 +77,10 @@ export function PMHomePage() {
         <button
           type="button"
           onClick={() => navigate('/pm/material-lookup?action=branch-transfer')}
-          className="flex-1 panel p-4 text-left hover:border-bekem-accent/30 transition-colors"
+          className="flex-1 panel p-3 text-left hover:border-bekem-accent/30 transition-colors"
         >
-          <div className="flex items-center gap-3">
-            <ArrowLeftRight className="h-5 w-5 text-ink-muted shrink-0" />
+          <div className="flex items-center gap-2.5">
+            <ArrowLeftRight className="h-4 w-4 text-ink-muted shrink-0" />
             <div>
               <p className="font-semibold text-ink">Branch transfer</p>
               <p className="text-xs text-ink-secondary mt-0.5">Move stock between your projects</p>
@@ -90,13 +90,13 @@ export function PMHomePage() {
         <button
           type="button"
           onClick={() => navigate('/pm/material-lookup')}
-          className="sm:w-auto panel px-4 py-4 text-left hover:border-bekem-accent/30 transition-colors"
+          className="sm:w-auto panel px-3 py-3 text-left hover:border-bekem-accent/30 transition-colors"
         >
-          <Search className="h-5 w-5 text-bekem-accent" />
+          <Search className="h-4 w-4 text-bekem-accent" />
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 lg:mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 section-gap">
         <ActionCard
           title="Pending material requests"
           count={pendingCount}

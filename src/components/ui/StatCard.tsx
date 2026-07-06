@@ -45,9 +45,9 @@ export function StatCard({
 
   if (loading) {
     return (
-      <div className={cn('panel p-3 animate-pulse', hero && 'lg:p-4', className)}>
-        <div className="h-4 w-24 bg-surface-muted rounded mb-6" />
-        <div className="h-12 w-32 bg-surface-muted rounded" />
+      <div className={cn('panel p-2.5 animate-pulse', hero && 'lg:p-3', className)}>
+        <div className="h-3 w-20 bg-surface-muted rounded mb-3" />
+        <div className="h-8 w-24 bg-surface-muted rounded" />
       </div>
     );
   }
@@ -55,11 +55,11 @@ export function StatCard({
   const displayValue =
     currency && typeof value === 'string' && value.startsWith('₹') ? (
       <span className="inline-flex items-baseline gap-0.5">
-        <span className={cn('font-semibold text-ink-muted', hero ? 'text-base' : 'text-sm')}>₹</span>
+        <span className={cn('font-semibold text-ink-muted', hero ? 'text-sm' : 'text-xs')}>₹</span>
         <span
           className={cn(
             'font-semibold tabular-nums text-ink tracking-tight',
-            hero ? 'text-3xl lg:text-4xl' : 'text-2xl'
+            hero ? 'text-2xl lg:text-3xl' : 'text-xl'
           )}
         >
           {value.slice(1)}
@@ -69,7 +69,7 @@ export function StatCard({
       <span
         className={cn(
           'font-semibold tabular-nums text-ink tracking-tight',
-          hero ? 'text-3xl lg:text-4xl' : 'text-2xl'
+          hero ? 'text-2xl lg:text-3xl' : 'text-xl'
         )}
       >
         {value}
@@ -86,36 +86,36 @@ export function StatCard({
       className={cn(
         'relative overflow-hidden rounded-lg border border-surface-border bg-white text-left w-full group',
         'transition-colors duration-200',
-        hero ? 'p-4 lg:p-5' : 'p-3',
+        hero ? 'p-3' : 'p-2.5',
         onClick && 'hover:border-bekem-accent/30 hover:bg-bekem-accent-soft/20 cursor-pointer',
         className
       )}
     >
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">{label}</p>
-          <div className="mt-1.5">{displayValue}</div>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-ink-muted">{label}</p>
+          <div className="mt-0.5">{displayValue}</div>
           {trend && (
             <div
               className={cn(
-                'flex items-center gap-1.5 text-xs font-semibold mt-3',
+                'flex items-center gap-1 text-[11px] font-semibold mt-1.5',
                 trend.positive === true && 'text-success',
                 trend.positive === false && 'text-warning',
                 trend.positive === undefined && 'text-ink-muted'
               )}
             >
-              {TrendIcon && <TrendIcon className="h-3.5 w-3.5" />}
+              {TrendIcon && <TrendIcon className="h-3 w-3" />}
               <span>{trend.label}</span>
             </div>
           )}
-          {hint && !trend && <p className="text-xs text-ink-muted mt-2">{hint}</p>}
+          {hint && !trend && <p className="text-[11px] text-ink-muted mt-1">{hint}</p>}
         </div>
-        <div className="flex flex-col items-end gap-3">
+        <div className="flex flex-col items-end gap-2">
           {icon && (
             <div
               className={cn(
                 'shrink-0 rounded-lg flex items-center justify-center text-white',
-                hero ? 'h-9 w-9' : 'h-8 w-8',
+                hero ? 'h-8 w-8' : 'h-7 w-7',
                 iconBg
               )}
             >

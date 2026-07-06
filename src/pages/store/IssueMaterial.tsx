@@ -157,7 +157,7 @@ export function IssueMaterialPage() {
       />
 
       {lastIssue && (
-        <div className="panel p-4 mb-4 flex items-center justify-between gap-3">
+        <div className="panel p-3 mb-4 flex items-center justify-between gap-3">
           <div>
             <p className="font-semibold">{lastIssue.issueNumber}</p>
             <p className="text-sm text-ink-secondary">Issue slip ready to print</p>
@@ -200,13 +200,13 @@ export function IssueMaterialPage() {
           </div>
         </ListQueryBoundary>
       ) : (
-        <div className="space-y-4">
-          <div className="panel p-5">
+        <div className="space-y-3">
+          <div className="panel p-3">
             <p className="font-semibold mb-4">{selected.indentNumber}</p>
             <StockComparisonTable items={lineItems(selected)} />
           </div>
 
-          <div className="panel p-5 space-y-4">
+          <div className="panel p-3 space-y-3">
             <div>
               <label className="text-sm font-medium text-ink-secondary block mb-2">
                 Issue reason <span className="text-danger">*</span>

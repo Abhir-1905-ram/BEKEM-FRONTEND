@@ -51,7 +51,7 @@ export function UserAnalyticsPage() {
         subtitle="Activity and assignments across every user in Bekem OS"
       />
 
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row gap-3 mb-3">
         <Input
           placeholder="Search name, email, project, site…"
           value={search}

@@ -55,9 +55,9 @@ export function ExplorerPage() {
         skeletonRows={6}
         empty={<EmptyState title="No projects" description="Active projects will appear here." />}
       >
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
           {(projects ?? []).map((p) => (
-            <div key={p.id} className="panel p-5 hover:shadow-card-hover transition-all">
+            <div key={p.id} className="panel p-3 hover:shadow-card-hover transition-all">
               <div className="flex items-start gap-3">
                 <div className="h-10 w-10 rounded-xl bg-store/10 flex items-center justify-center shrink-0">
                   <Building2 className="h-5 w-5 text-store" />

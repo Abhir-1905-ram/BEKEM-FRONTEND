@@ -238,7 +238,7 @@ export function WorkOrderDetailPage() {
 
   return (
     <div className="px-4 pt-4 pb-6 max-w-lg mx-auto">
-      <header className="flex items-center gap-3 mb-6">
+      <header className="flex items-center gap-3 mb-3">
         <button
           onClick={() => navigate(-1)}
           className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-gray-100"
@@ -256,7 +256,7 @@ export function WorkOrderDetailPage() {
         </Button>
       </header>
 
-      <Card className="space-y-3 mb-6">
+      <Card className="space-y-3 mb-3">
         <div>
           <p className="text-xs text-gray-500">Scope</p>
           <p className="font-medium">{wo.scope}</p>
@@ -286,7 +286,7 @@ export function WorkOrderDetailPage() {
       </Card>
 
       {['ACCEPTED', 'IN_PROGRESS', 'CLOSED'].includes(wo.status) && (
-        <Card className="mb-6">
+        <Card className="mb-3">
           <div className="flex justify-between items-end mb-2">
             <div>
               <p className="text-xs text-gray-500">Progress</p>
@@ -312,7 +312,7 @@ export function WorkOrderDetailPage() {
       )}
 
       {(wo.milestones?.length ?? 0) > 0 && (
-        <div className="mb-6">
+        <div className="mb-3">
           <h2 className="font-semibold text-sm mb-2">Milestones</h2>
           <div className="space-y-2">
             {(wo.milestones ?? []).map((ms) => (
@@ -345,7 +345,7 @@ export function WorkOrderDetailPage() {
       )}
 
       {(wo.materialIssues?.length ?? 0) > 0 && (
-        <div className="mb-6">
+        <div className="mb-3">
           <h2 className="font-semibold text-sm mb-2">Materials issued</h2>
           <div className="space-y-2">
             {(wo.materialIssues ?? []).map((issue) => (
@@ -361,7 +361,7 @@ export function WorkOrderDetailPage() {
       )}
 
       {(wo.certifications?.length ?? 0) > 0 && (
-        <div className="mb-6">
+        <div className="mb-3">
           <h2 className="font-semibold text-sm mb-2">Certifications</h2>
           <div className="space-y-2">
             {(wo.certifications ?? []).map((cert) => (

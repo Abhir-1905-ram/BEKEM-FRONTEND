@@ -103,7 +103,7 @@ export function StoreHomePage() {
 
       <TodayPanel actions={today ?? []} loading={todayLoading} />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 lg:mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 section-gap">
         <StatCard label="Waiting" value={summary?.waiting ?? '—'} hint="Needs allocation" tone="amber" />
         <StatCard
           label="Stock items"
@@ -120,7 +120,7 @@ export function StoreHomePage() {
         />
       </div>
 
-      <div className="mb-8">
+      <div className="mb-4">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-bold text-ink uppercase tracking-wider">Existing stock</h2>
         </div>

@@ -12,24 +12,24 @@ export function MaterialAvailabilityPanel({ availability, className }: MaterialA
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className={cn('panel p-4 lg:p-5 space-y-4', className)}>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="rounded-xl border border-surface-border bg-bekem-accent-soft/30 px-4 py-3">
-          <div className="flex items-center gap-2 text-ink-muted mb-1">
-            <Warehouse className="h-4 w-4" />
-            <p className="text-xs font-semibold uppercase tracking-wide">Store available stock</p>
+    <div className={cn('panel p-3 space-y-2', className)}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="rounded-lg border border-surface-border bg-bekem-accent-soft/30 px-2.5 py-1.5">
+          <div className="flex items-center gap-1.5 text-ink-muted mb-0.5">
+            <Warehouse className="h-3.5 w-3.5" />
+            <p className="text-[10px] font-semibold uppercase tracking-wide">Store available stock</p>
           </div>
-          <p className="text-2xl font-bold tabular-nums text-ink">
+          <p className="text-xl font-bold tabular-nums text-ink">
             {availability.storeAvailableQty}{' '}
             <span className="text-sm font-medium text-ink-secondary">{availability.unit}</span>
           </p>
         </div>
-        <div className="rounded-xl border border-surface-border px-4 py-3">
-          <div className="flex items-center gap-2 text-ink-muted mb-1">
-            <Building2 className="h-4 w-4" />
-            <p className="text-xs font-semibold uppercase tracking-wide">Company available stock</p>
+        <div className="rounded-lg border border-surface-border px-2.5 py-1.5">
+          <div className="flex items-center gap-1.5 text-ink-muted mb-0.5">
+            <Building2 className="h-3.5 w-3.5" />
+            <p className="text-[10px] font-semibold uppercase tracking-wide">Company available stock</p>
           </div>
-          <p className="text-2xl font-bold tabular-nums text-ink">
+          <p className="text-xl font-bold tabular-nums text-ink">
             {availability.companyAvailableQty}{' '}
             <span className="text-sm font-medium text-ink-secondary">{availability.unit}</span>
           </p>

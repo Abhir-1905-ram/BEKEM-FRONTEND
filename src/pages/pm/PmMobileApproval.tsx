@@ -87,8 +87,8 @@ export function PmMobileApprovalPage() {
         empty={<p className="text-sm text-ink-muted">Request not found.</p>}
       >
         {request && (
-          <div className="space-y-4">
-            <div className="panel p-4 space-y-3">
+          <div className="space-y-3">
+            <div className="panel p-3 space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-lg font-bold text-ink">{request.indentNumber}</p>

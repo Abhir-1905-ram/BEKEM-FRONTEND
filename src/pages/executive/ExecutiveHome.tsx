@@ -119,7 +119,7 @@ export function ExecutiveHomePage() {
       <DashboardSearch placeholder="Search projects, materials, employees, POs…" />
 
       {!!deliveryAlerts?.length && (
-        <div className="mb-6 rounded-lg border border-danger/25 bg-danger-light px-4 py-3 flex items-start gap-3">
+        <div className="mb-3 rounded-lg border border-danger/25 bg-danger-light px-3 py-2 flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-danger shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold text-danger-dark">Pending delivery overdue</p>
@@ -147,7 +147,7 @@ export function ExecutiveHomePage() {
 
       <DashboardWidgetCards widgets={widgets?.widgets} loading={widgetsLoading} />
 
-      <div className="flex flex-wrap gap-3 mb-6">
+      <div className="flex flex-wrap gap-3 mb-3">
         <input
           type="search"
           placeholder="Filter projects by code or name…"
@@ -181,20 +181,20 @@ export function ExecutiveHomePage() {
         empty={<></>}
       >
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-            <div className="panel p-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <div className="panel p-3">
               <p className="text-xs text-ink-muted uppercase tracking-wide">Projects</p>
               <p className="text-2xl font-bold mt-1">{dashboard?.totals.projectCount ?? 0}</p>
             </div>
-            <div className="panel p-4">
+            <div className="panel p-3">
               <p className="text-xs text-ink-muted uppercase tracking-wide">Open POs</p>
               <p className="text-2xl font-bold mt-1">{dashboard?.totals.openPoCount ?? 0}</p>
             </div>
-            <div className="panel p-4">
+            <div className="panel p-3">
               <p className="text-xs text-ink-muted uppercase tracking-wide">Open PRs</p>
               <p className="text-2xl font-bold mt-1">{dashboard?.totals.openPrCount ?? 0}</p>
             </div>
-            <div className="panel p-4">
+            <div className="panel p-3">
               <p className="text-xs text-ink-muted uppercase tracking-wide">Pending indents</p>
               <p className="text-2xl font-bold mt-1">{dashboard?.totals.pendingIndentCount ?? 0}</p>
             </div>
@@ -209,7 +209,7 @@ export function ExecutiveHomePage() {
                 {filteredProjects.map((p) => (
                   <div
                     key={p.id}
-                    className="panel p-4 cursor-pointer hover:border-bekem-accent/30 transition-colors"
+                    className="panel p-3 cursor-pointer hover:border-bekem-accent/30 transition-colors"
                     onClick={() => navigate(`/admin/projects`)}
                   >
                     <div className="flex justify-between items-start gap-2">

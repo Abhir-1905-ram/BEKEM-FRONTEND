@@ -29,10 +29,10 @@ export function SuccessScreen({
         animate={{ scale: 1 }}
         transition={{ type: 'spring', delay: 0.1 }}
       >
-        <CheckCircle2 className="h-20 w-20 mb-6" style={{ color: accentColor }} />
+        <CheckCircle2 className="h-20 w-20 mb-3" style={{ color: accentColor }} />
       </motion.div>
       <h1 className="text-2xl font-bold text-gray-900 mb-2">{title}</h1>
-      <p className="text-gray-600 mb-8 max-w-sm">{message}</p>
+      <p className="text-gray-600 mb-4 max-w-sm">{message}</p>
       <div className="w-full max-w-sm space-y-3">
         <Button variant="accent" size="lg" accentColor={accentColor} onClick={primaryAction.onClick}>
           {primaryAction.label}

@@ -57,7 +57,7 @@ export function CategoryReportPage() {
         isEmpty={!data?.length}
         empty={<p className="text-sm text-ink-muted">No materials in catalog.</p>}
       >
-        <div className="space-y-4">
+        <div className="space-y-3">
           {(data ?? []).map((group) => (
             <div key={group.category} className="panel overflow-hidden">
               <div className="px-3 py-2 border-b border-surface-border bg-surface-muted/50 flex justify-between items-center">

@@ -13,7 +13,7 @@ export function ExecutivePurchaseRequestsWidget({
 }: ExecutivePurchaseRequestsWidgetProps) {
   if (loading) {
     return (
-      <div className="h-28 rounded-lg bg-surface-muted border border-surface-border animate-pulse mb-6 lg:mb-8" />
+      <div className="h-20 rounded-lg bg-surface-muted border border-surface-border animate-pulse section-gap" />
     );
   }
 
@@ -21,20 +21,20 @@ export function ExecutivePurchaseRequestsWidget({
     <button
       type="button"
       onClick={onClick}
-      className="w-full text-left mb-6 lg:mb-8 rounded-lg border border-surface-border bg-white p-4 hover:border-bekem-accent/40 transition-colors"
+      className="w-full text-left section-gap rounded-lg border border-surface-border bg-white p-3 hover:border-bekem-accent/40 transition-colors"
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">
             Pending purchase requests
           </p>
-          <p className="text-3xl font-bold text-ink mt-1 tabular-nums">{count}</p>
-          <p className="text-sm text-ink-secondary mt-1">
+          <p className="text-2xl font-bold text-ink mt-0.5 tabular-nums">{count}</p>
+          <p className="text-xs text-ink-secondary mt-0.5">
             PM-forwarded indents ready for procurement decision
           </p>
         </div>
-        <div className="h-10 w-10 rounded-lg bg-bekem-accent/10 text-bekem-accent flex items-center justify-center">
-          <FilePlus className="h-5 w-5" />
+        <div className="h-8 w-8 rounded-lg bg-bekem-accent/10 text-bekem-accent flex items-center justify-center">
+          <FilePlus className="h-4 w-4" />
         </div>
       </div>
     </button>

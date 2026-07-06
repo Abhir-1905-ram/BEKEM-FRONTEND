@@ -63,7 +63,7 @@ export function GrnApprovalsPage() {
       >
         <div className="space-y-3">
           {(data ?? []).map((grn) => (
-            <div key={grn.id} className="panel p-4 space-y-3">
+            <div key={grn.id} className="panel p-3 space-y-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="font-semibold text-ink">{grn.grnNumber}</p>
@@ -91,7 +91,7 @@ export function GrnApprovalsPage() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-4 text-sm">
+              <div className="flex flex-wrap gap-2.5 text-sm">
                 {grn.invoiceNo && <span>Invoice: {grn.invoiceNo}</span>}
                 {grn.invoiceValue != null && (
                   <span>Value: {formatCurrency(grn.invoiceValue)}</span>

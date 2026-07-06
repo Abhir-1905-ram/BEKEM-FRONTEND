@@ -243,7 +243,7 @@ export function VendorAdminPage() {
       />
 
       {!!pendingVendors?.length && (
-        <div className="mb-6 panel p-4 border-amber-200 bg-amber-50/50">
+        <div className="mb-3 panel p-3 border-amber-200 bg-amber-50/50">
           <p className="font-semibold text-ink mb-3">
             Pending authorization ({pendingVendors.length})
           </p>
@@ -290,8 +290,8 @@ export function VendorAdminPage() {
       >
         <div className="space-y-2">
           {(vendors ?? []).map((v) => (
-            <div key={v.id} className="panel p-5">
-              <div className="flex items-start justify-between gap-4">
+            <div key={v.id} className="panel p-3">
+              <div className="flex items-start justify-between gap-2.5">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Truck className="h-4 w-4 text-bekem-accent shrink-0" />
@@ -360,7 +360,7 @@ export function VendorAdminPage() {
         className="max-w-xl"
       >
         {wizardStep === 0 && !editTarget ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <p className="text-sm text-ink-secondary">
               Is this vendor registered under MSME (Udyam)?
             </p>

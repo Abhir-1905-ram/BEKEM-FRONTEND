@@ -72,8 +72,8 @@ export function AppShell() {
       <div className="flex-1 flex flex-col min-w-0">
         {!hideNav && user && (
           <header className="sticky top-0 z-30 shrink-0 border-b border-surface-border bg-white">
-            <div className="hidden lg:flex h-11 items-center justify-between px-4">
-              <div className="flex items-center gap-4 min-w-0">
+            <div className="hidden lg:flex h-10 items-center justify-between px-3">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <p className="text-sm text-ink-secondary truncate">
                   <span className="font-semibold text-ink">{user.name}</span>
                   <span className="mx-2 text-ink-muted">·</span>
@@ -85,7 +85,7 @@ export function AppShell() {
                 <button
                   type="button"
                   onClick={toggleDensity}
-                  className="flex h-9 items-center gap-1.5 rounded-lg border border-transparent px-2.5 text-xs font-medium text-ink-secondary hover:text-ink hover:bg-surface-muted hover:border-surface-border transition-colors"
+                  className="flex h-8 items-center gap-1.5 rounded-lg border border-transparent px-2 text-xs font-medium text-ink-secondary hover:text-ink hover:bg-surface-muted hover:border-surface-border transition-colors"
                   aria-label={`Table density: ${density}. Click to toggle.`}
                   title={`Table density: ${density} (toggle)`}
                 >
@@ -94,7 +94,7 @@ export function AppShell() {
                 </button>
                 <NavLink
                   to="/notifications"
-                  className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-transparent text-ink-secondary hover:text-ink hover:bg-surface-muted hover:border-surface-border transition-colors duration-200"
+                  className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-transparent text-ink-secondary hover:text-ink hover:bg-surface-muted hover:border-surface-border transition-colors duration-200"
                   aria-label={`Notifications${unread > 0 ? `, ${unread} unread` : ''}`}
                 >
                   <Bell className="h-4 w-4" strokeWidth={1.75} />
@@ -107,12 +107,12 @@ export function AppShell() {
               </div>
             </div>
 
-            <div className="lg:hidden flex h-11 items-center gap-2 px-3">
+            <div className="lg:hidden flex h-10 items-center gap-2 px-2.5">
               <BekemLogo size="sm" className="shrink-0" />
               <button
                 type="button"
                 onClick={() => setSearchOpen(true)}
-                className="flex-1 flex items-center gap-2 h-9 px-3 rounded-lg border border-surface-border bg-surface-muted/60 text-sm text-ink-muted"
+                className="flex-1 flex items-center gap-2 h-8 px-2.5 rounded-lg border border-surface-border bg-surface-muted/60 text-xs text-ink-muted"
                 aria-label="Open search"
               >
                 <Search className="h-4 w-4 shrink-0" />
@@ -138,7 +138,7 @@ export function AppShell() {
           id="main-content"
           className={cn('flex-1 overflow-y-auto w-full', hideNav ? 'pb-4' : 'pb-20 lg:pb-8')}
         >
-          <div className="max-w-dashboard mx-auto px-3 sm:px-4 lg:px-5 py-1">
+          <div className="max-w-dashboard mx-auto px-2.5 sm:px-3 lg:px-4 py-0.5">
             <RouteErrorBoundary resetKey={location.pathname}>
               <Outlet />
             </RouteErrorBoundary>

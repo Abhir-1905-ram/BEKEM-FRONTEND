@@ -100,8 +100,8 @@ export function PmMaterialLookupPage() {
       />
 
       {selected && (
-        <div className="space-y-6">
-          <div className="panel p-4">
+        <div className="space-y-3">
+          <div className="panel p-3">
             <p className="font-semibold text-ink">{selected.name}</p>
             <p className="text-sm text-ink-secondary mt-0.5">
               {selected.code}
@@ -114,8 +114,8 @@ export function PmMaterialLookupPage() {
           )}
           {availability && <MaterialAvailabilityPanel availability={availability} />}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="panel p-4 space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div className="panel p-3 space-y-3">
               <div className="flex items-center gap-2">
                 <ArrowLeftRight className="h-4 w-4 text-bekem-accent" />
                 <h3 className="font-semibold text-ink">Branch transfer</h3>
@@ -163,7 +163,7 @@ export function PmMaterialLookupPage() {
               </Button>
             </div>
 
-            <div className="panel p-4 space-y-3 border-bekem-accent/20">
+            <div className="panel p-3 space-y-3 border-bekem-accent/20">
               <div className="flex items-center gap-2">
                 <ShoppingCart className="h-4 w-4 text-bekem-accent" />
                 <h3 className="font-semibold text-ink">New procurement</h3>

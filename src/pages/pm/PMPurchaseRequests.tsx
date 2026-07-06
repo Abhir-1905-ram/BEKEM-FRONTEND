@@ -24,7 +24,7 @@ export function PMPurchaseRequestsPage() {
 
   return (
     <div className="px-4 pt-4 pb-6 max-w-3xl">
-      <header className="flex items-center gap-3 mb-6">
+      <header className="flex items-center gap-3 mb-3">
         <button
           onClick={() => navigate('/pm')}
           className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-gray-100"

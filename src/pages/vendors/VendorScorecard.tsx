@@ -95,7 +95,7 @@ export function VendorScorecardPage() {
         }
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mb-4">
         <StatCard label="Purchase orders" value={metrics.poCount} tone="blue" />
         <StatCard label="Total spend" value={formatCurrency(metrics.totalSpend)} tone="blue" />
         <StatCard label="Fulfillment" value={`${metrics.onTimeDeliveryPct}%`} tone="teal" />
@@ -103,7 +103,7 @@ export function VendorScorecardPage() {
       </div>
 
       {recentOrders.length > 0 && (
-        <section className="panel p-5 mb-6">
+        <section className="panel p-3 mb-3">
           <h2 className="text-sm font-bold text-ink mb-3">Recent approved orders</h2>
           <div className="space-y-2">
             {recentOrders.map((po) => (
@@ -119,9 +119,9 @@ export function VendorScorecardPage() {
         </section>
       )}
 
-      <section className="panel p-5 mb-6">
+      <section className="panel p-3 mb-3">
         <h2 className="text-sm font-bold text-ink mb-4">Submit review</h2>
-        <div className="grid sm:grid-cols-2 gap-4 mb-4">
+        <div className="grid sm:grid-cols-2 gap-2.5 mb-4">
           <div>
             <label className="text-xs font-semibold text-ink-muted mb-1 block">Delivery (1–5)</label>
             <Input
@@ -159,7 +159,7 @@ export function VendorScorecardPage() {
       </section>
 
       {reviews.length > 0 && (
-        <section className="panel p-5">
+        <section className="panel p-3">
           <h2 className="text-sm font-bold text-ink mb-3">Review history</h2>
           <div className="space-y-3">
             {reviews.map((r) => (

@@ -90,7 +90,7 @@ export function StoreBranchTransfersPage() {
       />
 
       {showCreate && (
-        <div className="panel p-5 space-y-3 mb-6">
+        <div className="panel p-3 space-y-3 mb-3">
           <p className="text-sm text-ink-secondary">
             Search for a project that may hold the required stock. Your store&apos;s project is the destination.
           </p>

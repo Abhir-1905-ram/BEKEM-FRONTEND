@@ -119,7 +119,7 @@ export function AllocateFlowPage() {
 
   return (
     <div className="px-4 pt-4 pb-6 max-w-3xl mx-auto">
-      <header className="flex items-center gap-3 mb-6">
+      <header className="flex items-center gap-3 mb-3">
         <button
           onClick={() => navigate('/store')}
           className="h-10 w-10 rounded-xl hover:bg-gray-100 flex items-center justify-center"
@@ -135,19 +135,19 @@ export function AllocateFlowPage() {
       </header>
 
         {!canIssue && (
-          <div className="mb-4 rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-ink-secondary">
+          <div className="mb-4 rounded-xl border border-warning/30 bg-warning/5 px-3 py-2 text-sm text-ink-secondary">
             One or more lines are short on stock. Forward the entire indent to the Project Manager
             for a decision — partial issue is not allowed.
           </div>
         )}
 
         {canIssue && (
-          <div className="mb-4 rounded-xl border border-bekem-accent/20 bg-bekem-accent/5 px-4 py-3 text-sm text-ink-secondary">
+          <div className="mb-4 rounded-xl border border-bekem-accent/20 bg-bekem-accent/5 px-3 py-2 text-sm text-ink-secondary">
             Stock is available, but PM approval is still required before material can be issued.
           </div>
         )}
 
-      <StockComparisonTable items={items} className="mb-6" />
+      <StockComparisonTable items={items} className="mb-3" />
 
       <div className="mb-4">
         <label className="text-sm font-medium text-ink-secondary block mb-2">

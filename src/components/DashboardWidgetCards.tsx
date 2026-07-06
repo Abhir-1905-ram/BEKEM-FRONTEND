@@ -28,22 +28,22 @@ const WIDGETS = [
 export function DashboardWidgetCards({ widgets, loading, onNavigate }: DashboardWidgetCardsProps) {
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 lg:mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 section-gap">
         {WIDGETS.map((w) => (
-          <div key={w.key} className="h-28 rounded-lg bg-surface-muted border border-surface-border animate-pulse" />
+          <div key={w.key} className="h-20 rounded-lg bg-surface-muted border border-surface-border animate-pulse" />
         ))}
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 lg:mb-8">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 section-gap">
       {WIDGETS.map((w) => (
         <StatCard
           key={w.key}
           label={w.title}
           value={widgets?.[w.key as keyof typeof widgets] ?? 0}
-          icon={<w.icon className="h-5 w-5" />}
+          icon={<w.icon className="h-4 w-4" />}
           tone={w.tone}
           onClick={onNavigate ? () => onNavigate(w.key) : undefined}
         />

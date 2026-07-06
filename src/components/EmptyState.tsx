@@ -21,10 +21,10 @@ export function EmptyState({
   const Icon = celebrate ? PartyPopper : Inbox;
 
   return (
-    <div className={cn('panel flex flex-col items-center text-center py-16 px-8', className)}>
+    <div className={cn('panel flex flex-col items-center text-center py-10 px-6', className)}>
       <div
         className={cn(
-          'h-14 w-14 rounded-2xl flex items-center justify-center mb-4',
+          'h-11 w-11 rounded-xl flex items-center justify-center mb-3',
           celebrate ? 'bg-success-light' : 'bg-bekem-accent-soft'
         )}
       >
@@ -33,15 +33,15 @@ export function EmptyState({
           strokeWidth={1.5}
         />
       </div>
-      <p className="text-[20px] font-semibold text-ink">{title}</p>
+      <p className="text-base font-semibold text-ink">{title}</p>
       {description && (
-        <p className="text-sm text-ink-muted mt-2 max-w-sm leading-relaxed">{description}</p>
+        <p className="text-xs text-ink-muted mt-1.5 max-w-sm leading-relaxed">{description}</p>
       )}
       {actionLabel && onAction && (
         <button
           type="button"
           onClick={onAction}
-          className="mt-5 text-sm font-semibold text-bekem-accent hover:underline"
+          className="mt-3 text-xs font-semibold text-bekem-accent hover:underline"
         >
           {actionLabel}
         </button>

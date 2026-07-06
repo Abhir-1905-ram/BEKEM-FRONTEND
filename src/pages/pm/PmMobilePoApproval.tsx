@@ -52,7 +52,7 @@ export function PmMobilePoApprovalPage() {
 
       <ListQueryBoundary isLoading={isLoading} isError={isError} onRetry={() => refetch()} empty={<></>}>
         {po && (
-          <div className="panel p-4 space-y-4 mt-4">
+          <div className="panel p-3 space-y-3 mt-4">
             <div className="flex items-center justify-between gap-2">
               <p className="font-semibold text-ink">{po.poNumber || po.draftRef || 'Draft PO'}</p>
               <StatusBadge status={po.status} />

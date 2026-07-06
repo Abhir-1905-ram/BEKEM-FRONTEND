@@ -155,7 +155,7 @@ export function RequestDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="px-4 pt-6 space-y-4">
+      <div className="px-4 pt-6 space-y-3">
         <div className="h-8 w-48 bg-gray-100 rounded animate-pulse" />
         <div className="h-40 bg-gray-100 rounded-card animate-pulse" />
       </div>
@@ -205,7 +205,7 @@ export function RequestDetailPage() {
 
   return (
     <div className="px-4 pt-4 pb-6 max-w-3xl mx-auto">
-      <header className="flex items-center gap-3 mb-6">
+      <header className="flex items-center gap-3 mb-3">
         <button
           onClick={() => navigate(-1)}
           className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-gray-100"
@@ -235,13 +235,13 @@ export function RequestDetailPage() {
       {canPmDecide && <PmDailyCapBanner />}
 
       {request.escalatedToHo && (
-        <div className="mb-4 rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-sm">
+        <div className="mb-4 rounded-xl border border-warning/30 bg-warning/5 px-3 py-2 text-sm">
           This indent was escalated to Head Office — it exceeds the PM&apos;s configurable daily
           approval limit (see Admin settings).
         </div>
       )}
 
-      <Card className="space-y-3 mb-6">
+      <Card className="space-y-3 mb-3">
         {request.project && (
           <div>
             <p className="text-xs text-gray-500">Project</p>
@@ -288,7 +288,7 @@ export function RequestDetailPage() {
       <h2 className="font-semibold text-gray-900 mb-3">Stock comparison (requesting site)</h2>
       <StockComparisonTable
         items={items}
-        className="mb-6"
+        className="mb-3"
         showPricing
         totalEstimatedValue={request.estimatedValue}
       />
@@ -299,13 +299,13 @@ export function RequestDetailPage() {
           <CrossProjectStockPanel
             rows={request.crossProjectStock}
             requestingProjectId={request.projectId}
-            className="mb-6"
+            className="mb-3"
           />
         </>
       ) : null}
 
       {canPmDecide && (
-        <div className="mb-6 space-y-4 panel p-4">
+        <div className="mb-3 space-y-3 panel p-3">
           <div>
             <p className="text-sm font-semibold text-ink">PM decision</p>
             <p className="text-xs text-ink-secondary mt-1">
@@ -438,7 +438,7 @@ export function RequestDetailPage() {
       )}
 
       {canHoReview && (
-        <div className="mb-6 space-y-3 panel p-4">
+        <div className="mb-3 space-y-3 panel p-3">
           <p className="text-sm font-semibold text-ink">Head Office procurement</p>
           <p className="text-xs text-ink-secondary">
             This indent is in the procurement decision workflow. Open Procurement Decisions to select
@@ -461,7 +461,7 @@ export function RequestDetailPage() {
       )}
 
       {canConfirmReceipt && (
-        <div className="flex flex-wrap gap-2 mb-6">
+        <div className="flex flex-wrap gap-2 mb-3">
           <Button
             variant="accent"
             accentColor={ROLE_COLORS[UserRole.SITE_INCHARGE].primary}

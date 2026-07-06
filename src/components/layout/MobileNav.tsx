@@ -42,7 +42,7 @@ export function MobileNav({ role, homePath, unread }: MobileNavProps) {
 
       {menuOpen && (
         <div className="lg:hidden fixed bottom-[60px] left-0 right-0 z-[70] max-h-[55vh] overflow-y-auto sidebar-scroll bg-surface-sidebar border-t border-white/10 rounded-t-xl safe-bottom animate-slide-up">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
             <p className="text-xs font-bold uppercase tracking-widest text-white/50">Workspace</p>
             <button
               type="button"

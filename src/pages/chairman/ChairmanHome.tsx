@@ -105,13 +105,13 @@ export function ChairmanHomePage() {
       <TodayPanel actions={today ?? []} loading={todayLoading} />
 
       {kpis?.approvalRules && (
-        <div className="mb-6 rounded-lg border border-review/20 bg-review-light px-4 py-3 text-sm text-ink">
+        <div className="mb-3 rounded-lg border border-review/20 bg-review-light px-3 py-2 text-sm text-ink">
           <p className="font-semibold text-bekem-accent">PO approval rules</p>
           <p className="mt-1 text-ink-secondary">{kpis.approvalRules.note}</p>
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 mb-8 lg:mb-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 mb-4 lg:mb-5">
         <StatCard
           hero
           label="Projects"
@@ -207,9 +207,9 @@ export function ChairmanHomePage() {
       </div>
 
       {pipeline && (
-        <section className="mb-8 lg:mb-10 panel p-5">
+        <section className="mb-4 lg:mb-5 panel p-3">
           <h2 className="section-label mb-4">PO pipeline (company-wide)</h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
             {(
               [
                 { label: 'PM (< ₹5k)', value: pipeline.pmPending, tone: 'bg-violet-500' },
@@ -231,7 +231,7 @@ export function ChairmanHomePage() {
       )}
 
       {kpis?.projectBreakdown && kpis.projectBreakdown.length > 0 && (
-        <section className="mb-8 lg:mb-10">
+        <section className="mb-4 lg:mb-5">
           <h2 className="section-label mb-4">Project-wise overview (A–Z)</h2>
           <div className="table-shell overflow-x-auto">
             <table className="data-table min-w-[900px]">
@@ -309,7 +309,7 @@ export function ChairmanHomePage() {
       )}
 
       {budgetRows && budgetRows.length > 0 && (
-        <section className="mb-8 lg:mb-10">
+        <section className="mb-4 lg:mb-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="section-label">Budget vs actual</h2>
             <Button variant="secondary" size="sm" onClick={exportBudgetPdf} disabled={exportingBudget}>
@@ -358,9 +358,9 @@ export function ChairmanHomePage() {
       )}
 
       {chairmanExtras?.enterpriseSummary && (
-        <section className="mb-8 lg:mb-10 panel p-5">
+        <section className="mb-4 lg:mb-5 panel p-3">
           <h2 className="section-label mb-4">Enterprise summary</h2>
-          <div className="grid sm:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-3 gap-2.5">
             <div>
               <p className="text-xs text-ink-muted uppercase tracking-wide">Total approved spend</p>
               <p className="text-2xl font-bold mt-1">
@@ -392,7 +392,7 @@ export function ChairmanHomePage() {
       )}
 
       {chairmanExtras?.suppliers && (
-        <section className="mb-8 lg:mb-10 panel p-5">
+        <section className="mb-4 lg:mb-5 panel p-3">
           <h2 className="section-label mb-4">Suppliers ({chairmanExtras.suppliers.totalCount})</h2>
           <div className="space-y-2">
             {chairmanExtras.suppliers.topVendors?.map((v) => (
@@ -418,9 +418,9 @@ export function ChairmanHomePage() {
       )}
 
       {chairmanExtras?.stock && (
-        <section className="mb-8 lg:mb-10 panel p-5">
+        <section className="mb-4 lg:mb-5 panel p-3">
           <h2 className="section-label mb-4">Stock health</h2>
-          <div className="grid sm:grid-cols-4 gap-4 text-sm">
+          <div className="grid sm:grid-cols-4 gap-2.5 text-sm">
             <div>
               <p className="text-ink-muted">Status</p>
               <p className="font-bold text-lg">{chairmanExtras.stock.healthLabel}</p>

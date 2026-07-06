@@ -29,7 +29,7 @@ export function PmDailyCapBanner({ cap }: { cap?: PmDailyCapDto }) {
   return (
     <div
       className={cn(
-        'rounded-xl border px-4 py-3 mb-4',
+        'rounded-lg border px-3 py-2 mb-3',
         overCap
           ? 'border-danger/40 bg-danger/5'
           : nearCap

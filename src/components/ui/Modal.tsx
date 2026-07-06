@@ -28,7 +28,7 @@ export function Modal({ open, onClose, title, subtitle, children, className }: M
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3">
       <button
         type="button"
         className="absolute inset-0 bg-ink/30"
@@ -44,23 +44,23 @@ export function Modal({ open, onClose, title, subtitle, children, className }: M
           className
         )}
       >
-        <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4 border-b border-surface-border">
+        <div className="flex items-start justify-between gap-3 px-4 pt-4 pb-3 border-b border-surface-border">
           <div>
-            <h2 id="modal-title" className="text-lg font-semibold text-ink">
+            <h2 id="modal-title" className="text-base font-semibold text-ink">
               {title}
             </h2>
-            {subtitle && <p className="text-sm text-ink-secondary mt-1">{subtitle}</p>}
+            {subtitle && <p className="text-xs text-ink-secondary mt-0.5">{subtitle}</p>}
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="h-9 w-9 shrink-0 flex items-center justify-center rounded-xl text-ink-muted hover:bg-surface-muted hover:text-ink transition-colors"
+            className="h-8 w-8 shrink-0 flex items-center justify-center rounded-lg text-ink-muted hover:bg-surface-muted hover:text-ink transition-colors"
             aria-label="Close"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="px-6 py-5">{children}</div>
+        <div className="px-3 py-2">{children}</div>
       </div>
     </div>
   );

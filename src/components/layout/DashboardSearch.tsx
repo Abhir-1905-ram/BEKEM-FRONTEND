@@ -81,9 +81,9 @@ export function DashboardSearch({
   };
 
   return (
-    <div ref={wrapRef} className={cn('relative mb-6 lg:mb-8', className)}>
+    <div ref={wrapRef} className={cn('relative section-gap', className)}>
       <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-ink-muted pointer-events-none" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted pointer-events-none" />
         <input
           type="search"
           value={q}
@@ -94,8 +94,8 @@ export function DashboardSearch({
           onFocus={() => setOpen(true)}
           placeholder={placeholder}
           className={cn(
-            'w-full h-11 pl-12 pr-4 rounded-lg border border-surface-border bg-white',
-            'text-sm text-ink placeholder:text-ink-muted',
+            'w-full h-8 pl-9 pr-3 rounded-lg border border-surface-border bg-white',
+            'text-xs text-ink placeholder:text-ink-muted',
             'focus:outline-none focus:ring-2 focus:ring-bekem-accent/20 focus:border-bekem-accent/50 transition-colors'
           )}
           aria-label="Dashboard search"

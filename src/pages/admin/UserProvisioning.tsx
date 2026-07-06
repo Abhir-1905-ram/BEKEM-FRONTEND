@@ -88,7 +88,7 @@ export function UserProvisioningPage() {
         }
       />
 
-      <section className="panel p-4 mb-6 text-sm text-ink-secondary">
+      <section className="panel p-3 mb-3 text-sm text-ink-secondary">
         <p>
           This page only creates users (name, email, password, role). Open a project under{' '}
           <button
@@ -106,12 +106,12 @@ export function UserProvisioningPage() {
         </p>
       </section>
 
-      <section className="panel p-5 mb-8">
+      <section className="panel p-3 mb-4">
         <h2 className="text-sm font-bold text-ink flex items-center gap-2 mb-4">
           <UserPlus className="h-4 w-4" />
           {t('admin.createUser')}
         </h2>
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid sm:grid-cols-2 gap-2.5">
           <div>
             <label className="text-xs font-semibold text-ink-muted mb-1 block">{t('admin.name')}</label>
             <Input
@@ -177,21 +177,21 @@ export function UserProvisioningPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-border bg-surface-muted/50">
-                <th className="text-left px-4 py-3 font-semibold text-ink-muted">Name</th>
-                <th className="text-left px-4 py-3 font-semibold text-ink-muted">Email</th>
-                <th className="text-left px-4 py-3 font-semibold text-ink-muted">Role</th>
-                <th className="text-left px-4 py-3 font-semibold text-ink-muted">Projects</th>
+                <th className="text-left px-3 py-2 font-semibold text-ink-muted">Name</th>
+                <th className="text-left px-3 py-2 font-semibold text-ink-muted">Email</th>
+                <th className="text-left px-3 py-2 font-semibold text-ink-muted">Role</th>
+                <th className="text-left px-3 py-2 font-semibold text-ink-muted">Projects</th>
               </tr>
             </thead>
             <tbody>
               {(users ?? []).map((u) => (
                 <tr key={u.id} className="border-b border-surface-border last:border-0">
-                  <td className="px-4 py-3 font-medium text-ink">{u.name}</td>
-                  <td className="px-4 py-3 text-ink-secondary">{u.email}</td>
-                  <td className="px-4 py-3 text-ink-secondary">
+                  <td className="px-3 py-2 font-medium text-ink">{u.name}</td>
+                  <td className="px-3 py-2 text-ink-secondary">{u.email}</td>
+                  <td className="px-3 py-2 text-ink-secondary">
                     {ROLE_LABELS[u.role as UserRole] || u.role}
                   </td>
-                  <td className="px-4 py-3 text-ink-secondary text-xs">
+                  <td className="px-3 py-2 text-ink-secondary text-xs">
                     {isAllProjectsRole(u.role)
                       ? 'All projects'
                       : u.projects?.length

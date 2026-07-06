@@ -92,17 +92,17 @@ export function LoginPage() {
 
       <div className="flex-1 flex items-center justify-center px-6 py-10 bg-white">
         <div className="w-full max-w-[440px]">
-          <div className="lg:hidden mb-8">
+          <div className="lg:hidden mb-4">
             <BekemLogo size="md" />
           </div>
 
           <div className="panel p-8">
             <h1 className="text-xl font-extrabold text-ink">Welcome back</h1>
-            <p className="text-sm text-ink-secondary mt-1 mb-6">
+            <p className="text-sm text-ink-secondary mt-1 mb-3">
               Sign in with your organisation account
             </p>
 
-            <form className="space-y-4" onSubmit={handleSubmit}>
+            <form className="space-y-3" onSubmit={handleSubmit}>
               <div>
                 <label htmlFor="email" className="block text-sm font-semibold text-ink mb-1.5">
                   Email

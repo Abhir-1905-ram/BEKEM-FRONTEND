@@ -21,7 +21,7 @@ export function OverrideRemarkModal({ open, onClose, onSubmit, pending }: Overri
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md p-5 shadow-xl">
+      <div className="bg-white rounded-2xl w-full max-w-md p-3 shadow-xl">
         <h3 className="font-semibold text-ink">Approve in Chairman&apos;s absence</h3>
         <p className="text-xs text-ink-secondary mt-1">
           This action is permanently recorded. Explain why the Chairman could not approve (minimum{' '}

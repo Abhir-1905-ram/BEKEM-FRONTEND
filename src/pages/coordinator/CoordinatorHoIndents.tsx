@@ -63,7 +63,7 @@ export function CoordinatorHoIndentsPage() {
       >
         <div className="space-y-2">
           {(indents ?? []).map((r) => (
-            <div key={r.id} className="panel p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div key={r.id} className="panel p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <p className="font-semibold text-ink">{r.indentNumber}</p>
                 <p className="text-sm text-ink-secondary mt-0.5">

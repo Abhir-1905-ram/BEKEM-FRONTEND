@@ -58,7 +58,7 @@ export function ProfilePage() {
     <div className="page-container max-w-lg">
       <PageHeader title={t('profile.title')} subtitle={t('profile.subtitle')} />
 
-      <div className="panel p-6 flex items-center gap-4 mb-6">
+      <div className="panel p-6 flex items-center gap-2.5 mb-3">
         <div
           className="h-16 w-16 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shrink-0"
           style={{ backgroundColor: accent }}
@@ -74,7 +74,7 @@ export function ProfilePage() {
         </div>
       </div>
 
-      <section className="panel p-5 mb-6">
+      <section className="panel p-3 mb-3">
         <h2 className="text-sm font-bold text-ink flex items-center gap-2 mb-4">
           <Bell className="h-4 w-4" />
           {t('profile.notifications')}
@@ -108,7 +108,7 @@ export function ProfilePage() {
 
       <DelegationPanel />
 
-      <section className="panel p-5 mb-6">
+      <section className="panel p-3 mb-3">
         <h2 className="text-sm font-bold text-ink flex items-center gap-2 mb-4">
           <Globe className="h-4 w-4" />
           {t('profile.language')}

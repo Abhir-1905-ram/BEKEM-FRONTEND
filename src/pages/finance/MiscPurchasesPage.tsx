@@ -122,7 +122,7 @@ export function MiscPurchasesPage() {
       />
 
       {showForm && canCreate && (
-        <div className="panel p-4 mb-4 space-y-3">
+        <div className="panel p-3 mb-4 space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label className="text-xs font-medium text-ink-secondary">
               Category

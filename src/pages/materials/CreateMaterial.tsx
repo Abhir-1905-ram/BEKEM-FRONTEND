@@ -627,8 +627,8 @@ export function CreateMaterialPage() {
         subtitle={stockTarget ? `${stockTarget.code} — ${stockTarget.name}` : undefined}
       >
         {stockTarget && (
-          <div className="space-y-4">
-            <div className="rounded-xl bg-surface-muted px-4 py-3 flex justify-between items-center">
+          <div className="space-y-3">
+            <div className="rounded-xl bg-surface-muted px-3 py-2 flex justify-between items-center">
               <span className="text-sm text-ink-secondary">Current stock</span>
               <span className="text-lg font-bold tabular-nums text-ink">
                 {stockTarget.stock.quantityOnHand} {stockTarget.unit}
@@ -793,7 +793,7 @@ export function CreateMaterialPage() {
         subtitle={deleteTarget ? `${deleteTarget.code} — ${deleteTarget.name}` : undefined}
       >
         {deleteTarget && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <p className="text-sm text-ink-secondary leading-relaxed">
               This removes the product from the catalog. Existing indents and stock records are kept,
               but the item will no longer appear for new requests.

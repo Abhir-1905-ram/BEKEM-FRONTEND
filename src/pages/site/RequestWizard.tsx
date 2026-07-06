@@ -233,7 +233,7 @@ export function RequestWizardPage() {
             description="Your account has no project or site linked. Contact the coordinator."
           />
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {sites.map((site) => {
               const isSelected = selectedSiteId === site.id;
               return (
@@ -248,7 +248,7 @@ export function RequestWizardPage() {
                       : 'border-surface-border bg-white hover:border-bekem-accent/40 hover:shadow-sm'
                   )}
                 >
-                  <div className="flex items-start gap-4">
+                  <div className="flex items-start gap-2.5">
                     <div
                       className={cn(
                         'h-12 w-12 rounded-2xl flex items-center justify-center shrink-0',
@@ -316,7 +316,7 @@ export function RequestWizardPage() {
       />
 
       {selectedSite && (
-        <div className="mb-6 rounded-2xl border border-bekem-accent/20 bg-gradient-to-r from-bekem-navy/5 to-bekem-accent/5 px-5 py-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+        <div className="mb-3 rounded-2xl border border-bekem-accent/20 bg-gradient-to-r from-bekem-navy/5 to-bekem-accent/5 px-3 py-2.5 flex flex-wrap items-center gap-x-6 gap-y-2">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Project</p>
             <p className="font-semibold text-ink">
@@ -334,10 +334,10 @@ export function RequestWizardPage() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-5 lg:items-start">
+      <div className="grid gap-3 lg:grid-cols-5 lg:items-start">
         {/* Cart */}
         <aside className="lg:col-span-2 order-1 lg:order-2">
-          <div className="panel p-5 lg:sticky lg:top-20 space-y-4">
+          <div className="panel p-3 lg:sticky lg:top-20 space-y-3">
             <div className="flex items-center justify-between gap-2">
               <h2 className="text-sm font-semibold text-ink">Your indent</h2>
               <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-bekem-accent/10 text-bekem-accent">
@@ -454,7 +454,7 @@ export function RequestWizardPage() {
 
         {/* Material picker */}
         <div className="lg:col-span-3 order-2 lg:order-1 space-y-5">
-          <div className="panel p-5 space-y-4">
+          <div className="panel p-3 space-y-3">
             <label className="text-sm font-semibold text-ink">Search materials</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted" />
@@ -467,7 +467,7 @@ export function RequestWizardPage() {
             </div>
 
             {selectedMaterial && (
-              <div className="rounded-2xl border border-bekem-accent/30 bg-bekem-accent/5 p-4 space-y-4">
+              <div className="rounded-2xl border border-bekem-accent/30 bg-bekem-accent/5 p-4 space-y-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-bekem-accent">
                     Selected
@@ -484,7 +484,7 @@ export function RequestWizardPage() {
                     </p>
                   )}
                 </div>
-                <div className="grid sm:grid-cols-2 gap-4 items-end">
+                <div className="grid sm:grid-cols-2 gap-2.5 items-end">
                   <QuantityStepper
                     value={pickQty}
                     onChange={setPickQty}
@@ -568,7 +568,7 @@ export function RequestWizardPage() {
                       type="button"
                       onClick={() => selectMaterial(m)}
                       className={cn(
-                        'w-full text-left rounded-2xl border px-4 py-3 transition-all duration-200',
+                        'w-full text-left rounded-2xl border px-3 py-2 transition-all duration-200',
                         isSelected
                           ? 'border-bekem-accent bg-bekem-accent/5 shadow-sm'
                           : 'border-surface-border bg-white hover:border-bekem-accent/40 hover:shadow-sm'

@@ -29,9 +29,9 @@ export function MaterialSearch({ className, onSelect }: MaterialSearchProps) {
   );
 
   return (
-    <section className={cn('mb-8 lg:mb-10', className)}>
+    <section className={cn('mb-4 lg:mb-5', className)}>
       <h2 className="section-label mb-4">Material lookup</h2>
-      <div className="panel p-4 lg:p-5">
+      <div className="panel p-3 lg:p-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted" />
           <input

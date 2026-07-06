@@ -38,7 +38,7 @@ export function AppSidebar({ unread }: AppSidebarProps) {
       end={item.id === 'home'}
       className={({ isActive }) =>
         cn(
-          'flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-semibold transition-colors duration-200',
+          'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition-colors duration-200',
           isActive
             ? 'bg-white text-bekem-navy'
             : 'text-white/65 hover:text-white hover:bg-white/10'
@@ -56,17 +56,17 @@ export function AppSidebar({ unread }: AppSidebarProps) {
   );
 
   return (
-    <aside className="hidden lg:flex lg:flex-col lg:w-[260px] lg:shrink-0 bg-surface-sidebar lg:sticky lg:top-0 lg:h-screen border-r border-bekem-navy-dark/30">
-      <div className="px-5 pt-6 pb-5 border-b border-white/10">
+    <aside className="hidden lg:flex lg:flex-col lg:w-[232px] lg:shrink-0 bg-surface-sidebar lg:sticky lg:top-0 lg:h-screen border-r border-bekem-navy-dark/30">
+      <div className="px-4 pt-4 pb-3 border-b border-white/10">
         <BekemLogo variant="light" size="sm" />
       </div>
 
-      <nav className="flex-1 px-3 pt-4 overflow-y-auto sidebar-scroll" aria-label="Main navigation">
+      <nav className="flex-1 px-2 pt-3 overflow-y-auto sidebar-scroll" aria-label="Main navigation">
         <div className="space-y-1">{coreNav.map(renderLink)}</div>
 
         {workspaceNav.length > 0 && (
-          <div className="mt-6">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 px-3 pb-2">
+          <div className="mt-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 px-2.5 pb-1.5">
               Workspace
             </p>
             <div className="space-y-1">{workspaceNav.map(renderLink)}</div>
@@ -74,9 +74,9 @@ export function AppSidebar({ unread }: AppSidebarProps) {
         )}
       </nav>
 
-      <div className="p-4 mt-auto shrink-0 border-t border-white/10">
+      <div className="p-3 mt-auto shrink-0 border-t border-white/10">
         {user && (
-          <div className="rounded-lg bg-white/8 border border-white/10 p-3 mb-3">
+          <div className="rounded-lg bg-white/8 border border-white/10 p-2.5 mb-2">
             <div className="flex items-center gap-3">
               <div
                 className="h-10 w-10 rounded-lg bg-white/15 flex items-center justify-center text-white text-sm font-bold shrink-0"

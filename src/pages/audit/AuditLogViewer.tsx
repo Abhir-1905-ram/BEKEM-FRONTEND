@@ -71,7 +71,7 @@ export function AuditLogViewerPage() {
         subtitle="Compliance trail — filter by entity, action, or date range"
       />
 
-      <div className="panel p-4 mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="panel p-3 mb-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <label className="text-xs font-semibold text-ink-muted mb-1 block">Entity type</label>
           <Input
@@ -131,7 +131,7 @@ export function AuditLogViewerPage() {
       >
         <div className="space-y-2">
           {(logs ?? []).map((log) => (
-            <div key={log.id} className="panel px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2">
+            <div key={log.id} className="panel px-3 py-2 flex flex-col sm:flex-row sm:items-center gap-2">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-ink">{formatAuditAction(log.action)}</p>
                 <p className="text-xs text-ink-muted mt-0.5">

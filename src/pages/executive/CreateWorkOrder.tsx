@@ -77,7 +77,7 @@ export function CreateWorkOrderPage() {
 
   return (
     <div className="page-container max-w-lg mx-auto">
-      <header className="flex items-center gap-3 mb-6">
+      <header className="flex items-center gap-3 mb-3">
         <button
           onClick={() => navigate('/executive')}
           className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-gray-100"
@@ -135,7 +135,7 @@ export function CreateWorkOrderPage() {
           </ListQueryBoundary>
         </>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           <Card className="py-3">
             <p className="text-xs text-ink-muted">Selected PO</p>
             <p className="font-semibold">{selectedPo.poNumber}</p>

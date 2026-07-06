@@ -78,7 +78,7 @@ export function ExecutiveHoIndentsPage() {
       />
 
       {showForm && (
-        <div className="panel p-4 mb-6 space-y-3">
+        <div className="panel p-3 mb-3 space-y-3">
           <select
             value={projectId}
             onChange={(e) => setProjectId(e.target.value)}

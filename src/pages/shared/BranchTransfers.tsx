@@ -66,7 +66,7 @@ export function BranchTransfersPage() {
         subtitle={pending > 0 ? 'Review each transfer carefully' : 'Queue clear'}
         icon={Truck}
         tone="info"
-        className="mb-8"
+        className="mb-4"
       />
 
       <ListQueryBoundary

@@ -44,7 +44,7 @@ export function PoPreviewDocument({ data, className }: PoPreviewDocumentProps) {
       </div>
 
       <div className="p-6 space-y-5 text-sm">
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid sm:grid-cols-2 gap-2.5">
           <div>
             <p className="text-xs font-semibold text-bekem-accent mb-1">To</p>
             <p className="font-semibold text-ink">{data.vendorName}</p>
@@ -111,7 +111,7 @@ export function PoPreviewDocument({ data, className }: PoPreviewDocumentProps) {
           <p>{data.paymentTerms}</p>
         </div>
 
-        <div className="grid sm:grid-cols-2 gap-4 pt-2 border-t border-surface-border">
+        <div className="grid sm:grid-cols-2 gap-2.5 pt-2 border-t border-surface-border">
           <div>
             <p className="text-xs font-semibold text-bekem-accent mb-1">Buyer&apos;s address</p>
             <p className="text-xs whitespace-pre-line text-ink-secondary">{data.billingAddress}</p>

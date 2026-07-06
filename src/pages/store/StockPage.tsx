@@ -351,7 +351,7 @@ export function StockPage() {
 
   return (
     <div className="px-4 pt-4 pb-6 max-w-[1600px] mx-auto">
-      <header className="flex flex-col gap-4 mb-6">
+      <header className="flex flex-col gap-2.5 mb-3">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/')}
@@ -409,7 +409,7 @@ export function StockPage() {
             <CrossProjectStockPanel rows={crossProjectRows ?? []} />
           </div>
         )}
-        <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950">
+        <div className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-950">
           <p className="font-semibold">FY PO index — {isPm ? 'read-only' : 'editable'}</p>
           <p className="mt-1 text-sky-900/90">
             {fullAccess ? (
@@ -675,7 +675,7 @@ export function StockPage() {
       {editing && form && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-border px-5 py-4 flex items-center justify-between">
+            <div className="sticky top-0 bg-white border-b border-border px-3 py-2.5 flex items-center justify-between">
               <div>
                 <h2 className="font-semibold text-ink">Edit inventory record</h2>
                 <p className="text-xs text-ink-muted font-mono mt-0.5">{editing.poNo || editing.id}</p>
@@ -692,7 +692,7 @@ export function StockPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="p-5 grid gap-3 sm:grid-cols-2">
+            <div className="p-3 grid gap-3 sm:grid-cols-2">
               {editFields.map(([key, label, type]) => (
                 <label
                   key={key}
@@ -729,7 +729,7 @@ export function StockPage() {
                 </label>
               ))}
             </div>
-            <div className="sticky bottom-0 bg-white border-t border-border px-5 py-4 flex justify-end gap-2">
+            <div className="sticky bottom-0 bg-white border-t border-border px-3 py-2.5 flex justify-end gap-2">
               <Button
                 variant="secondary"
                 onClick={() => {

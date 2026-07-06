@@ -263,7 +263,7 @@ export function GrnReceivePage() {
           </div>
         </ListQueryBoundary>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           <button
             type="button"
             onClick={resetForm}
@@ -275,7 +275,7 @@ export function GrnReceivePage() {
 
           <div className="panel overflow-hidden">
             <div className="h-1 bg-bekem-accent" />
-            <div className="p-4 sm:p-5 space-y-4">
+            <div className="p-4 sm:p-3 space-y-3">
               <div className="flex flex-wrap items-start justify-between gap-3 border-b border-surface-border pb-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">

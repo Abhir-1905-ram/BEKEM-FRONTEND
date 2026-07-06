@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Bekem enterprise design system — Inter, white surfaces, thin borders, 24–32px section rhythm */
+/* Bekem enterprise design system — compact density for maximum information per viewport */
 
 @layer base {
   * {
@@ -22,28 +22,32 @@
     @apply text-ink font-semibold tracking-tight;
   }
   h1 {
-    @apply text-lg lg:text-xl;
+    @apply text-base lg:text-lg;
   }
   h2 {
-    @apply text-base;
+    @apply text-sm;
   }
   h3 {
-    @apply text-sm;
+    @apply text-xs;
   }
 }
 
 @layer components {
   .page-container {
-    @apply py-3 lg:py-4 w-full;
+    @apply py-2 lg:py-3 w-full;
     animation: bekem-fade-in 200ms ease-out;
   }
 
+  .section-gap {
+    @apply mb-3 lg:mb-4;
+  }
+
   .input-compact {
-    @apply h-8 px-2 py-1 text-xs;
+    @apply h-7 px-2 py-0.5 text-xs;
   }
 
   .data-row {
-    @apply flex items-center justify-between gap-2 px-2 min-h-[32px] rounded border border-surface-border bg-white
+    @apply flex items-center justify-between gap-2 px-2 min-h-[28px] rounded border border-surface-border bg-white
       hover:border-bekem-accent/30 hover:bg-bekem-accent-soft/30
       transition-colors duration-150 cursor-pointer text-xs;
   }
@@ -57,15 +61,27 @@
   }
 
   .field-readonly {
-    @apply rounded border border-surface-border bg-surface-muted px-2 py-1 text-xs text-ink-secondary cursor-default;
+    @apply rounded border border-surface-border bg-surface-muted px-2 py-0.5 text-xs text-ink-secondary cursor-default;
   }
 
   .field-readonly-label {
     @apply text-[10px] font-semibold uppercase tracking-wider text-ink-muted;
   }
 
+  .field-stack {
+    @apply space-y-1;
+  }
+
+  .form-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-3 gap-y-2;
+  }
+
+  .form-grid-2 {
+    @apply grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2;
+  }
+
   .action-card {
-    @apply relative overflow-hidden rounded border border-surface-border bg-white p-3
+    @apply relative overflow-hidden rounded border border-surface-border bg-white p-2.5
       transition-colors duration-150 text-left w-full text-xs
       hover:border-bekem-accent/30 hover:bg-bekem-accent-soft/20;
   }
@@ -87,13 +103,45 @@
   .excel-grid td,
   .procurement-landscape-table th,
   .procurement-landscape-table td {
-    @apply border border-surface-border px-2 py-0.5 align-middle;
+    @apply border border-surface-border px-2 align-middle;
+  }
+
+  /* Compact density (default) */
+  :root[data-table-density='compact'] .data-table th,
+  :root[data-table-density='compact'] .data-table td,
+  :root[data-table-density='compact'] .excel-grid th,
+  :root[data-table-density='compact'] .excel-grid td,
+  :root[data-table-density='compact'] .procurement-landscape-table th,
+  :root[data-table-density='compact'] .procurement-landscape-table td {
+    @apply py-0;
+  }
+
+  :root[data-table-density='compact'] .data-table thead th,
+  :root[data-table-density='compact'] .excel-grid thead th,
+  :root[data-table-density='compact'] .procurement-landscape-table thead th {
+    @apply py-0.5;
+  }
+
+  /* Comfortable density toggle */
+  :root[data-table-density='comfortable'] .data-table th,
+  :root[data-table-density='comfortable'] .data-table td,
+  :root[data-table-density='comfortable'] .excel-grid th,
+  :root[data-table-density='comfortable'] .excel-grid td,
+  :root[data-table-density='comfortable'] .procurement-landscape-table th,
+  :root[data-table-density='comfortable'] .procurement-landscape-table td {
+    @apply py-0.5;
+  }
+
+  :root[data-table-density='comfortable'] .data-table thead th,
+  :root[data-table-density='comfortable'] .excel-grid thead th,
+  :root[data-table-density='comfortable'] .procurement-landscape-table thead th {
+    @apply py-1;
   }
 
   .data-table thead th,
   .excel-grid thead th,
   .procurement-landscape-table thead th {
-    @apply bg-slate-100 text-[10px] font-bold uppercase tracking-wide text-ink-muted sticky top-0 z-10 py-1 whitespace-nowrap text-left;
+    @apply bg-slate-100 text-[10px] font-bold uppercase tracking-wide text-ink-muted sticky top-0 z-10 whitespace-nowrap text-left;
   }
 
   .data-table tbody tr:nth-child(even),

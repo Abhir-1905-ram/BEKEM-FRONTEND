@@ -74,7 +74,7 @@ export function DelegationPanel() {
     role === UserRole.CHAIRMAN ? 'PO final approval' : 'PM material approval';
 
   return (
-    <section className="panel p-5 mb-6">
+    <section className="panel p-3 mb-3">
       <h2 className="text-sm font-bold text-ink flex items-center gap-2 mb-2">
         <UserCheck className="h-4 w-4" />
         Approval delegation

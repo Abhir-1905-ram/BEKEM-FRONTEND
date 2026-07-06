@@ -74,7 +74,7 @@ export function ExecutivePurchaseRequestDetailPage() {
 
   return (
     <div className="page-container max-w-2xl">
-      <header className="flex items-center gap-3 mb-6">
+      <header className="flex items-center gap-3 mb-3">
         <button
           type="button"
           onClick={() => navigate('/executive/purchase-requests')}
@@ -108,7 +108,7 @@ export function ExecutivePurchaseRequestDetailPage() {
       >
         {pr && (
           <>
-            <Card className="space-y-3 mb-6">
+            <Card className="space-y-3 mb-3">
               <div>
                 <p className="text-xs text-ink-muted">Project</p>
                 <p className="font-medium">
@@ -163,7 +163,7 @@ export function ExecutivePurchaseRequestDetailPage() {
             </Card>
 
             <h2 className="section-label mb-3">Materials requested</h2>
-            <Card className="overflow-hidden p-0 mb-6">
+            <Card className="overflow-hidden p-0 mb-3">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-surface-border bg-surface-muted/50">
@@ -185,7 +185,7 @@ export function ExecutivePurchaseRequestDetailPage() {
             </Card>
 
             {canDecide && (
-              <Card className="space-y-4 mb-6">
+              <Card className="space-y-3 mb-3">
                 <h2 className="font-semibold text-ink">Procurement decision</h2>
                 <p className="text-sm text-ink-secondary">
                   Prepare your recommendation — this does not final-approve the request.

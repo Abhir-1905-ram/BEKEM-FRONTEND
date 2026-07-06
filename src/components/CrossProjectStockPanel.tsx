@@ -26,7 +26,7 @@ export function CrossProjectStockPanel({
   if (!rows.length) return null;
 
   return (
-    <div className={cn('space-y-4', className)}>
+    <div className={cn('space-y-3', className)}>
       {rows.map((row) => (
         <Card key={row.materialId} className="p-4 space-y-3">
           <p className="font-semibold text-ink">{row.materialName || 'Material'}</p>

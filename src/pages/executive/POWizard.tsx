@@ -1067,7 +1067,7 @@ export function POWizardPage() {
                 Review the purchase order exactly as the vendor will receive it. Confirm only when
                 every line, address, and total is correct.
               </p>
-              <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+              <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
                 {assignedVendorIds.map((vendorId) => {
                   const vendor =
                     vendorRows.flatMap((r) => r.vendors).find((v) => v.id === vendorId) ||

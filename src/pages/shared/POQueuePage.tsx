@@ -1,5 +1,6 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronRight, ClipboardCheck } from 'lucide-react';import { formatCurrency } from '@afios/shared';
+import { ChevronRight, ClipboardCheck } from 'lucide-react';
+import { formatCurrency } from '@afios/shared';
 import type { PurchaseOrderDto } from '@afios/shared';
 import { api } from '@/lib/api';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -74,7 +75,7 @@ export function POQueuePage({
         subtitle={pending > 0 ? 'Awaiting your review' : 'Queue clear'}
         icon={ClipboardCheck}
         tone="primary"
-        className="mb-8"
+        className="mb-4"
       />
 
       <ListQueryBoundary

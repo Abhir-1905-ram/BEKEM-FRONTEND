@@ -195,7 +195,7 @@ export function ProjectAdminPage() {
         <button
           type="button"
           onClick={() => setSelectedProjectId(null)}
-          className="flex items-center gap-2 text-sm font-medium text-ink-secondary hover:text-ink mb-6 transition-colors"
+          className="flex items-center gap-2 text-sm font-medium text-ink-secondary hover:text-ink mb-3 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           All projects
@@ -222,7 +222,7 @@ export function ProjectAdminPage() {
           }
         />
 
-        <div className="grid sm:grid-cols-4 gap-3 mb-8">
+        <div className="grid sm:grid-cols-4 gap-3 mb-4">
           <ActionCard title="Team" count={detail?.users.length ?? 0} icon={Users} tone="primary" />
           <ActionCard
             title="Sites"
@@ -244,7 +244,7 @@ export function ProjectAdminPage() {
           />
         </div>
 
-        <div className="flex gap-1 bg-surface-muted rounded-xl p-1 mb-6 w-fit">
+        <div className="flex gap-1 bg-surface-muted rounded-xl p-1 mb-3 w-fit">
           {(
             [
               { key: 'users' as const, label: 'Users' },
@@ -277,8 +277,8 @@ export function ProjectAdminPage() {
           empty={<></>}
         >
         {detailTab === 'users' ? (
-          <div className="space-y-4">
-            <div className="panel p-4 flex flex-col sm:flex-row gap-3 sm:items-end">
+          <div className="space-y-3">
+            <div className="panel p-3 flex flex-col sm:flex-row gap-3 sm:items-end">
               <div className="flex-1">
                 <label className="text-xs font-semibold text-ink-muted mb-1 block">
                   Assign user to this project
@@ -536,7 +536,7 @@ export function ProjectAdminPage() {
         }
       />
 
-      <div className="grid sm:grid-cols-2 gap-4 mb-8">
+      <div className="grid sm:grid-cols-2 gap-2.5 mb-4">
         <ActionCard
           title="Active projects"
           count={projects?.length ?? 0}

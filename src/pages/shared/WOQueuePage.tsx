@@ -44,7 +44,7 @@ export function WOQueuePage({ title, subtitle, queue, detailPrefix, queryKey }: 
         subtitle={pending > 0 ? 'Awaiting your review' : 'Queue clear'}
         icon={HardHat}
         tone="info"
-        className="mb-8"
+        className="mb-4"
       />
 
       <ListQueryBoundary

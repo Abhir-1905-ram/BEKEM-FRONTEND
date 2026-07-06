@@ -282,7 +282,7 @@ export function ProcurementDecisionDetailPage({ listPath }: ProcurementDecisionD
 
     <div className="page-container max-w-3xl">
 
-      <header className="flex items-center gap-3 mb-6">
+      <header className="flex items-center gap-3 mb-3">
 
         <button
 
@@ -336,7 +336,7 @@ export function ProcurementDecisionDetailPage({ listPath }: ProcurementDecisionD
 
           <>
 
-            <Card className="space-y-3 mb-6">
+            <Card className="space-y-3 mb-3">
 
               <div className="grid sm:grid-cols-2 gap-3">
 
@@ -436,7 +436,7 @@ export function ProcurementDecisionDetailPage({ listPath }: ProcurementDecisionD
 
               items={stockItems}
 
-              className="mb-6"
+              className="mb-3"
 
               showPricing
 
@@ -448,7 +448,7 @@ export function ProcurementDecisionDetailPage({ listPath }: ProcurementDecisionD
 
             <h2 className="section-label mb-3">Stock across all projects</h2>
 
-            <div className="space-y-4 mb-6">
+            <div className="space-y-3 mb-3">
 
               {decision.items.map((item) => (
 
@@ -532,7 +532,7 @@ export function ProcurementDecisionDetailPage({ listPath }: ProcurementDecisionD
 
             {decision.purchaseRequestId && decision.status === 'PURCHASE_REQUESTED' && (
 
-              <Card className="mb-6 border-success/30 bg-success-light/20">
+              <Card className="mb-3 border-success/30 bg-success-light/20">
 
                 <p className="text-sm font-semibold text-ink">Queued for Create PO</p>
 
@@ -576,7 +576,7 @@ export function ProcurementDecisionDetailPage({ listPath }: ProcurementDecisionD
 
             {decision.canExecutiveDecide && role === UserRole.EXECUTIVE && (
 
-              <div className="panel p-4 mb-6 space-y-4">
+              <div className="panel p-3 mb-3 space-y-3">
 
                 <p className="text-sm font-semibold text-ink">Procurement review</p>
 
@@ -632,7 +632,7 @@ export function ProcurementDecisionDetailPage({ listPath }: ProcurementDecisionD
 
             {decision.canCoordinatorReview && role === UserRole.COORDINATOR && (
 
-              <div className="panel p-4 mb-6 space-y-4">
+              <div className="panel p-3 mb-3 space-y-3">
 
                 <p className="text-sm font-semibold text-ink">Coordinator review (legacy branch transfer)</p>
 

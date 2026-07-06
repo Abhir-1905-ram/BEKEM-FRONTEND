@@ -70,8 +70,8 @@ export function SettingsAdminPage() {
 
       <ListQueryBoundary isLoading={isLoading} isError={isError} onRetry={() => refetch()} empty={<></>}>
         {settings && (
-          <div className="space-y-6">
-            <section className="panel p-4 space-y-4">
+          <div className="space-y-3">
+            <section className="panel p-3 space-y-3">
               <h2 className="text-sm font-semibold text-ink">PO approval limits (INR)</h2>
               <p className="text-xs text-ink-muted">{settings.approvalRoutingNote}</p>
               <div className="grid sm:grid-cols-3 gap-3">
@@ -120,7 +120,7 @@ export function SettingsAdminPage() {
               </div>
             </section>
 
-            <section className="panel p-4 space-y-3">
+            <section className="panel p-3 space-y-3">
               <h2 className="text-sm font-semibold text-ink">Expense categories</h2>
               <p className="text-xs text-ink-muted">
                 Grocery, Mess, Office, and Emergency paths — with or without PO per category.
@@ -180,7 +180,7 @@ export function SettingsAdminPage() {
               </div>
             </section>
 
-            <section className="panel p-4 text-xs text-ink-secondary space-y-2">
+            <section className="panel p-3 text-xs text-ink-secondary space-y-2">
               <p className="font-semibold text-ink">Role summary</p>
               <ul className="list-disc pl-4 space-y-1">
                 <li>

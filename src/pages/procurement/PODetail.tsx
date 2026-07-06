@@ -328,7 +328,7 @@ export function PODetailPage() {
 
   return (
     <div className="px-4 pt-4 pb-6 max-w-lg mx-auto">
-      <header className="flex items-center gap-3 mb-6">
+      <header className="flex items-center gap-3 mb-3">
         <button
           onClick={() => navigate(-1)}
           className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-gray-100"
@@ -392,7 +392,7 @@ export function PODetailPage() {
         </p>
       )}
 
-      <Card className="space-y-3 mb-6">
+      <Card className="space-y-3 mb-3">
         <div>
           <p className="text-xs text-gray-500">Vendor (To)</p>
           <p className="font-medium">{po.vendor?.name}</p>
@@ -432,7 +432,7 @@ export function PODetailPage() {
       </Card>
 
       {po.lineItems && po.lineItems.length > 0 && (
-        <div className="mb-6">
+        <div className="mb-3">
           <h2 className="font-semibold text-sm mb-2">Line items</h2>
           <div className="space-y-2">
             {(po.lineItems ?? []).map((item, idx) => (
@@ -448,7 +448,7 @@ export function PODetailPage() {
       )}
 
       {data.quotations?.length > 0 && (
-        <div className="mb-6">
+        <div className="mb-3">
           <h2 className="font-semibold text-sm mb-2">Quotation comparison</h2>
           <div className="space-y-2">
             {(data.quotations ?? []).map((q) => (
@@ -462,7 +462,7 @@ export function PODetailPage() {
       )}
 
       <h2 className="font-semibold text-sm mb-3">PO tracking</h2>
-      <PoTrackingTimeline poId={po.id} className="mb-6" />
+      <PoTrackingTimeline poId={po.id} className="mb-3" />
 
       <h2 className="font-semibold text-sm mb-3">Approval history</h2>
       <StatusTimeline entityType="PurchaseOrder" entityId={po.id} />

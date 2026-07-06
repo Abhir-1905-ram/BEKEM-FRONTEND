@@ -83,7 +83,7 @@ export function CoordinatorHomePage() {
         skeletonRows={2}
         empty={<></>}
       >
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 lg:mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 section-gap">
         <ActionCard
           title="Pending PO approval"
           count={pending}

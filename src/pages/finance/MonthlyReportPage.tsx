@@ -68,7 +68,7 @@ export function MonthlyReportPage() {
         empty={<></>}
       >
         {data && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <p className="text-sm font-semibold text-ink">{data.periodLabel}</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <Card className="p-3">
