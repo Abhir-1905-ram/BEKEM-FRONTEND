@@ -1,7 +1,7 @@
 import { formatCurrency } from '@afios/shared';
 import type { PoLineItemDto, VendorDto } from '@afios/shared';
 import { computePoLineTotals } from '@/lib/poLineTotals';
-import { DEFAULT_PO_TERMS } from '@/lib/poTerms';
+import { buildAllPoTerms } from '@/lib/poTerms';
 
 export interface PoPreviewData {
   vendorName: string;
@@ -11,6 +11,8 @@ export interface PoPreviewData {
   vendorContact?: string;
   vendorPhone?: string;
   paymentTerms: string;
+  additionalTerms?: string;
+  poAmount?: number;
   billingAddress: string;
   deliveryAddress: string;
   referenceNote?: string;
@@ -123,7 +125,11 @@ export function PoPreviewDocument({ data, className }: PoPreviewDocumentProps) {
         <div>
           <p className="text-xs font-semibold text-bekem-accent mb-1">Terms &amp; conditions</p>
           <ol className="text-xs text-ink-secondary list-decimal list-inside space-y-0.5">
-            {DEFAULT_PO_TERMS.map((t) => (
+            {buildAllPoTerms({
+              amount: data.poAmount ?? grandTotal,
+              paymentTerms: data.paymentTerms,
+              additionalTerms: data.additionalTerms,
+            }).map((t) => (
               <li key={t}>{t}</li>
             ))}
           </ol>

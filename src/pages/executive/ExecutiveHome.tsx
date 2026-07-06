@@ -116,7 +116,7 @@ export function ExecutiveHomePage() {
 
       <TodayPanel actions={today ?? []} loading={todayLoading} />
 
-      <DashboardSearch placeholder="Search projects, materials, vendors, POs…" />
+      <DashboardSearch placeholder="Search projects, materials, employees, POs…" />
 
       {!!deliveryAlerts?.length && (
         <div className="mb-6 rounded-lg border border-danger/25 bg-danger-light px-4 py-3 flex items-start gap-3">

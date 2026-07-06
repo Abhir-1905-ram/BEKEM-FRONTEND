@@ -17,10 +17,26 @@ interface POQueuePageProps {
   queue: 'coordinator' | 'chairman' | 'pm';
   detailPrefix: '/coordinator' | '/chairman' | '/pm';
   queryKey: string;
+  mobileDetailPath?: (id: string) => string;
 }
 
-export function POQueuePage({ title, subtitle, queue, detailPrefix, queryKey }: POQueuePageProps) {
+export function POQueuePage({
+  title,
+  subtitle,
+  queue,
+  detailPrefix,
+  queryKey,
+  mobileDetailPath,
+}: POQueuePageProps) {
   const navigate = useNavigate();
+
+  const openPo = (id: string) => {
+    if (mobileDetailPath && typeof window !== 'undefined' && window.innerWidth < 768) {
+      navigate(mobileDetailPath(id));
+      return;
+    }
+    navigate(`${detailPrefix}/po/${id}`);
+  };
 
   const { data: items, list } = useListQuery({
     queryKey: [queryKey],
@@ -75,7 +91,7 @@ export function POQueuePage({ title, subtitle, queue, detailPrefix, queryKey }: 
               key={po.id}
               type="button"
               className="data-row w-full text-left"
-              onClick={() => navigate(`${detailPrefix}/po/${po.id}`)}
+              onClick={() => openPo(po.id)}
             >
               <div className="min-w-0">
                 <p className="font-semibold text-ink">

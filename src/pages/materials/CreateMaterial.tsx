@@ -22,7 +22,9 @@ import type {
   MaterialDto,
   UpdateMaterialDto,
 } from '@afios/shared';
-import { CategoryToggle } from '@/components/CategoryToggle';
+import { MaterialCategorySelect } from '@/components/MaterialCategorySelect';
+import { groupMaterialsByCategory } from '@/lib/groupMaterialsByCategory';
+import { MATERIAL_CATEGORY_NAMES } from '@afios/shared';
 import { useAuthStore } from '@/stores/authStore';
 import { UserRole, PERMISSION_MATRIX } from '@afios/shared';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -64,6 +66,7 @@ export function CreateMaterialPage() {
     grade: '',
     category: '',
     categoryId: '',
+    categoryRemarks: '',
     hsnCode: '',
     initialQuantity: 0,
     lowStockThreshold: 20,
@@ -84,6 +87,7 @@ export function CreateMaterialPage() {
     grade: '',
     category: '',
     categoryId: '',
+    categoryRemarks: '',
     hsnCode: '',
   });
 
@@ -158,6 +162,11 @@ export function CreateMaterialPage() {
     };
   }, [meta, catalog]);
 
+  const groupedCatalog = useMemo(
+    () => groupMaterialsByCategory(catalog ?? [], [...MATERIAL_CATEGORY_NAMES]),
+    [catalog]
+  );
+
   const create = useMutation({
     mutationFn: async () => {
       const payload = {
@@ -178,7 +187,8 @@ export function CreateMaterialPage() {
         description: '',
         grade: '',
         category: '',
-    categoryId: '',
+        categoryId: '',
+        categoryRemarks: '',
         hsnCode: '',
         initialQuantity: 0,
         lowStockThreshold: 20,
@@ -256,6 +266,7 @@ export function CreateMaterialPage() {
       grade: item.grade || '',
       category: item.category || '',
       categoryId: item.categoryId || categories?.find((c) => c.name === item.category)?.id || '',
+      categoryRemarks: item.categoryRemarks || '',
       hsnCode: item.hsnCode || '',
     });
   };
@@ -361,7 +372,14 @@ export function CreateMaterialPage() {
                 </tr>
               </thead>
               <tbody>
-                {catalog.map((item) => (
+                {groupedCatalog.map((group) => (
+                  <>
+                    <tr key={`cat-${group.category}`} className="bg-surface-muted/60">
+                      <td colSpan={6} className="py-2 font-semibold text-sm text-ink">
+                        {group.category}
+                      </td>
+                    </tr>
+                    {group.items.map((item) => (
                   <tr key={item.id}>
                     <td>
                       <p className="font-semibold text-ink font-mono text-[13px]">{item.code}</p>
@@ -432,6 +450,8 @@ export function CreateMaterialPage() {
                       </div>
                     </td>
                   </tr>
+                    ))}
+                  </>
                 ))}
               </tbody>
             </table>
@@ -518,21 +538,21 @@ export function CreateMaterialPage() {
                 onChange={(e) => setCreateForm({ ...createForm, grade: e.target.value })}
               />
             </div>
-            <div>
-              <label className="text-xs font-semibold text-ink-muted mb-2 block">Category</label>
-              {categories?.length ? (
-                <CategoryToggle
-                  categories={categories}
-                  value={createForm.categoryId}
-                  onChange={(categoryId, categoryName) =>
-                    setCreateForm({ ...createForm, categoryId, category: categoryName })
-                  }
-                />
-              ) : (
-                <div className="h-10 rounded-xl bg-surface-muted animate-pulse" />
-              )}
-            </div>
           </div>
+          <MaterialCategorySelect
+            categories={categories}
+            categoryId={createForm.categoryId || ''}
+            categoryName={createForm.category || ''}
+            categoryRemarks={createForm.categoryRemarks}
+            onChange={({ categoryId, categoryName, categoryRemarks }) =>
+              setCreateForm({
+                ...createForm,
+                categoryId,
+                category: categoryName,
+                categoryRemarks: categoryRemarks || '',
+              })
+            }
+          />
           <div>
             <label className="text-xs font-semibold text-ink-muted mb-1 block">HSN code</label>
             <Input
@@ -571,7 +591,14 @@ export function CreateMaterialPage() {
           <Button
             variant="primary"
             className="w-full"
-            disabled={!createForm.code || !createForm.name || !createForm.unit || !createForm.categoryId || create.isPending}
+            disabled={
+              !createForm.code ||
+              !createForm.name ||
+              !createForm.unit ||
+              !createForm.categoryId ||
+              (createForm.category === 'Others' && !createForm.categoryRemarks?.trim()) ||
+              create.isPending
+            }
             onClick={() => create.mutate()}
           >
             Create product
@@ -704,18 +731,20 @@ export function CreateMaterialPage() {
               />
             </div>
             <div className="sm:col-span-2">
-              <label className="text-xs font-semibold text-ink-muted mb-2 block">Category</label>
-              {categories?.length ? (
-                <CategoryToggle
-                  categories={categories}
-                  value={editForm.categoryId}
-                  onChange={(categoryId, categoryName) =>
-                    setEditForm({ ...editForm, categoryId, category: categoryName })
-                  }
-                />
-              ) : (
-                <div className="h-10 rounded-xl bg-surface-muted animate-pulse" />
-              )}
+              <MaterialCategorySelect
+                categories={categories}
+                categoryId={editForm.categoryId || ''}
+                categoryName={editForm.category || ''}
+                categoryRemarks={editForm.categoryRemarks}
+                onChange={({ categoryId, categoryName, categoryRemarks }) =>
+                  setEditForm({
+                    ...editForm,
+                    categoryId,
+                    category: categoryName,
+                    categoryRemarks: categoryRemarks || '',
+                  })
+                }
+              />
             </div>
           </div>
           <div>

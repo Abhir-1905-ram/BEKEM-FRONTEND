@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ClipboardCheck, FileText, Bell, ChevronRight, ShoppingCart } from 'lucide-react';
+import { ClipboardCheck, FileText, Bell, ChevronRight, ShoppingCart, ArrowLeftRight, Search } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
 import { getGreeting, getFirstName } from '@afios/shared';
@@ -57,6 +57,42 @@ export function PMHomePage() {
       <TodayPanel actions={today ?? []} loading={todayLoading} />
 
       <PmDailyCapBanner cap={dashboard?.dailyCap} />
+
+      <div className="flex flex-col sm:flex-row gap-3 mb-6 lg:mb-8">
+        <button
+          type="button"
+          onClick={() => navigate('/pm/material-lookup')}
+          className="flex-1 panel p-4 text-left border-2 border-bekem-accent/40 bg-bekem-accent-soft/40 hover:bg-bekem-accent-soft/60 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <ShoppingCart className="h-5 w-5 text-bekem-accent shrink-0" />
+            <div>
+              <p className="font-semibold text-ink">New procurement</p>
+              <p className="text-xs text-ink-secondary mt-0.5">Search materials and request purchase</p>
+            </div>
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate('/pm/material-lookup?action=branch-transfer')}
+          className="flex-1 panel p-4 text-left hover:border-bekem-accent/30 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <ArrowLeftRight className="h-5 w-5 text-ink-muted shrink-0" />
+            <div>
+              <p className="font-semibold text-ink">Branch transfer</p>
+              <p className="text-xs text-ink-secondary mt-0.5">Move stock between your projects</p>
+            </div>
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate('/pm/material-lookup')}
+          className="sm:w-auto panel px-4 py-4 text-left hover:border-bekem-accent/30 transition-colors"
+        >
+          <Search className="h-5 w-5 text-bekem-accent" />
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 lg:mb-8">
         <ActionCard

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, Search, Package, Building2, MapPin, ChevronRight } from 'lucide-react';
@@ -8,6 +8,8 @@ import {
   ROLE_COLORS,
   UserRole,
   formatCurrency,
+  MATERIAL_CATEGORY_NAMES,
+  MATERIAL_CATEGORY_OTHERS,
   type MaterialDto,
   type CreateIndentDto,
   type CreateSiteMaterialDto,
@@ -20,6 +22,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { QuantityStepper } from '@/components/QuantityStepper';
 import { cn } from '@/lib/utils';
+import { groupMaterialsByCategory } from '@/lib/groupMaterialsByCategory';
 
 interface LineDraft {
   material: MaterialDto;
@@ -27,7 +30,7 @@ interface LineDraft {
   unit: string;
 }
 
-const MATERIAL_CATEGORIES = ['Raw Material', 'Consumables'] as const;
+const MATERIAL_CATEGORIES = MATERIAL_CATEGORY_NAMES;
 
 function unitPriceSuffix(unit: string) {
   if (!unit) return '';
@@ -48,7 +51,8 @@ export function RequestWizardPage() {
   const [selectedMaterial, setSelectedMaterial] = useState<MaterialDto | null>(null);
   const [customName, setCustomName] = useState('');
   const [customUnit, setCustomUnit] = useState('Nos');
-  const [customCategory, setCustomCategory] = useState<(typeof MATERIAL_CATEGORIES)[number]>('Consumables');
+  const [customCategory, setCustomCategory] = useState<(typeof MATERIAL_CATEGORIES)[number]>('Civil Materials');
+  const [customCategoryRemarks, setCustomCategoryRemarks] = useState('');
   const [customDescription, setCustomDescription] = useState('');
   const [customQty, setCustomQty] = useState(1);
   const [showCustomForm, setShowCustomForm] = useState(false);
@@ -82,6 +86,11 @@ export function RequestWizardPage() {
     },
     enabled: step === 'materials',
   });
+
+  const groupedMaterials = useMemo(
+    () => groupMaterialsByCategory(materials ?? [], [...MATERIAL_CATEGORIES]),
+    [materials]
+  );
 
   const mutation = useMutation({
     mutationFn: async (data: CreateIndentDto) => {
@@ -131,6 +140,10 @@ export function RequestWizardPage() {
       return;
     }
     if (customQty <= 0) return;
+    if (customCategory === MATERIAL_CATEGORY_OTHERS && !customCategoryRemarks.trim()) {
+      toast.error('Remarks are required when category is Others');
+      return;
+    }
     const unit = customUnit.trim() || 'Nos';
 
     try {
@@ -138,13 +151,16 @@ export function RequestWizardPage() {
         name,
         unit,
         category: customCategory,
+        categoryRemarks:
+          customCategory === MATERIAL_CATEGORY_OTHERS ? customCategoryRemarks.trim() : undefined,
         description: customDescription.trim() || undefined,
       });
       await queryClient.invalidateQueries({ queryKey: ['materials'] });
       addLine(material, customQty, unit);
       setCustomName('');
       setCustomUnit('Nos');
-      setCustomCategory('Consumables');
+      setCustomCategory('Civil Materials');
+      setCustomCategoryRemarks('');
       setCustomDescription('');
       setCustomQty(1);
       setShowCustomForm(false);
@@ -536,8 +552,14 @@ export function RequestWizardPage() {
                 </Button>
               </div>
             ) : (
-              <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
-                {materials?.slice(0, 12).map((m) => {
+              <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+                {groupedMaterials.map((group) => (
+                  <div key={group.category}>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-ink-muted px-1 py-1.5 sticky top-0 bg-white/95">
+                      {group.category}
+                    </p>
+                    <div className="space-y-2">
+                      {group.items.slice(0, 12).map((m) => {
                   const inCart = lines.find((l) => l.material.id === m.id);
                   const isSelected = selectedMaterial?.id === m.id;
                   return (
@@ -577,6 +599,9 @@ export function RequestWizardPage() {
                     </button>
                   );
                 })}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 
@@ -637,6 +662,18 @@ export function RequestWizardPage() {
                       </select>
                     </div>
                   </div>
+                  {customCategory === MATERIAL_CATEGORY_OTHERS && (
+                    <div>
+                      <label className="text-xs font-semibold text-ink-muted mb-1 block">
+                        Remarks <span className="text-danger">*</span>
+                      </label>
+                      <Input
+                        value={customCategoryRemarks}
+                        onChange={(e) => setCustomCategoryRemarks(e.target.value)}
+                        placeholder="Specify material type…"
+                      />
+                    </div>
+                  )}
                   <div>
                     <label className="text-xs font-semibold text-ink-muted mb-1 block">
                       Description (optional)

@@ -9,10 +9,10 @@ import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 import { cn } from '@/lib/utils';
 
 const TABS = [
-  { key: 'pending', label: 'Waiting' },
-  { key: 'approved', label: 'In progress' },
+  { key: 'pending', label: 'Pending' },
+  { key: 'approved', label: 'Approved' },
   { key: 'completed', label: 'Completed' },
-  { key: 'rejected', label: 'Rejected' },
+  { key: 'all', label: 'All' },
 ];
 
 export function MyRequestsPage() {
@@ -65,7 +65,7 @@ export function MyRequestsPage() {
                 ? 'No in-progress requests'
                 : tab === 'completed'
                 ? 'No completed requests yet'
-                : 'No rejected requests'
+                : 'No requests yet'
             }
             description="You're all caught up."
           />

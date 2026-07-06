@@ -62,6 +62,9 @@ const StoreCompleteIndentsPage = lazy(() =>
 const GrnReceivePage = lazy(() =>
   import('@/pages/store/GrnReceive').then((m) => ({ default: m.GrnReceivePage }))
 );
+const GrnApprovalsPage = lazy(() =>
+  import('@/pages/store/GrnApprovals').then((m) => ({ default: m.GrnApprovalsPage }))
+);
 const VerifyDeliveryPage = lazy(() =>
   import('@/pages/store/VerifyDelivery').then((m) => ({ default: m.VerifyDeliveryPage }))
 );
@@ -85,11 +88,29 @@ const NotificationsPage = lazy(() =>
   import('@/pages/Notifications').then((m) => ({ default: m.NotificationsPage }))
 );
 const PMApprovalsPage = lazy(() => import('@/pages/pm/PMApprovals').then((m) => ({ default: m.PMApprovalsPage })));
+const PmMobileApprovalPage = lazy(() =>
+  import('@/pages/pm/PmMobileApproval').then((m) => ({ default: m.PmMobileApprovalPage }))
+);
+const PmMobilePoApprovalPage = lazy(() =>
+  import('@/pages/pm/PmMobilePoApproval').then((m) => ({ default: m.PmMobilePoApprovalPage }))
+);
 const PMPOApprovalsPage = lazy(() =>
   import('@/pages/pm/PMPOApprovals').then((m) => ({ default: m.PMPOApprovalsPage }))
 );
 const PMPurchaseRequestsPage = lazy(() =>
   import('@/pages/pm/PMPurchaseRequests').then((m) => ({ default: m.PMPurchaseRequestsPage }))
+);
+const PmMaterialLookupPage = lazy(() =>
+  import('@/pages/pm/PmMaterialLookup').then((m) => ({ default: m.PmMaterialLookupPage }))
+);
+const ExecutiveHoIndentsPage = lazy(() =>
+  import('@/pages/executive/ExecutiveHoIndents').then((m) => ({ default: m.ExecutiveHoIndentsPage }))
+);
+const CoordinatorHoIndentsPage = lazy(() =>
+  import('@/pages/coordinator/CoordinatorHoIndents').then((m) => ({ default: m.CoordinatorHoIndentsPage }))
+);
+const RfqDetailPage = lazy(() =>
+  import('@/pages/rfq/RfqDetailPage').then((m) => ({ default: m.RfqDetailPage }))
 );
 const POWizardPage = lazy(() => import('@/pages/executive/POWizard').then((m) => ({ default: m.POWizardPage })));
 const PODetailPage = lazy(() => import('@/pages/procurement/PODetail').then((m) => ({ default: m.PODetailPage })));
@@ -122,6 +143,9 @@ const ProjectAdminPage = lazy(() =>
 );
 const VendorAdminPage = lazy(() =>
   import('@/pages/admin/VendorAdmin').then((m) => ({ default: m.VendorAdminPage }))
+);
+const SettingsAdminPage = lazy(() =>
+  import('@/pages/admin/SettingsAdmin').then((m) => ({ default: m.SettingsAdminPage }))
 );
 const CreateMaterialPage = lazy(() =>
   import('@/pages/materials/CreateMaterial').then((m) => ({ default: m.CreateMaterialPage }))
@@ -353,6 +377,15 @@ export default function App() {
               />
 
               <Route
+                path="/coordinator/grn-approvals"
+                element={
+                  <RoleGuard roles={[UserRole.COORDINATOR]}>
+                    <GrnApprovalsPage />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
                 path="/coordinator/verify-wos"
                 element={
                   <RoleGuard roles={[UserRole.COORDINATOR]}>
@@ -431,6 +464,15 @@ export default function App() {
               />
 
               <Route
+                path="/admin/settings"
+                element={
+                  <RoleGuard roles={[UserRole.COORDINATOR, UserRole.CHAIRMAN]}>
+                    <SettingsAdminPage />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
                 path="/materials/new"
                 element={
                   <RoleGuard capability="CREATE_INVENTORY_ITEM">
@@ -465,6 +507,33 @@ export default function App() {
                 element={
                   <RoleGuard roles={[UserRole.EXECUTIVE]}>
                     <IncidentsPage />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/executive/ho-indents"
+                element={
+                  <RoleGuard roles={[UserRole.EXECUTIVE]}>
+                    <ExecutiveHoIndentsPage />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/coordinator/ho-indents"
+                element={
+                  <RoleGuard roles={[UserRole.COORDINATOR]}>
+                    <CoordinatorHoIndentsPage />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/rfqs/:id"
+                element={
+                  <RoleGuard roles={[UserRole.EXECUTIVE, UserRole.COORDINATOR, UserRole.CHAIRMAN]} match="any">
+                    <RfqDetailPage />
                   </RoleGuard>
                 }
               />
@@ -516,6 +585,15 @@ export default function App() {
                 element={
                   <RoleGuard capability="VIEW_FINANCE">
                     <FinancePage />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/chairman/grn-approvals"
+                element={
+                  <RoleGuard roles={[UserRole.CHAIRMAN]}>
+                    <GrnApprovalsPage />
                   </RoleGuard>
                 }
               />
@@ -706,6 +784,22 @@ export default function App() {
 
               <Route
 
+                path="/pm/material-lookup"
+
+                element={
+
+                  <RoleGuard roles={[UserRole.PROJECT_MANAGER]}>
+
+                    <PmMaterialLookupPage />
+
+                  </RoleGuard>
+
+                }
+
+              />
+
+              <Route
+
                 path="/pm/approvals"
 
                 element={
@@ -718,6 +812,31 @@ export default function App() {
 
                 }
 
+              />
+
+              <Route
+
+                path="/pm/mobile-approve/:id"
+
+                element={
+
+                  <RoleGuard roles={[UserRole.PROJECT_MANAGER]}>
+
+                    <PmMobileApprovalPage />
+
+                  </RoleGuard>
+
+                }
+
+              />
+
+              <Route
+                path="/pm/mobile-po-approve/:id"
+                element={
+                  <RoleGuard roles={[UserRole.PROJECT_MANAGER]}>
+                    <PmMobilePoApprovalPage />
+                  </RoleGuard>
+                }
               />
 
               <Route

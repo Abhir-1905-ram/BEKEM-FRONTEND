@@ -17,7 +17,7 @@ import {
 } from '@afios/shared';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
+import { Input, Textarea } from '@/components/ui/Input';
 import { StepIndicator } from '@/components/StepIndicator';
 import { SuccessScreen } from '@/components/SuccessScreen';
 import { EmptyState } from '@/components/EmptyState';
@@ -29,7 +29,14 @@ import type {
   BillingAddressType,
   DeliveryAddressType,
   MaterialSearchResultDto,
+  QuotationComparisonDto,
+  MaterialPurchaseHistoryDto,
 } from '@afios/shared';
+import { QuotationComparisonTable } from '@/components/QuotationComparisonTable';
+import { PurchaseHistoryPanel } from '@/components/PurchaseHistoryPanel';
+import { ProcurementWorkflowBanner } from '@/components/ProcurementWorkflowBanner';
+import { GstSummaryBar } from '@/components/GstSummaryBar';
+import { pickL1VendorId } from '@/lib/quotationTotals';
 
 const STEPS = [
   'Choose request',
@@ -89,7 +96,12 @@ export function POWizardPage() {
   const [referenceNote, setReferenceNote] = useState('');
   const [attachments, setAttachments] = useState<PoAttachment[]>([]);
   const [paymentTerms, setPaymentTerms] = useState('Net 30 days');
+  const [additionalTerms, setAdditionalTerms] = useState('');
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState('');
+  const [comparison, setComparison] = useState<QuotationComparisonDto | null>(null);
+  const [purchaseHistory, setPurchaseHistory] = useState<MaterialPurchaseHistoryDto[]>([]);
+  const [whyWeChoseThisVendor, setWhyWeChoseThisVendor] = useState('');
+  const [vendorSelectionReason, setVendorSelectionReason] = useState('');
   const [success, setSuccess] = useState(false);
   const [createdPoCount, setCreatedPoCount] = useState(0);
   const [selectingPr, setSelectingPr] = useState(false);
@@ -177,6 +189,7 @@ export function POWizardPage() {
         materialRequestId: selectedMr?.id,
         purchaseRequestId: selectedPr?.id,
         paymentTerms,
+        additionalTerms,
         billingAddress,
         billingAddressType,
         deliveryAddress:
@@ -187,6 +200,12 @@ export function POWizardPage() {
         expectedDeliveryDate: expectedDeliveryDate || undefined,
         referenceNote:
           referenceNote || (selectedMr?.indentNumber ? `Indent ${selectedMr.indentNumber}` : ''),
+        whyWeChoseThisVendor,
+        vendorSelectionReasons: Object.fromEntries(
+          assignedVendorIds
+            .filter((vid) => vid !== l1VendorId)
+            .map((vid) => [vid, vendorSelectionReason])
+        ),
         orders,
       });
       return res.data;
@@ -204,6 +223,8 @@ export function POWizardPage() {
     mutationFn: async (purchaseRequestId: string) => {
       const res = await api.post<{
         data: QuotationDto[];
+        comparison?: QuotationComparisonDto;
+        purchaseHistory?: MaterialPurchaseHistoryDto[];
         lineItems?: PoLineItemDto[];
         billingAddress?: string;
         deliveryAddress?: string;
@@ -213,6 +234,8 @@ export function POWizardPage() {
     },
     onSuccess: (data) => {
       setQuotations(data.data);
+      if (data.comparison) setComparison(data.comparison);
+      if (data.purchaseHistory) setPurchaseHistory(data.purchaseHistory);
       if (data.lineItems?.length) setLineItems(data.lineItems);
       if (data.billingAddress) {
         setRegisteredOfficeAddress(data.billingAddress);
@@ -388,11 +411,20 @@ export function POWizardPage() {
     setStep(2);
   };
 
-  const lowestQuote = quotations.filter((q) => assignedVendorIds.includes(q.vendorId)).length
-    ? quotations
-        .filter((q) => assignedVendorIds.includes(q.vendorId))
-        .reduce((a, b) => (a.amount < b.amount ? a : b))
-    : null;
+  const l1VendorId =
+    comparison?.l1VendorId ||
+    pickL1VendorId(
+      (comparison?.vendors ?? quotations).map((q) => ({
+        vendorId: 'vendorId' in q ? q.vendorId : (q as QuotationDto).vendorId,
+        finalCost: 'finalCost' in q ? (q as { finalCost: number }).finalCost : (q as QuotationDto).amount,
+      }))
+    );
+
+  const hasNonL1Vendor = assignedVendorIds.some((vid) => l1VendorId && vid !== l1VendorId);
+
+  const canSubmitPo =
+    whyWeChoseThisVendor.trim().length >= 10 &&
+    (!hasNonL1Vendor || vendorSelectionReason.trim().length >= 10);
 
   return (
     <div className="min-h-screen flex flex-col max-w-lg mx-auto bg-[#F8FAFC]">
@@ -408,7 +440,11 @@ export function POWizardPage() {
       </header>
 
       <StepIndicator current={step} total={STEPS.length} accentColor={accent} labels={STEPS} />
-      <p className="text-center text-xs text-ink-secondary mb-4">{STEPS[step]}</p>
+      <p className="text-center text-xs text-ink-secondary mb-2">{STEPS[step]}</p>
+      <ProcurementWorkflowBanner
+        className="mb-4"
+        highlightFrom={step <= 1 ? 0 : step === 2 ? 7 : step === 3 ? 9 : 10}
+      />
 
       <div className="flex-1 px-4 pb-6">
         <AnimatePresence mode="sync">
@@ -552,35 +588,16 @@ export function POWizardPage() {
 
           {step === 2 && (
             <motion.div key="s2" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}>
+              <PurchaseHistoryPanel history={purchaseHistory} className="mb-4" />
               <p className="text-sm text-ink-secondary mb-3">
-                Compare quotations for assigned vendors
-                {assignedVendorIds.length > 1 ? ` (${assignedVendorIds.length} vendors on this indent)` : ''}
+                Compare top vendor quotations (L1 highlighted)
               </p>
               {loadQuotations.isPending ? (
                 <div className="h-32 bg-surface-muted rounded-xl animate-pulse" />
+              ) : comparison ? (
+                <QuotationComparisonTable comparison={comparison} />
               ) : (
-                <div className="space-y-2">
-                  {quotations
-                    .filter((q) => assignedVendorIds.includes(q.vendorId))
-                    .map((q) => (
-                    <Card
-                      key={q.id}
-                      className={cn(
-                        q.id === lowestQuote?.id && 'border-l-4 border-l-emerald-500 bg-emerald-50',
-                        assignedVendorIds.includes(q.vendorId) && 'ring-1 ring-executive/30'
-                      )}
-                    >
-                      <div className="flex justify-between">
-                        <p className="font-medium">{q.vendor?.name}</p>
-                        <p className="font-bold">{formatCurrency(q.amount)}</p>
-                      </div>
-                      <p className="text-xs text-ink-secondary">{q.terms}</p>
-                      {q.id === lowestQuote?.id && (
-                        <p className="text-xs text-green-600 mt-1">Lowest quote</p>
-                      )}
-                    </Card>
-                  ))}
-                </div>
+                <p className="text-sm text-ink-muted">No comparison data yet.</p>
               )}
               <Button
                 className="mt-4"
@@ -603,7 +620,6 @@ export function POWizardPage() {
               <div className="space-y-3">
                 {lineItems.map((row, i) => {
                   const vendor = vendorsForLineIndex(i).find((v) => v.id === lineVendorByIndex[i]);
-                  const totals = computePoLineTotals(row.quantity, row.rate, row.gstPercent ?? 18);
                   return (
                   <Card key={i} className="space-y-2">
                     <div className="flex items-start justify-between gap-2">
@@ -679,20 +695,11 @@ export function POWizardPage() {
                         />
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 text-xs border-t border-surface-border pt-2">
-                      <div>
-                        <p className="text-ink-muted">Line total</p>
-                        <p className="font-semibold tabular-nums">{formatCurrency(totals.lineTotal)}</p>
-                      </div>
-                      <div>
-                        <p className="text-ink-muted">Tax</p>
-                        <p className="font-semibold tabular-nums">{formatCurrency(totals.tax)}</p>
-                      </div>
-                      <div>
-                        <p className="text-ink-muted">Grand total</p>
-                        <p className="font-semibold tabular-nums">{formatCurrency(totals.grandTotal)}</p>
-                      </div>
-                    </div>
+                    <GstSummaryBar
+                      quantity={row.quantity}
+                      rate={row.rate}
+                      gstPercent={row.gstPercent ?? 18}
+                    />
                   </Card>
                   );
                 })}
@@ -718,9 +725,39 @@ export function POWizardPage() {
                   emptyMessage="No materials found — check spelling or ask Coordinator to add it to Material Master"
                 />
               </div>
-              <p className="text-sm font-semibold mt-3">
-                Order grand total: {formatCurrency(grandTotalAll(lineItems))}
-              </p>
+              <div className="mt-3 panel p-3 text-xs space-y-1">
+                <p className="font-semibold text-ink">Order GST summary</p>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 tabular-nums">
+                  <span>
+                    Subtotal{' '}
+                    <strong>
+                      {formatCurrency(
+                        lineItems.reduce(
+                          (s, row) =>
+                            s + computePoLineTotals(row.quantity, row.rate, row.gstPercent ?? 18).lineTotal,
+                          0
+                        )
+                      )}
+                    </strong>
+                  </span>
+                  <span>
+                    GST amount{' '}
+                    <strong>
+                      {formatCurrency(
+                        lineItems.reduce(
+                          (s, row) =>
+                            s + computePoLineTotals(row.quantity, row.rate, row.gstPercent ?? 18).tax,
+                          0
+                        )
+                      )}
+                    </strong>
+                  </span>
+                  <span>
+                    Final amount{' '}
+                    <strong className="text-bekem-navy">{formatCurrency(grandTotalAll(lineItems))}</strong>
+                  </span>
+                </div>
+              </div>
               <Button
                 className="mt-4"
                 variant="accent"
@@ -741,6 +778,16 @@ export function POWizardPage() {
                 value={paymentTerms}
                 onChange={(e) => setPaymentTerms(e.target.value)}
                 className="mt-2"
+              />
+
+              <label className="text-sm font-medium text-ink-secondary mt-4 block">
+                Additional terms <span className="text-ink-muted font-normal">(optional)</span>
+              </label>
+              <Textarea
+                value={additionalTerms}
+                onChange={(e) => setAdditionalTerms(e.target.value)}
+                className="mt-2 min-h-[96px]"
+                placeholder="Add project-specific clauses without changing the standard terms…"
               />
 
               <label className="text-sm font-medium text-ink-secondary mt-4 block">
@@ -986,6 +1033,8 @@ export function POWizardPage() {
                         vendorContact: vendor?.contactPerson,
                         vendorPhone: vendor?.phone,
                         paymentTerms,
+                        additionalTerms,
+                        poAmount: vendorLines.reduce((s, row) => s + (row.amount || 0), 0),
                         billingAddress,
                         deliveryAddress:
                           deliveryAddressType === 'other'
@@ -999,6 +1048,22 @@ export function POWizardPage() {
                   );
                 })}
               </div>
+              <Card className="mt-4 space-y-3">
+                <Textarea
+                  value={whyWeChoseThisVendor}
+                  onChange={(e) => setWhyWeChoseThisVendor(e.target.value)}
+                  rows={3}
+                  placeholder="Why we chose this vendor (required)"
+                />
+                {hasNonL1Vendor && (
+                  <Textarea
+                    value={vendorSelectionReason}
+                    onChange={(e) => setVendorSelectionReason(e.target.value)}
+                    rows={2}
+                    placeholder="Reason for selection — non-L1 vendor (required)"
+                  />
+                )}
+              </Card>
               <div className="flex flex-col sm:flex-row gap-2 mt-4">
                 <Button variant="secondary" size="lg" onClick={() => setStep(4)}>
                   Back to edit
@@ -1007,7 +1072,7 @@ export function POWizardPage() {
                   variant="accent"
                   size="lg"
                   accentColor={accent}
-                  disabled={createPo.isPending}
+                  disabled={createPo.isPending || !canSubmitPo}
                   onClick={() => createPo.mutate()}
                 >
                   {createPo.isPending

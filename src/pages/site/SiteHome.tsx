@@ -46,13 +46,22 @@ export function SiteHomePage() {
   });
 
   const pending = requests?.filter((r) => r.status === 'PENDING_STORE').length || 0;
-  const inProgress =
-    requests?.filter((r) => ['ALLOCATED', 'FORWARDED_TO_PM', 'PM_APPROVED'].includes(r.status))
-      .length || 0;
+  const approved =
+    requests?.filter((r) =>
+      [
+        'ALLOCATED',
+        'FORWARDED_TO_PM',
+        'PM_APPROVED',
+        'PURCHASE_REQUESTED',
+        'PENDING_HO',
+        'PO_CREATED',
+        'COORDINATOR_VERIFIED',
+        'CHAIRMAN_APPROVED',
+      ].includes(r.status)
+    ).length || 0;
   const completed =
-    requests?.filter((r) => ['COMPLETED', 'CLOSED'].includes(r.status))
+    requests?.filter((r) => ['MATERIAL_RECEIVED', 'ISSUED', 'COMPLETED', 'CLOSED'].includes(r.status))
       .length || 0;
-  const pendingTotal = pending + inProgress;
   const unread = notifications?.filter((n) => !n.isRead).length || 0;
   const recent = requests?.slice(0, 5) || [];
 
@@ -82,8 +91,8 @@ export function SiteHomePage() {
         <div className="grid gap-4 sm:grid-cols-2 mt-4">
           <ActionCard
             title="Pending requests"
-            subtitle={pendingTotal > 0 ? 'Awaiting store or approval' : 'Nothing in queue'}
-            count={pendingTotal}
+            subtitle={pending > 0 ? 'Awaiting store verification' : 'Nothing in queue'}
+            count={pending}
             icon={Clock}
             tone="warning"
             onClick={() => navigate('/requests?tab=pending')}
@@ -108,8 +117,8 @@ export function SiteHomePage() {
           onClick={() => navigate('/requests?tab=pending')}
         />
         <ActionCard
-          title="In progress"
-          count={inProgress}
+          title="Approved"
+          count={approved}
           icon={Loader}
           tone="info"
           onClick={() => navigate('/requests?tab=approved')}

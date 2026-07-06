@@ -153,6 +153,27 @@
   .sidebar-scroll::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.32);
   }
+
+  .procurement-landscape-scroll {
+    @apply overflow-x-auto;
+  }
+
+  .procurement-landscape-table {
+    @apply w-full min-w-[520px] text-xs border-collapse;
+  }
+
+  .procurement-landscape-table th {
+    @apply text-left py-1.5 px-2 font-semibold text-ink;
+  }
+
+  .procurement-landscape-table td {
+    @apply py-1 px-2 text-ink align-top border-t border-surface-border;
+  }
+
+  .procurement-landscape-table th:first-child,
+  .procurement-landscape-table td:first-child {
+    @apply pr-2 text-ink-muted;
+  }
 }
 
 @layer utilities {

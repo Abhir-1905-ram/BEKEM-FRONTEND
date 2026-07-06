@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Search, FileText, Package, Building2, Users, HardHat, Truck, ArrowLeftRight } from 'lucide-react';
+import { Search, FileText, Package, Building2, Users, HardHat, Truck, ArrowLeftRight, UserCircle } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { GlobalSearchDto } from '@afios/shared';
 import { cn } from '@/lib/utils';
@@ -15,6 +15,7 @@ const ICONS: Record<keyof GlobalSearchDto, typeof FileText> = {
   projects: Building2,
   grns: Truck,
   branchTransfers: ArrowLeftRight,
+  employees: UserCircle,
 };
 
 const GROUP_LABELS: Record<keyof GlobalSearchDto, string> = {
@@ -26,6 +27,7 @@ const GROUP_LABELS: Record<keyof GlobalSearchDto, string> = {
   projects: 'Projects',
   grns: 'GRNs',
   branchTransfers: 'Branch transfers',
+  employees: 'Employees',
 };
 
 interface DashboardSearchProps {

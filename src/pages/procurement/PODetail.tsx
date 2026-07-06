@@ -501,6 +501,20 @@ export function PODetailPage() {
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <StatusBadge status={g.status} />
+                      {g.status === 'ON_HOLD' && g.approvalStage && g.approvalStage !== 'APPROVED' && (
+                        <span className="text-[10px] font-semibold uppercase text-amber-700">
+                          {g.approvalStage === 'COORDINATOR_PENDING'
+                            ? 'Awaiting coordinator'
+                            : g.approvalStage === 'CHAIRMAN_PENDING'
+                              ? 'Awaiting MD'
+                              : g.approvalStage.replace(/_/g, ' ').toLowerCase()}
+                        </span>
+                      )}
+                      {g.holdReasons?.length ? (
+                        <span className="text-[10px] text-ink-muted">
+                          {g.holdReasons.join(' · ')} variance
+                        </span>
+                      ) : null}
                       {g.isPartialGrn && (
                         <span className="text-[10px] font-bold text-red-600 uppercase">Partial GRN</span>
                       )}

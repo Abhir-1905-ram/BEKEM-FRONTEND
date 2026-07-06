@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import { ISSUE_REASON_LABELS, type IssueReason, type MaterialRequestDto } from '@afios/shared';
+import { ISSUE_REASON_LABELS, ISSUE_TYPE_LABELS, type IssueReason, type IssueType, type MaterialRequestDto } from '@afios/shared';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
@@ -35,10 +35,13 @@ interface IssueAttachment {
 }
 
 const REASONS = Object.entries(ISSUE_REASON_LABELS) as [IssueReason, string][];
+const ISSUE_TYPE_OPTIONS = Object.entries(ISSUE_TYPE_LABELS) as [IssueType, string][];
 
 export function IssueMaterialPage() {
   const [selected, setSelected] = useState<MaterialRequestDto | null>(null);
   const [reason, setReason] = useState<IssueReason | ''>('');
+  const [issueType, setIssueType] = useState<IssueType | ''>('');
+  const [issueTypeError, setIssueTypeError] = useState('');
   const [reasonOther, setReasonOther] = useState('');
   const [reasonError, setReasonError] = useState('');
   const [note, setNote] = useState('');
@@ -80,6 +83,7 @@ export function IssueMaterialPage() {
       }>('/material-issues', {
         materialRequestId: selected!.id,
         reason,
+        issueType,
         reasonOtherText: reason === 'other' ? reasonOther.trim() : undefined,
         issuedToType,
         issuedToName: issuedToName.trim(),
@@ -93,6 +97,8 @@ export function IssueMaterialPage() {
       setLastIssue(issueData);
       setSelected(null);
       setReason('');
+      setIssueType('');
+      setIssueTypeError('');
       setReasonOther('');
       setReasonError('');
       setIssuedToType('');
@@ -116,11 +122,16 @@ export function IssueMaterialPage() {
       setReasonError('Please provide details when reason is Other');
       return;
     }
+    if (!issueType) {
+      setIssueTypeError('Issue type is required');
+      return;
+    }
     if (!issuedToType || !issuedToName.trim()) {
       setIssuedToError('Issued to is required (employee, contractor, or department)');
       return;
     }
     setReasonError('');
+    setIssueTypeError('');
     setIssuedToError('');
     issue.mutate();
   };
@@ -225,6 +236,28 @@ export function IssueMaterialPage() {
                 placeholder="Describe the reason…"
               />
             )}
+
+            <div>
+              <label className="text-sm font-medium text-ink-secondary block mb-2">
+                Issue type <span className="text-danger">*</span>
+              </label>
+              <select
+                value={issueType}
+                onChange={(e) => {
+                  setIssueType(e.target.value as IssueType | '');
+                  if (e.target.value) setIssueTypeError('');
+                }}
+                className="w-full border border-surface-border rounded-xl px-3 py-2.5 text-sm bg-white"
+              >
+                <option value="">Select issue type…</option>
+                {ISSUE_TYPE_OPTIONS.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              {issueTypeError && <p className="text-xs text-danger mt-1">{issueTypeError}</p>}
+            </div>
 
             <div>
               <label className="text-sm font-medium text-ink-secondary block mb-2">

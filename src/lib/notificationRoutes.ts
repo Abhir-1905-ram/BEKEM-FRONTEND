@@ -18,14 +18,11 @@ export function getNotificationPath(
   }
 
   if (n.relatedEntityType === 'MaterialRequest') {
-    if (
-      [
-        UserRole.SITE_INCHARGE,
-        UserRole.STORE_INCHARGE,
-        UserRole.PROJECT_MANAGER,
-      ].includes(role)
-    ) {
+    if (role === UserRole.SITE_INCHARGE || role === UserRole.STORE_INCHARGE) {
       return `/requests/${n.relatedEntityId}`;
+    }
+    if (role === UserRole.PROJECT_MANAGER) {
+      return `/pm/mobile-approve/${n.relatedEntityId}`;
     }
     if (role === UserRole.EXECUTIVE || role === UserRole.COORDINATOR) {
       return procurementDecisionPath(role, n.relatedEntityId);
@@ -40,7 +37,9 @@ export function getNotificationPath(
 
   if (n.relatedEntityType === 'PurchaseOrder') {
     if (role === UserRole.EXECUTIVE) return `/purchase-orders/${n.relatedEntityId}`;
-    if (role === UserRole.PROJECT_MANAGER) return `/pm/po/${n.relatedEntityId}`;
+    if (role === UserRole.PROJECT_MANAGER) {
+      return `/pm/mobile-po-approve/${n.relatedEntityId}`;
+    }
     if (role === UserRole.COORDINATOR) return `/coordinator/po/${n.relatedEntityId}`;
     if (role === UserRole.CHAIRMAN) return `/chairman/po/${n.relatedEntityId}`;
     return null;

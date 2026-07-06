@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, Truck, Upload, CheckCircle2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Truck, Upload, CheckCircle2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
+import { previewVendorGstLookup } from '@/lib/vendorGstLookup';
 import type { CreateVendorDto, MaterialDto, MsmeCertificateUploadDto, VendorDto } from '@afios/shared';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -56,6 +57,31 @@ export function VendorAdminPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [msmeChoice, setMsmeChoice] = useState<boolean | null>(null);
+  const [gstLookupMessage, setGstLookupMessage] = useState<string | null>(null);
+
+  const previewGst = async () => {
+    if (!form.gstNumber?.trim()) {
+      toast.error('Enter GST number first');
+      return;
+    }
+    try {
+      const result = await previewVendorGstLookup(form.gstNumber);
+      setGstLookupMessage(result.message || null);
+      if (result.available && result.name) {
+        setForm((f) => ({
+          ...f,
+          name: result.name || f.name,
+          address: result.address || f.address,
+        }));
+        toast.success('Vendor details applied from GST registry');
+      } else {
+        toast.info(result.message || 'GST auto-fetch will be available when portal API is connected');
+      }
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } } };
+      toast.error(err.response?.data?.message || 'GST preview failed');
+    }
+  };
 
   const { data: vendors, list } = useListQuery({
     queryKey: ['vendors'],
@@ -424,11 +450,20 @@ export function VendorAdminPage() {
               onChange={(e) => setForm({ ...form, address: e.target.value })}
             />
             <div className="grid sm:grid-cols-2 gap-3">
-              <Input
-                placeholder="GST number *"
-                value={form.gstNumber}
-                onChange={(e) => setForm({ ...form, gstNumber: e.target.value })}
-              />
+              <div className="space-y-1">
+                <Input
+                  placeholder="GST number *"
+                  value={form.gstNumber}
+                  onChange={(e) => setForm({ ...form, gstNumber: e.target.value })}
+                />
+                <Button type="button" variant="secondary" size="sm" className="gap-1.5" onClick={previewGst}>
+                  <Search className="h-3.5 w-3.5" />
+                  Fetch from GST (coming soon)
+                </Button>
+                {gstLookupMessage && (
+                  <p className="text-[11px] text-ink-muted">{gstLookupMessage}</p>
+                )}
+              </div>
               <Input
                 placeholder="PAN"
                 value={form.panNumber || ''}

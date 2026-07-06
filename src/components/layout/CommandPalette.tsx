@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, FileText, Package, Building2, Users, X, HardHat, Truck, ArrowLeftRight } from 'lucide-react';
+import { Search, FileText, Package, Building2, Users, X, HardHat, Truck, ArrowLeftRight, UserCircle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import type { GlobalSearchDto } from '@afios/shared';
@@ -18,6 +18,7 @@ const ICONS: Record<keyof GlobalSearchDto, typeof FileText> = {
   projects: Building2,
   grns: Truck,
   branchTransfers: ArrowLeftRight,
+  employees: UserCircle,
 };
 
 interface CommandPaletteProps {

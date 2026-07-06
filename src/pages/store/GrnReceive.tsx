@@ -1,16 +1,22 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { ArrowLeft, Upload, FileText, Image as ImageIcon, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Upload, FileText, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import { ROLE_COLORS, UserRole, formatCurrency, type PurchaseOrderDto, type PoLineItemDto, type ProjectGrnCounterDto } from '@afios/shared';
+import {
+  ROLE_COLORS,
+  UserRole,
+  formatCurrency,
+  type PurchaseOrderDto,
+  type PoGrnReceiptLineDto,
+  type ProjectGrnCounterDto,
+} from '@afios/shared';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { EmptyState } from '@/components/EmptyState';
 import { ListQueryBoundary } from '@/components/ListQueryBoundary';
 import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
-import { QuantityStepper } from '@/components/QuantityStepper';
 import { cn } from '@/lib/utils';
 
 type ReceiveType = 'PARTIAL' | 'FULL';
@@ -22,28 +28,38 @@ interface GrnAttachment {
   category: AttachmentCategory;
 }
 
-function primaryLine(po: PurchaseOrderDto): PoLineItemDto | undefined {
-  return po.lineItems?.[0];
+interface GrnCreateResponse {
+  id: string;
+  grnNumber: string;
+  status: string;
+  approvalStage?: string;
 }
 
-function deliveryLabel(address?: string) {
-  if (!address) return '—';
-  const first = address.split('\n').find((l) => l.trim());
-  return first || address;
+function lineKey(line: PoGrnReceiptLineDto) {
+  return line.materialId || `line-${line.lineIndex}`;
+}
+
+function invoiceRateClass(invoicePrice: number, poRate: number) {
+  if (Math.abs(invoicePrice - poRate) < 0.0001) return '';
+  if (invoicePrice < poRate) return 'border-emerald-400 text-emerald-700 bg-emerald-50/50';
+  return 'border-red-400 text-red-700 bg-red-50/50';
+}
+
+function hasAttachmentCategory(attachments: GrnAttachment[], category: AttachmentCategory) {
+  return attachments.some((a) => a.category === category);
 }
 
 export function GrnReceivePage() {
   const accent = ROLE_COLORS[UserRole.COORDINATOR].primary;
   const [selectedPo, setSelectedPo] = useState<PurchaseOrderDto | null>(null);
+  const [receiptLines, setReceiptLines] = useState<PoGrnReceiptLineDto[]>([]);
   const [receivedByLine, setReceivedByLine] = useState<Record<string, number>>({});
   const [invoicePriceByLine, setInvoicePriceByLine] = useState<Record<string, number>>({});
   const [receiveType, setReceiveType] = useState<ReceiveType>('FULL');
   const [invoiceNo, setInvoiceNo] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [challanNo, setChallanNo] = useState('');
-  const [vehicleNo, setVehicleNo] = useState('');
   const [ewayBillNumber, setEwayBillNumber] = useState('');
-  const [driverName, setDriverName] = useState('');
   const [remarks, setRemarks] = useState('');
   const [attachments, setAttachments] = useState<GrnAttachment[]>([]);
 
@@ -61,55 +77,54 @@ export function GrnReceivePage() {
     },
   });
 
-  const projectId = selectedPo?.purchaseRequest?.project?.id;
-
-  const { data: grnPreview } = useQuery({
-    queryKey: ['grn-counter', projectId],
+  const { data: grnContext } = useQuery({
+    queryKey: ['po-grn-counter', selectedPo?.id],
     queryFn: async () => {
       const res = await api.get<{ data: ProjectGrnCounterDto }>(
-        `/projects/${projectId}/grn-counter`
+        `/purchase-orders/${selectedPo!.id}/grn-counter`
       );
       return res.data.data;
     },
-    enabled: !!projectId,
+    enabled: !!selectedPo?.id,
   });
 
-  const line = selectedPo ? primaryLine(selectedPo) : undefined;
-  const lines = selectedPo?.lineItems?.length ? selectedPo.lineItems : line ? [line] : [];
-
   const invoiceValue = useMemo(() => {
-    return lines.reduce((sum, row) => {
-      if (!row.materialId) return sum;
-      const qty = receivedByLine[row.materialId] ?? row.quantity;
-      const price = invoicePriceByLine[row.materialId] ?? row.rate;
+    return receiptLines.reduce((sum, row) => {
+      const key = lineKey(row);
+      const qty = receivedByLine[key] ?? 0;
+      const price = invoicePriceByLine[key] ?? row.poRate;
       return sum + qty * price;
     }, 0);
-  }, [lines, receivedByLine, invoicePriceByLine]);
+  }, [receiptLines, receivedByLine, invoicePriceByLine]);
 
   const requiresEway = invoiceValue > 50000;
-  const ewayFieldsIncomplete = requiresEway && (!vehicleNo.trim() || !ewayBillNumber.trim());
+  const ewayIncomplete = requiresEway && !ewayBillNumber.trim();
+  const hasInvoiceUpload = hasAttachmentCategory(attachments, 'INVOICE');
+  const hasChallanUpload = hasAttachmentCategory(attachments, 'CHALLAN');
 
   useEffect(() => {
-    if (!selectedPo?.lineItems?.length) return;
-    if (receiveType === 'FULL') {
-      const next: Record<string, number> = {};
-      selectedPo.lineItems.forEach((l) => {
-        if (l.materialId) next[l.materialId] = l.quantity;
-      });
-      setReceivedByLine(next);
-    }
-  }, [receiveType, selectedPo]);
+    if (!grnContext?.lines?.length) return;
+    setReceiptLines(grnContext.lines);
+    const received: Record<string, number> = {};
+    const prices: Record<string, number> = {};
+    grnContext.lines.forEach((line) => {
+      const key = lineKey(line);
+      received[key] = receiveType === 'FULL' ? line.remainingQty : 0;
+      prices[key] = line.poRate;
+    });
+    setReceivedByLine(received);
+    setInvoicePriceByLine(prices);
+  }, [grnContext, receiveType]);
 
   const resetForm = () => {
     setSelectedPo(null);
+    setReceiptLines([]);
     setReceivedByLine({});
     setInvoicePriceByLine({});
     setReceiveType('FULL');
     setInvoiceNo('');
     setChallanNo('');
-    setVehicleNo('');
     setEwayBillNumber('');
-    setDriverName('');
     setRemarks('');
     setAttachments([]);
   };
@@ -129,76 +144,93 @@ export function GrnReceivePage() {
     if (input) input.value = '';
   };
 
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const validateSubmit = (saveDraft: boolean) => {
+    if (saveDraft) return true;
+    if (!hasInvoiceUpload || !hasChallanUpload) {
+      toast.error('Invoice and Challan uploads are required');
+      return false;
+    }
+    if (ewayIncomplete) {
+      toast.message('GRN will be placed on hold until E-Way Bill is approved');
+    }
+    return true;
+  };
+
   const receive = useMutation({
     mutationFn: async (saveDraft: boolean) => {
       if (!selectedPo) throw new Error('No PO');
-      const items = lines
-        .filter((l) => l.materialId)
-        .map((l, idx) => {
-          const qty = receivedByLine[l.materialId!] ?? l.quantity;
-          const invoiceUnitPrice = invoicePriceByLine[l.materialId!] ?? l.rate;
-          return {
-            materialId: l.materialId!,
-            quantityOrdered: l.quantity,
-            quantityReceived: qty,
-            invoiceUnitPrice,
-            lineIndex: idx,
-            lineStatus:
-              receiveType === 'FULL' || qty >= l.quantity ? 'RECEIVED' : ('PARTIAL' as const),
-          };
-        });
-      await api.post('/goods-receipts', {
+      const items = receiptLines.map((line) => {
+        const key = lineKey(line);
+        const qty = receivedByLine[key] ?? 0;
+        const invoiceUnitPrice = invoicePriceByLine[key] ?? line.poRate;
+        return {
+          materialId: line.materialId!,
+          quantityOrdered: line.orderedQty,
+          quantityReceived: qty,
+          invoiceUnitPrice,
+          lineIndex: line.lineIndex,
+          lineStatus:
+            receiveType === 'FULL' || line.previouslyReceived + qty >= line.orderedQty
+              ? 'RECEIVED'
+              : ('PARTIAL' as const),
+        };
+      });
+      const res = await api.post<{ data: GrnCreateResponse }>('/goods-receipts', {
         purchaseOrderId: selectedPo.id,
         receiveType,
         invoiceNo,
         invoiceDate: new Date(invoiceDate).toISOString(),
         invoiceValue,
         challanNo,
-        vehicleNo,
         ewayBillNumber,
-        driverName,
         deliveryDate: new Date().toISOString(),
         remarks,
         attachments,
         saveDraft,
         items,
       });
+      return { ...res.data.data, saveDraft };
     },
-    onSuccess: (_, saveDraft) => {
-      toast.success(saveDraft ? 'GRN draft saved' : 'GRN approved — inventory updated');
+    onSuccess: (data) => {
+      if (data.saveDraft) {
+        toast.success('GRN draft saved');
+      } else if (data.status === 'ON_HOLD') {
+        toast.success(`${data.grnNumber} submitted — on hold pending Coordinator approval`);
+      } else {
+        toast.success('GRN approved — inventory updated');
+      }
       resetForm();
       refetch();
     },
-    onError: () => toast.error('GRN failed'),
+    onError: (e: Error & { response?: { data?: { message?: string } } }) => {
+      toast.error(e.response?.data?.message || 'GRN failed');
+    },
   });
+
+  const submitGrn = (saveDraft: boolean) => {
+    if (!validateSubmit(saveDraft)) return;
+    receive.mutate(saveDraft);
+  };
 
   const openPo = (po: PurchaseOrderDto) => {
     setSelectedPo(po);
-    const initial: Record<string, number> = {};
-    const priceInitial: Record<string, number> = {};
-    po.lineItems?.forEach((l) => {
-      if (l.materialId) {
-        initial[l.materialId] = l.quantity;
-        priceInitial[l.materialId] = l.rate;
-      }
-    });
-    setReceivedByLine(initial);
-    setInvoicePriceByLine(priceInitial);
     setReceiveType('FULL');
     setInvoiceNo('');
     setChallanNo('');
-    setVehicleNo('');
     setEwayBillNumber('');
-    setDriverName('');
     setRemarks('');
     setAttachments([]);
   };
 
   return (
-    <div className="page-container max-w-lg">
+    <div className="page-container max-w-6xl">
       <PageHeader
         title="Material receipt (GRN)"
-        subtitle="Store Manager / Coordinator — create GRN after physical delivery is verified"
+        subtitle="One GRN per supplier invoice — variances go on hold for approval"
       />
 
       {!selectedPo ? (
@@ -211,11 +243,7 @@ export function GrnReceivePage() {
           empty={
             <EmptyState
               title="No approved POs"
-              description="POs appear here after the Store Manager verifies physical delivery at site (Verify delivery)."
-              actionLabel="Workflow: Store → Verify delivery, then return here for GRN"
-              onAction={() =>
-                toast.info('Store Manager (storeincharge@bekem.com) must complete Verify delivery first.')
-              }
+              description="POs appear here after the Store Manager verifies physical delivery at site."
             />
           }
         >
@@ -230,15 +258,12 @@ export function GrnReceivePage() {
                 <p className="font-semibold text-ink">PO #{po.displayPoNumber || '—'}</p>
                 <p className="text-xs text-ink-muted mt-0.5">{po.procurementRef || po.poNumber}</p>
                 <p className="text-sm text-ink-secondary">{po.vendor?.name}</p>
-                {po.purchaseRequest?.project?.code && (
-                  <p className="text-xs text-ink-muted mt-1">{po.purchaseRequest.project.code}</p>
-                )}
               </button>
             ))}
           </div>
         </ListQueryBoundary>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-4">
           <button
             type="button"
             onClick={resetForm}
@@ -250,303 +275,224 @@ export function GrnReceivePage() {
 
           <div className="panel overflow-hidden">
             <div className="h-1 bg-bekem-accent" />
-            <div className="p-5 sm:p-6 space-y-5">
-              <div className="border-b border-surface-border pb-4 space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
-                  Material Receipt (GRN)
-                </p>
-                <p className="text-2xl font-bold text-ink">
-                  PO #{selectedPo.displayPoNumber || '—'}
-                </p>
-                <p className="text-sm text-ink-muted font-mono">
-                  {selectedPo.procurementRef || selectedPo.poNumber}
-                </p>
-                <p className="text-xs text-amber-700 font-medium mt-2">Pending receipt</p>
-                {grnPreview?.grnNumber && (
-                  <p
-                    className="text-sm font-semibold text-ink mt-2"
-                    title="GRN numbers are continuous across the project and never reset"
-                  >
-                    This will be {grnPreview.grnNumber}
+            <div className="p-4 sm:p-5 space-y-4">
+              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-surface-border pb-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
+                    GRN — PO #{selectedPo.displayPoNumber || '—'}
+                  </p>
+                  <p className="text-sm text-ink-muted font-mono mt-0.5">
+                    {selectedPo.procurementRef || selectedPo.poNumber}
+                  </p>
+                  <p className="text-sm text-ink-secondary mt-1">
+                    {selectedPo.purchaseRequest?.project?.name} · {selectedPo.vendor?.name}
+                  </p>
+                </div>
+                {grnContext?.grnNumber && (
+                  <p className="text-sm font-bold text-ink bg-surface-muted px-3 py-1.5 rounded-lg">
+                    Next: {grnContext.grnNumber}
                   </p>
                 )}
               </div>
 
-              <dl className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                    Project
-                  </dt>
-                  <dd className="font-semibold text-ink mt-1">
-                    {selectedPo.purchaseRequest?.project?.name || '—'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                    Vendor
-                  </dt>
-                  <dd className="font-semibold text-ink mt-1">{selectedPo.vendor?.name || '—'}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                    PO Number
-                  </dt>
-                  <dd className="font-semibold text-ink mt-1">
-                    {selectedPo.displayPoNumber || '—'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                    Material supply year
-                  </dt>
-                  <dd className="font-semibold text-ink mt-1">
-                    {selectedPo.financialYear ? `20${selectedPo.financialYear.replace('-', '-20')}` : '—'}
-                  </dd>
-                </div>
-                <div className="sm:col-span-2">
-                  <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                    Delivery address
-                  </dt>
-                  <dd className="text-sm text-ink-secondary mt-1 whitespace-pre-line">
-                    {deliveryLabel(selectedPo.deliveryAddress)}
-                  </dd>
-                </div>
-              </dl>
+              <div className="overflow-x-auto rounded-xl border border-surface-border">
+                <table className="data-table text-sm min-w-[760px]">
+                  <thead>
+                    <tr className="bg-surface-muted/60">
+                      <th className="text-left">Item</th>
+                      <th className="text-right w-20">Ordered</th>
+                      <th className="text-right w-28">Received</th>
+                      <th className="text-right w-20">Balance</th>
+                      <th className="text-center w-14">Unit</th>
+                      <th className="text-right w-28">PO rate</th>
+                      <th className="text-right w-32">Invoice rate</th>
+                      <th className="text-right w-28">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {receiptLines.map((row) => {
+                      const key = lineKey(row);
+                      const received = receivedByLine[key] ?? 0;
+                      const invoicePrice = invoicePriceByLine[key] ?? row.poRate;
+                      const balance = Math.max(0, row.orderedQty - row.previouslyReceived - received);
+                      const lineTotal = received * invoicePrice;
+                      const qtyOver = received > row.remainingQty + 0.0001;
+                      const rateClass = invoiceRateClass(invoicePrice, row.poRate);
 
-              <div className="rounded-2xl bg-surface-muted/50 border border-surface-border p-4 space-y-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                  Ordered items
-                </p>
-                {lines.map((row) => {
-                  const received = receivedByLine[row.materialId!] ?? row.quantity;
-                  const invoicePrice = invoicePriceByLine[row.materialId!] ?? row.rate;
-                  const qtyDeviation = Math.abs(received - row.quantity) > 0.0001;
-                  const priceDeviation = Math.abs(invoicePrice - row.rate) > 0.0001;
-                  return (
-                  <div key={row.materialId || row.description} className="border-t border-surface-border pt-3 first:border-0 first:pt-0">
-                    <div className="flex items-start gap-2">
-                      <p className="font-medium text-ink flex-1">{row.description}</p>
-                      {(qtyDeviation || priceDeviation) && (
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-600">
-                          <AlertTriangle className="h-3.5 w-3.5" />
-                          Partial variance
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-6 mt-2">
-                      <div>
-                        <p className="text-xs text-ink-muted">Ordered</p>
-                        <p className="font-bold tabular-nums">{row.quantity}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-ink-muted">PO rate</p>
-                        <p className="font-bold tabular-nums">{formatCurrency(row.rate)}</p>
-                      </div>
-                      <div className="flex-1 min-w-[200px]">
-                        <p className={cn('text-xs mb-2', qtyDeviation ? 'text-red-600 font-semibold' : 'text-ink-muted')}>
-                          Received qty
-                        </p>
-                        <QuantityStepper
-                          size="compact"
-                          value={received}
-                          onChange={(v) =>
-                            setReceivedByLine((prev) => ({
-                              ...prev,
-                              [row.materialId!]: v,
-                            }))
-                          }
-                          min={0}
-                          max={row.quantity * 2}
-                          step={1}
-                          accentColor={qtyDeviation ? '#dc2626' : accent}
-                        />
-                      </div>
-                      <div className="min-w-[140px]">
-                        <p className={cn('text-xs mb-2', priceDeviation ? 'text-red-600 font-semibold' : 'text-ink-muted')}>
-                          Invoice unit price
-                        </p>
-                        <Input
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          value={invoicePrice}
-                          onChange={(e) =>
-                            setInvoicePriceByLine((prev) => ({
-                              ...prev,
-                              [row.materialId!]: Number(e.target.value),
-                            }))
-                          }
-                          className={cn(priceDeviation && 'border-red-300 text-red-700')}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                );})}
+                      return (
+                        <tr key={key}>
+                          <td>
+                            <p className="font-medium text-ink">{row.description}</p>
+                            {row.previouslyReceived > 0 && (
+                              <p className="text-[11px] text-ink-muted mt-0.5">
+                                Previously received: {row.previouslyReceived}
+                              </p>
+                            )}
+                          </td>
+                          <td className="text-right tabular-nums font-medium">{row.orderedQty}</td>
+                          <td className="text-right">
+                            <Input
+                              type="number"
+                              min={0}
+                              step="any"
+                              value={received}
+                              onChange={(e) => {
+                                const v = Math.max(0, Number(e.target.value) || 0);
+                                setReceivedByLine((prev) => ({ ...prev, [key]: v }));
+                              }}
+                              className={cn(
+                                'h-9 text-right tabular-nums w-24 ml-auto',
+                                qtyOver && 'border-amber-400 text-amber-800'
+                              )}
+                            />
+                          </td>
+                          <td className="text-right tabular-nums font-semibold text-ink-muted">
+                            {balance}
+                          </td>
+                          <td className="text-center text-ink-secondary">{row.unit || '—'}</td>
+                          <td className="text-right tabular-nums">{formatCurrency(row.poRate)}</td>
+                          <td className="text-right">
+                            <Input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              value={invoicePrice}
+                              onChange={(e) =>
+                                setInvoicePriceByLine((prev) => ({
+                                  ...prev,
+                                  [key]: Number(e.target.value),
+                                }))
+                              }
+                              className={cn(
+                                'h-9 text-right tabular-nums w-32 ml-auto',
+                                rateClass
+                              )}
+                            />
+                          </td>
+                          <td className="text-right tabular-nums font-semibold">
+                            {formatCurrency(lineTotal)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-surface-muted/40">
+                      <td colSpan={7} className="text-right font-semibold text-ink-secondary">
+                        Invoice value
+                      </td>
+                      <td className="text-right font-bold tabular-nums">{formatCurrency(invoiceValue)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <p className="text-[11px] text-ink-muted">
+                Invoice rate: green = below PO rate, red = above PO rate. Qty/price variance puts GRN on hold.
+              </p>
+
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">
                 <div>
-                  <label className="text-sm font-medium text-ink-secondary">Invoice no.</label>
-                  <Input
-                    value={invoiceNo}
-                    onChange={(e) => setInvoiceNo(e.target.value)}
-                    placeholder="Invoice number"
-                    className="mt-1.5"
-                  />
+                  <label className="text-xs font-semibold text-ink-muted">Invoice no.</label>
+                  <Input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} className="mt-1 h-9" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-ink-secondary">
+                  <label className="text-xs font-semibold text-ink-muted">
                     Invoice date <span className="text-danger">*</span>
                   </label>
                   <Input
                     type="date"
                     value={invoiceDate}
                     onChange={(e) => setInvoiceDate(e.target.value)}
-                    className="mt-1.5"
+                    className="mt-1 h-9"
                     required
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-ink-secondary">Invoice value</label>
-                  <p className="mt-2 text-lg font-bold tabular-nums text-ink">
-                    {formatCurrency(invoiceValue)}
-                  </p>
+                  <label className="text-xs font-semibold text-ink-muted">Challan no.</label>
+                  <Input value={challanNo} onChange={(e) => setChallanNo(e.target.value)} className="mt-1 h-9" />
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-ink-secondary">Challan no.</label>
-                  <Input
-                    value={challanNo}
-                    onChange={(e) => setChallanNo(e.target.value)}
-                    placeholder="Challan number"
-                    className="mt-1.5"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-ink-secondary">Vehicle no.</label>
-                  <Input
-                    value={vehicleNo}
-                    onChange={(e) => setVehicleNo(e.target.value)}
-                    placeholder={requiresEway ? 'Required above ₹50,000' : 'Optional'}
-                    className={cn('mt-1.5', requiresEway && !vehicleNo.trim() && 'border-amber-300')}
-                  />
-                </div>
-                <div
-                  className={cn(
-                    'sm:col-span-2 overflow-hidden transition-all duration-300 ease-out',
-                    requiresEway ? 'max-h-32 opacity-100' : 'max-h-0 opacity-0'
-                  )}
-                >
-                  <label className="text-sm font-medium text-red-700">
-                    E-Way Bill no. <span className="text-xs">(required above ₹50,000)</span>
-                  </label>
-                  <Input
-                    value={ewayBillNumber}
-                    onChange={(e) => setEwayBillNumber(e.target.value)}
-                    placeholder="E-Way Bill number"
-                    className={cn('mt-1.5', requiresEway && !ewayBillNumber.trim() && 'border-red-300')}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-ink-secondary">Driver name</label>
-                  <Input
-                    value={driverName}
-                    onChange={(e) => setDriverName(e.target.value)}
-                    placeholder="Driver name"
-                    className="mt-1.5"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-ink-secondary">Remarks</label>
-                <textarea
-                  value={remarks}
-                  onChange={(e) => setRemarks(e.target.value)}
-                  placeholder="Quality notes, shortage details, etc."
-                  className="mt-1.5 w-full min-h-[88px] rounded-xl border border-border px-3 py-2 text-sm"
-                />
-              </div>
-
-              <div className="space-y-3">
-                <p className="text-sm font-semibold text-ink">Attachments</p>
-                <div className="grid gap-2 sm:grid-cols-3">
-                  <input
-                    ref={invoiceRef}
-                    type="file"
-                    className="hidden"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => pickFiles(e.target.files, 'INVOICE', invoiceRef.current)}
-                  />
-                  <input
-                    ref={challanRef}
-                    type="file"
-                    className="hidden"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => pickFiles(e.target.files, 'CHALLAN', challanRef.current)}
-                  />
-                  <input
-                    ref={photosRef}
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    multiple
-                    onChange={(e) => pickFiles(e.target.files, 'PHOTO', photosRef.current)}
-                  />
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="justify-start gap-2"
-                    onClick={() => invoiceRef.current?.click()}
-                  >
-                    <Upload className="h-4 w-4" />
-                    Upload invoice
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="justify-start gap-2"
-                    onClick={() => challanRef.current?.click()}
-                  >
-                    <FileText className="h-4 w-4" />
-                    Upload challan
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="justify-start gap-2"
-                    onClick={() => photosRef.current?.click()}
-                  >
-                    <ImageIcon className="h-4 w-4" />
-                    Upload photos
-                  </Button>
-                </div>
-                {attachments.length > 0 && (
-                  <ul className="text-xs text-ink-secondary space-y-1">
-                    {attachments.map((a, i) => (
-                      <li key={`${a.name}-${i}`}>
-                        {a.category}: {a.name}
-                      </li>
-                    ))}
-                  </ul>
+                {requiresEway && (
+                  <div className="sm:col-span-2">
+                    <label className="text-xs font-semibold text-red-700">E-Way Bill no. *</label>
+                    <Input
+                      value={ewayBillNumber}
+                      onChange={(e) => setEwayBillNumber(e.target.value)}
+                      className={cn('mt-1 h-9', !ewayBillNumber.trim() && 'border-red-300')}
+                    />
+                  </div>
                 )}
               </div>
 
-              <fieldset className="space-y-2">
-                <legend className="text-sm font-semibold text-ink">Receipt type</legend>
-                <div className="flex flex-wrap gap-4">
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-ink-muted">Remarks</label>
+                  <textarea
+                    value={remarks}
+                    onChange={(e) => setRemarks(e.target.value)}
+                    className="mt-1 w-full min-h-[64px] rounded-xl border border-border px-3 py-2 text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-ink-muted">Uploads</p>
+                  <input ref={invoiceRef} type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => pickFiles(e.target.files, 'INVOICE', invoiceRef.current)} />
+                  <input ref={challanRef} type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => pickFiles(e.target.files, 'CHALLAN', challanRef.current)} />
+                  <input ref={photosRef} type="file" className="hidden" accept="image/*" multiple onChange={(e) => pickFiles(e.target.files, 'PHOTO', photosRef.current)} />
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => invoiceRef.current?.click()}
+                      className={cn(!hasInvoiceUpload && 'border-amber-300')}
+                    >
+                      <Upload className="h-3.5 w-3.5 mr-1" /> Invoice *
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => challanRef.current?.click()}
+                      className={cn(!hasChallanUpload && 'border-amber-300')}
+                    >
+                      <FileText className="h-3.5 w-3.5 mr-1" /> Challan *
+                    </Button>
+                    <Button type="button" variant="secondary" size="sm" onClick={() => photosRef.current?.click()}>
+                      <ImageIcon className="h-3.5 w-3.5 mr-1" /> Photos
+                    </Button>
+                  </div>
+                  {attachments.length > 0 && (
+                    <ul className="text-[11px] text-ink-secondary space-y-1">
+                      {attachments.map((a, i) => (
+                        <li key={`${a.name}-${i}`} className="flex justify-between gap-2">
+                          <span>
+                            {a.category}: {a.name}
+                          </span>
+                          <button type="button" className="text-danger" onClick={() => removeAttachment(i)}>
+                            Remove
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-surface-border">
+                <fieldset className="flex flex-wrap gap-3">
                   {(
                     [
-                      { value: 'PARTIAL', label: 'Partial receive' },
-                      { value: 'FULL', label: 'Full receive' },
+                      { value: 'PARTIAL', label: 'Partial' },
+                      { value: 'FULL', label: 'Full (remaining)' },
                     ] as const
                   ).map((opt) => (
                     <label
                       key={opt.value}
                       className={cn(
-                        'flex items-center gap-2 cursor-pointer rounded-xl border px-4 py-3 text-sm font-medium transition-colors',
+                        'flex items-center gap-2 cursor-pointer rounded-lg border px-3 py-2 text-xs font-medium',
                         receiveType === opt.value
                           ? 'border-bekem-accent bg-bekem-accent/5 text-bekem-accent'
-                          : 'border-surface-border text-ink-secondary hover:border-bekem-accent/30'
+                          : 'border-surface-border text-ink-secondary'
                       )}
                     >
                       <input
@@ -560,29 +506,20 @@ export function GrnReceivePage() {
                       {opt.label}
                     </label>
                   ))}
+                </fieldset>
+                <div className="flex gap-2">
+                  <Button variant="secondary" disabled={receive.isPending} onClick={() => submitGrn(true)}>
+                    Save draft
+                  </Button>
+                  <Button
+                    variant="accent"
+                    accentColor={accent}
+                    disabled={receive.isPending}
+                    onClick={() => submitGrn(false)}
+                  >
+                    {receive.isPending ? 'Submitting…' : 'Submit GRN'}
+                  </Button>
                 </div>
-              </fieldset>
-
-              <div className="flex gap-2">
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  className="flex-1"
-                  disabled={receive.isPending}
-                  onClick={() => receive.mutate(true)}
-                >
-                  Save draft
-                </Button>
-                <Button
-                  variant="accent"
-                  size="lg"
-                  accentColor={accent}
-                  className="flex-1"
-                  disabled={receive.isPending || ewayFieldsIncomplete}
-                  onClick={() => receive.mutate(false)}
-                >
-                  {receive.isPending ? 'Saving…' : 'Approve GRN'}
-                </Button>
               </div>
             </div>
           </div>

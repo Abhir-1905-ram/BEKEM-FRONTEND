@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, Package } from 'lucide-react';
 import { api } from '@/lib/api';
-import type { MaterialDto } from '@afios/shared';
+import { MATERIAL_CATEGORY_NAMES, type MaterialDto } from '@afios/shared';
 import { cn } from '@/lib/utils';
+import { groupMaterialsByCategory } from '@/lib/groupMaterialsByCategory';
 
 interface MaterialSearchProps {
   className?: string;
@@ -21,6 +22,11 @@ export function MaterialSearch({ className, onSelect }: MaterialSearchProps) {
     },
     enabled: q.trim().length >= 2,
   });
+
+  const grouped = useMemo(
+    () => groupMaterialsByCategory(materials ?? [], [...MATERIAL_CATEGORY_NAMES]),
+    [materials]
+  );
 
   return (
     <section className={cn('mb-8 lg:mb-10', className)}>
@@ -45,7 +51,12 @@ export function MaterialSearch({ className, onSelect }: MaterialSearchProps) {
             {!isFetching && !materials?.length && (
               <p className="text-sm text-ink-muted py-4 text-center">No materials match &ldquo;{q}&rdquo;</p>
             )}
-            {materials?.map((m) => (
+            {grouped.map((group) => (
+              <div key={group.category}>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-ink-muted px-1 py-1">
+                  {group.category}
+                </p>
+                {group.items.map((m) => (
               <button
                 key={m.id}
                 type="button"
@@ -71,6 +82,8 @@ export function MaterialSearch({ className, onSelect }: MaterialSearchProps) {
                   )}
                 </div>
               </button>
+                ))}
+              </div>
             ))}
           </div>
         )}

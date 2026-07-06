@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Input';
 import { SuccessScreen } from '@/components/SuccessScreen';
 import { StockComparisonTable } from '@/components/StockComparisonTable';
-import { cn } from '@/lib/utils';
 
 export function AllocateFlowPage() {
   const { id } = useParams<{ id: string }>();
@@ -48,7 +47,7 @@ export function AllocateFlowPage() {
       await api.post(`/material-requests/${id}/allocate`, { decision, remark: trimmed });
     },
     onSuccess: (_, decision) => {
-      toast.success(decision === 'issue' ? 'Complete indent issued' : 'Forwarded to PM');
+      toast.success(decision === 'issue' ? 'Verified & forwarded to PM' : 'Forwarded to PM');
       setPhase('done');
       queryClient.invalidateQueries({ queryKey: ['store-pending-requests'] });
     },
@@ -142,6 +141,12 @@ export function AllocateFlowPage() {
           </div>
         )}
 
+        {canIssue && (
+          <div className="mb-4 rounded-xl border border-bekem-accent/20 bg-bekem-accent/5 px-4 py-3 text-sm text-ink-secondary">
+            Stock is available, but PM approval is still required before material can be issued.
+          </div>
+        )}
+
       <StockComparisonTable items={items} className="mb-6" />
 
       <div className="mb-4">
@@ -156,7 +161,7 @@ export function AllocateFlowPage() {
           }}
           placeholder={
             canIssue
-              ? 'Note for allocation (visible to PM, Executive, Coordinator, Chairman)…'
+              ? 'Store verification note (stock available — PM must approve before issue)…'
               : 'Reason for forwarding entire indent to PM…'
           }
         />
@@ -168,19 +173,10 @@ export function AllocateFlowPage() {
           variant="accent"
           size="lg"
           accentColor={accent}
-          disabled={!canIssue || actionMutation.isPending}
-          className={cn(!canIssue && 'opacity-50 cursor-not-allowed')}
-          onClick={() => submit('issue')}
-        >
-          Issue complete indent
-        </Button>
-        <Button
-          variant="secondary"
-          size="lg"
           disabled={actionMutation.isPending}
-          onClick={() => submit('forward')}
+          onClick={() => submit(canIssue ? 'issue' : 'forward')}
         >
-          Forward entire indent to PM
+          {canIssue ? 'Verify stock & forward to PM' : 'Forward entire indent to PM'}
         </Button>
         <Button
           variant="ghost"
