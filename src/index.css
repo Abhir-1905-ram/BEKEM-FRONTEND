@@ -9,7 +9,7 @@
     @apply border-surface-border;
   }
   body {
-    @apply bg-white text-ink font-sans antialiased text-sm leading-relaxed;
+    @apply bg-white text-ink font-sans antialiased text-xs leading-snug;
   }
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-bekem-accent;
@@ -22,13 +22,13 @@
     @apply text-ink font-semibold tracking-tight;
   }
   h1 {
-    @apply text-[24px] lg:text-[32px];
+    @apply text-lg lg:text-xl;
   }
   h2 {
-    @apply text-[20px];
+    @apply text-base;
   }
   h3 {
-    @apply text-base;
+    @apply text-sm;
   }
 }
 
@@ -43,21 +43,21 @@
   }
 
   .data-row {
-    @apply flex items-center justify-between gap-4 px-4 min-h-[48px] rounded-lg border border-surface-border bg-white
+    @apply flex items-center justify-between gap-2 px-2 min-h-[32px] rounded border border-surface-border bg-white
       hover:border-bekem-accent/30 hover:bg-bekem-accent-soft/30
-      transition-colors duration-200 cursor-pointer;
+      transition-colors duration-150 cursor-pointer text-xs;
   }
 
   .section-label {
-    @apply text-xs font-semibold uppercase tracking-widest text-ink-muted;
+    @apply text-[10px] font-semibold uppercase tracking-wider text-ink-muted;
   }
 
   .panel {
-    @apply rounded-lg border border-surface-border bg-white;
+    @apply rounded border border-surface-border bg-white;
   }
 
   .field-readonly {
-    @apply rounded-lg border border-surface-border bg-surface-muted px-3 py-2 text-sm text-ink-secondary cursor-default;
+    @apply rounded border border-surface-border bg-surface-muted px-2 py-1 text-xs text-ink-secondary cursor-default;
   }
 
   .field-readonly-label {
@@ -65,8 +65,8 @@
   }
 
   .action-card {
-    @apply relative overflow-hidden rounded-lg border border-surface-border bg-white p-6
-      transition-colors duration-200 text-left w-full
+    @apply relative overflow-hidden rounded border border-surface-border bg-white p-3
+      transition-colors duration-150 text-left w-full text-xs
       hover:border-bekem-accent/30 hover:bg-bekem-accent-soft/20;
   }
 
@@ -74,53 +74,67 @@
     @apply absolute left-0 top-0 bottom-0 w-1 rounded-l-lg;
   }
 
-  .data-table {
-    @apply w-full text-sm;
+  /* Excel-style grid — default for all data tables app-wide */
+  .data-table,
+  .excel-grid,
+  .procurement-landscape-table {
+    @apply w-full border-collapse text-xs tabular-nums;
   }
 
-  .data-table thead {
-    @apply sticky top-0 z-10 bg-white;
+  .data-table th,
+  .data-table td,
+  .excel-grid th,
+  .excel-grid td,
+  .procurement-landscape-table th,
+  .procurement-landscape-table td {
+    @apply border border-surface-border px-2 py-0.5 align-middle;
   }
 
-  .data-table th {
-    @apply text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-ink-muted border-b border-surface-border bg-surface-muted/50;
+  .data-table thead th,
+  .excel-grid thead th,
+  .procurement-landscape-table thead th {
+    @apply bg-slate-100 text-[10px] font-bold uppercase tracking-wide text-ink-muted sticky top-0 z-10 py-1 whitespace-nowrap text-left;
   }
 
-  .data-table td {
-    @apply px-4 py-3 border-b border-surface-border text-ink;
+  .data-table tbody tr:nth-child(even),
+  .excel-grid tbody tr:nth-child(even),
+  .procurement-landscape-table tbody tr:nth-child(even) {
+    @apply bg-slate-50/60;
   }
 
-  .data-table tbody tr {
-    @apply min-h-[48px] transition-colors duration-150 hover:bg-bekem-accent-soft/25;
+  .data-table tbody tr:hover,
+  .excel-grid tbody tr:hover,
+  .procurement-landscape-table tbody tr:hover {
+    @apply bg-bekem-accent-soft/15;
   }
 
   .data-table td.num,
-  .data-table th.num {
-    @apply text-right tabular-nums;
+  .data-table th.num,
+  .excel-grid td.num,
+  .excel-grid th.num {
+    @apply text-right;
   }
 
-  .data-table tbody tr:active {
-    @apply bg-bekem-accent-soft/40;
+  .data-table .cell-text,
+  .excel-grid .cell-text {
+    @apply truncate max-w-[220px];
   }
 
-  [data-table-density='compact'] .data-table th {
-    @apply py-2;
-  }
-
-  [data-table-density='compact'] .data-table td {
-    @apply py-2;
-  }
-
-  [data-table-density='compact'] .data-table tbody tr {
-    @apply min-h-[40px];
+  .data-table .cell-code,
+  .excel-grid .cell-code {
+    @apply font-mono font-semibold text-ink whitespace-nowrap;
   }
 
   .table-shell {
-    @apply panel overflow-hidden;
+    @apply overflow-x-auto border border-surface-border bg-white;
+  }
+
+  .procurement-landscape-scroll {
+    @apply overflow-x-auto;
   }
 
   .enterprise-chip {
-    @apply inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold border;
+    @apply inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold border;
   }
 
   .sr-only {
@@ -156,56 +170,6 @@
 
   .sidebar-scroll::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.32);
-  }
-
-  .procurement-landscape-scroll {
-    @apply overflow-x-auto;
-  }
-
-  .procurement-landscape-table {
-    @apply w-full min-w-[520px] text-xs border-collapse;
-  }
-
-  .procurement-landscape-table th {
-    @apply text-left py-1.5 px-2 font-semibold text-ink;
-  }
-
-  .procurement-landscape-table td {
-    @apply py-1 px-2 text-ink align-top border-t border-surface-border;
-  }
-
-  .procurement-landscape-table th:first-child,
-  .procurement-landscape-table td:first-child {
-    @apply pr-2 text-ink-muted;
-  }
-
-  .excel-grid {
-    @apply w-full border-collapse text-xs tabular-nums;
-  }
-
-  .excel-grid th,
-  .excel-grid td {
-    @apply border border-surface-border px-2 py-0.5 align-middle;
-  }
-
-  .excel-grid thead th {
-    @apply bg-slate-100 text-[10px] font-bold uppercase tracking-wide text-ink-muted sticky top-0 z-10 py-1.5 whitespace-nowrap;
-  }
-
-  .excel-grid tbody tr:nth-child(even) {
-    @apply bg-slate-50/60;
-  }
-
-  .excel-grid tbody tr:hover {
-    @apply bg-bekem-accent-soft/15;
-  }
-
-  .excel-grid .cell-text {
-    @apply truncate max-w-[220px];
-  }
-
-  .excel-grid .cell-code {
-    @apply font-mono font-semibold text-ink whitespace-nowrap;
   }
 }
 

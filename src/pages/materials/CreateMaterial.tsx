@@ -364,7 +364,7 @@ export function CreateMaterialPage() {
             />
           </div>
         ) : (
-          <table className="excel-grid min-w-[900px]">
+          <table className="data-table min-w-[900px]">
             <thead>
               <tr>
                 <th className="w-28">Item code</th>

@@ -296,9 +296,9 @@ export function GrnReceivePage() {
               </div>
 
               <div className="overflow-x-auto rounded-xl border border-surface-border">
-                <table className="data-table text-sm min-w-[760px]">
+                <table className="data-table min-w-[760px]">
                   <thead>
-                    <tr className="bg-surface-muted/60">
+                    <tr>
                       <th className="text-left">Item</th>
                       <th className="text-right w-20">Ordered</th>
                       <th className="text-right w-28">Received</th>

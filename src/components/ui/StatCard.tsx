@@ -45,7 +45,7 @@ export function StatCard({
 
   if (loading) {
     return (
-      <div className={cn('panel p-6 animate-pulse', hero && 'lg:p-8', className)}>
+      <div className={cn('panel p-3 animate-pulse', hero && 'lg:p-4', className)}>
         <div className="h-4 w-24 bg-surface-muted rounded mb-6" />
         <div className="h-12 w-32 bg-surface-muted rounded" />
       </div>
@@ -55,11 +55,11 @@ export function StatCard({
   const displayValue =
     currency && typeof value === 'string' && value.startsWith('₹') ? (
       <span className="inline-flex items-baseline gap-0.5">
-        <span className={cn('font-semibold text-ink-muted', hero ? 'text-xl' : 'text-lg')}>₹</span>
+        <span className={cn('font-semibold text-ink-muted', hero ? 'text-base' : 'text-sm')}>₹</span>
         <span
           className={cn(
             'font-semibold tabular-nums text-ink tracking-tight',
-            hero ? 'text-5xl lg:text-6xl' : 'text-4xl'
+            hero ? 'text-3xl lg:text-4xl' : 'text-2xl'
           )}
         >
           {value.slice(1)}
@@ -69,7 +69,7 @@ export function StatCard({
       <span
         className={cn(
           'font-semibold tabular-nums text-ink tracking-tight',
-          hero ? 'text-5xl lg:text-6xl' : 'text-4xl'
+          hero ? 'text-3xl lg:text-4xl' : 'text-2xl'
         )}
       >
         {value}
@@ -86,7 +86,7 @@ export function StatCard({
       className={cn(
         'relative overflow-hidden rounded-lg border border-surface-border bg-white text-left w-full group',
         'transition-colors duration-200',
-        hero ? 'p-6 lg:p-8' : 'p-6',
+        hero ? 'p-4 lg:p-5' : 'p-3',
         onClick && 'hover:border-bekem-accent/30 hover:bg-bekem-accent-soft/20 cursor-pointer',
         className
       )}
@@ -94,7 +94,7 @@ export function StatCard({
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">{label}</p>
-          <div className="mt-3">{displayValue}</div>
+          <div className="mt-1.5">{displayValue}</div>
           {trend && (
             <div
               className={cn(
@@ -115,7 +115,7 @@ export function StatCard({
             <div
               className={cn(
                 'shrink-0 rounded-lg flex items-center justify-center text-white',
-                hero ? 'h-12 w-12' : 'h-11 w-11',
+                hero ? 'h-9 w-9' : 'h-8 w-8',
                 iconBg
               )}
             >

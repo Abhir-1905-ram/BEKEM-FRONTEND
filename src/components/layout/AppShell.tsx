@@ -72,7 +72,7 @@ export function AppShell() {
       <div className="flex-1 flex flex-col min-w-0">
         {!hideNav && user && (
           <header className="sticky top-0 z-30 shrink-0 border-b border-surface-border bg-white">
-            <div className="hidden lg:flex h-14 items-center justify-between px-6">
+            <div className="hidden lg:flex h-11 items-center justify-between px-4">
               <div className="flex items-center gap-4 min-w-0">
                 <p className="text-sm text-ink-secondary truncate">
                   <span className="font-semibold text-ink">{user.name}</span>
@@ -107,7 +107,7 @@ export function AppShell() {
               </div>
             </div>
 
-            <div className="lg:hidden flex h-14 items-center gap-3 px-4">
+            <div className="lg:hidden flex h-11 items-center gap-2 px-3">
               <BekemLogo size="sm" className="shrink-0" />
               <button
                 type="button"
@@ -138,7 +138,7 @@ export function AppShell() {
           id="main-content"
           className={cn('flex-1 overflow-y-auto w-full', hideNav ? 'pb-4' : 'pb-20 lg:pb-8')}
         >
-          <div className="max-w-dashboard mx-auto px-4 sm:px-6 lg:px-8 py-2">
+          <div className="max-w-dashboard mx-auto px-3 sm:px-4 lg:px-5 py-1">
             <RouteErrorBoundary resetKey={location.pathname}>
               <Outlet />
             </RouteErrorBoundary>

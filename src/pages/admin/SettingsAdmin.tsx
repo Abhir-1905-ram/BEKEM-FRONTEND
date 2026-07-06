@@ -126,7 +126,7 @@ export function SettingsAdminPage() {
                 Grocery, Mess, Office, and Emergency paths — with or without PO per category.
               </p>
               <div className="procurement-landscape-scroll">
-                <table className="procurement-landscape-table min-w-[640px]">
+                <table className="data-table min-w-[640px]">
                   <thead>
                     <tr>
                       <th>Category</th>

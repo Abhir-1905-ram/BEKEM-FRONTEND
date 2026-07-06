@@ -147,27 +147,25 @@ export function StoreHomePage() {
             />
           }
         >
-        <div className="panel overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="table-shell">
+          <table className="data-table">
             <thead>
-              <tr className="border-b border-surface-border bg-surface-muted/50">
-                <th className="text-left px-3 py-2 font-semibold text-ink-muted">Code</th>
-                <th className="text-left px-3 py-2 font-semibold text-ink-muted">Description</th>
-                <th className="text-right px-3 py-2 font-semibold text-ink-muted">Available</th>
-                <th className="text-right px-3 py-2 font-semibold text-ink-muted">Reserved</th>
+              <tr>
+                <th>Code</th>
+                <th>Description</th>
+                <th className="num">Available</th>
+                <th className="num">Reserved</th>
               </tr>
             </thead>
             <tbody>
               {(filteredStock ?? []).slice(0, 8).map((s) => (
-                <tr key={s.id} className="border-b border-surface-border last:border-0">
-                  <td className="px-3 py-2 font-mono text-xs">{s.material.code}</td>
-                  <td className="px-3 py-2">{s.material.name}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">
+                <tr key={s.id}>
+                  <td className="cell-code">{s.material.code}</td>
+                  <td className="cell-text">{s.material.name}</td>
+                  <td className="num">
                     {s.availableQty ?? s.quantityOnHand} {s.material.unit}
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums text-ink-muted">
-                    {s.quantityReserved || 0}
-                  </td>
+                  <td className="num text-ink-muted">{s.quantityReserved || 0}</td>
                 </tr>
               ))}
             </tbody>

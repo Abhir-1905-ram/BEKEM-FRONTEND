@@ -25,7 +25,7 @@ export function GstPercentSelect({
       onChange={(e) => onChange(Number(e.target.value))}
       className={cn(
         'flex w-full rounded-card border border-surface-border bg-white text-ink',
-        compact ? 'h-8 px-2 text-xs' : 'h-10 px-3 text-sm',
+        compact ? 'h-8 px-2 text-xs' : 'h-8 px-2 text-xs',
         'focus:outline-none focus:ring-2 focus:ring-bekem-navy/15 focus:border-bekem-navy/30',
         disabled && 'opacity-60 cursor-not-allowed bg-surface-muted',
         className

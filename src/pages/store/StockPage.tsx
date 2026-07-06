@@ -457,90 +457,55 @@ export function StockPage() {
         }
       >
         <>
-          <div className="overflow-x-auto rounded-xl border border-border bg-white shadow-sm">
+          <div className="table-shell">
             <table
               className={cn(
-                'w-full text-xs text-left',
+                'data-table text-left',
                 fullAccess ? 'min-w-[2100px]' : 'min-w-[1400px]'
               )}
             >
-              <thead className="bg-slate-100 text-[10px] uppercase tracking-wide text-ink-muted sticky top-0">
+              <thead>
                 <tr>
                   {canEditRows && (
-                    <th className="px-2 py-2 font-semibold border-r border-slate-200 sticky left-0 bg-slate-100 z-10">
-                      Edit
-                    </th>
+                    <th className="sticky left-0 bg-slate-100 z-20">Edit</th>
                   )}
-                  <th className="px-2 py-2 font-semibold border-r border-slate-200">PO S.No</th>
-                  <th className="px-2 py-2 font-semibold border-r border-slate-200">Project</th>
-                  <th className="px-2 py-2 font-semibold border-r border-slate-200">Indent No</th>
-                  <th className="px-2 py-2 font-semibold border-r border-slate-200">Supplier</th>
-                  <th className="px-2 py-2 font-semibold border-r border-slate-200 min-w-[200px]">
-                    PO No
-                  </th>
-                  <th className="px-2 py-2 font-semibold border-r border-slate-200">PO Date</th>
-                  <th className="px-2 py-2 font-semibold border-r border-slate-200">Item Code</th>
-                  <th className="px-2 py-2 font-semibold border-r border-slate-200 min-w-[180px]">
-                    Item Description
-                  </th>
-                  <th className="px-2 py-2 font-semibold border-r border-slate-200 text-right">Qty</th>
-                  <th className="px-2 py-2 font-semibold border-r border-slate-200">Units</th>
-                  <th className="px-2 py-2 font-semibold border-r border-slate-200">PO Qty</th>
-                  <th className="px-2 py-2 font-semibold border-r border-slate-200 text-right">
-                    Unit Rate
-                  </th>
-                  <th className="px-2 py-2 font-semibold border-r border-slate-200 text-right">
-                    Basic Total
-                  </th>
-                  <th className="px-2 py-2 font-semibold border-r border-slate-200 text-right">GST</th>
-                  <th className="px-2 py-2 font-semibold border-r border-slate-200 text-right">
-                    Net Total
-                  </th>
-                  <th className="px-2 py-2 font-semibold border-r border-slate-200">
-                    Expected Delivery
-                  </th>
-                  <th className="px-2 py-2 font-semibold border-r border-slate-200">
-                    Delivery Date
-                  </th>
-                  <th
-                    className={cn(
-                      'px-2 py-2 font-semibold min-w-[140px]',
-                      fullAccess && 'border-r border-slate-200'
-                    )}
-                  >
-                    Delay Reason
-                  </th>
+                  <th>PO S.No</th>
+                  <th>Project</th>
+                  <th>Indent No</th>
+                  <th>Supplier</th>
+                  <th className="min-w-[200px]">PO No</th>
+                  <th>PO Date</th>
+                  <th>Item Code</th>
+                  <th className="min-w-[180px]">Item Description</th>
+                  <th className="num">Qty</th>
+                  <th>Units</th>
+                  <th>PO Qty</th>
+                  <th className="num">Unit Rate</th>
+                  <th className="num">Basic Total</th>
+                  <th className="num">GST</th>
+                  <th className="num">Net Total</th>
+                  <th>Expected Delivery</th>
+                  <th>Delivery Date</th>
+                  <th className="min-w-[140px]">Delay Reason</th>
                   {fullAccess && (
                     <>
-                      <th className="px-2 py-2 font-semibold border-r border-slate-200 text-right">
-                        Advance
-                      </th>
-                      <th className="px-2 py-2 font-semibold border-r border-slate-200">Invoice No</th>
-                      <th className="px-2 py-2 font-semibold border-r border-slate-200">
-                        Invoice Date
-                      </th>
-                      <th className="px-2 py-2 font-semibold border-r border-slate-200 text-right">
-                        Received
-                      </th>
-                      <th className="px-2 py-2 font-semibold border-r border-slate-200 text-right">
-                        Balance
-                      </th>
-                      <th className="px-2 py-2 font-semibold border-r border-slate-200">Available</th>
-                      <th className="px-2 py-2 font-semibold border-r border-slate-200 text-right">
-                        Invoice Amt
-                      </th>
-                      <th className="px-2 py-2 font-semibold border-r border-slate-200">Location</th>
-                      <th className="px-2 py-2 font-semibold border-r border-slate-200">Transport</th>
-                      <th className="px-2 py-2 font-semibold border-r border-slate-200">Mtrl Rcvd</th>
-                      <th className="px-2 py-2 font-semibold border-r border-slate-200">
-                        Invoice Entry
-                      </th>
-                      <th className="px-2 py-2 font-semibold">Purpose</th>
+                      <th className="num">Advance</th>
+                      <th>Invoice No</th>
+                      <th>Invoice Date</th>
+                      <th className="num">Received</th>
+                      <th className="num">Balance</th>
+                      <th>Available</th>
+                      <th className="num">Invoice Amt</th>
+                      <th>Location</th>
+                      <th>Transport</th>
+                      <th>Mtrl Rcvd</th>
+                      <th>Invoice Entry</th>
+                      <th>Purpose</th>
                     </>
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody>
                 {rows.map((r) => (
                   <tr
                     key={r.id}

@@ -1,6 +1,5 @@
 import type { IndentLineItemDto } from '@afios/shared';
 import { computeRequiredQty, formatCurrency, formatQuantity } from '@afios/shared';
-import { Card } from '@/components/ui/Card';
 import { cn } from '@/lib/utils';
 
 interface StockComparisonTableProps {
@@ -55,11 +54,11 @@ export function StockComparisonTable({
       : null);
 
   return (
-    <div className={cn('space-y-3', className)}>
+    <div className={cn('space-y-2', className)}>
       {showBanner && (
         <div
           className={cn(
-            'rounded-xl border px-4 py-3 text-sm',
+            'rounded border px-2 py-1.5 text-xs',
             hasShortfall
               ? 'border-warning/40 bg-warning/10 text-warning-dark'
               : 'border-success/30 bg-success-light/50 text-success-dark'
@@ -71,78 +70,65 @@ export function StockComparisonTable({
         </div>
       )}
 
-      <Card className="overflow-hidden p-0">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[32rem]">
-            <thead>
-              <tr className="border-b border-surface-border bg-surface-muted/50">
-                <th className="text-left px-3 py-2 font-semibold text-ink-muted">Item</th>
-                <th className="text-right px-3 py-2 font-semibold text-ink-muted w-24">Requested</th>
-                <th className="text-right px-3 py-2 font-semibold text-ink-muted w-24">Available</th>
-                <th className="text-right px-3 py-2 font-semibold text-ink-muted w-24">Required</th>
-                {hasPricing && (
-                  <>
-                    <th className="text-right px-3 py-2 font-semibold text-ink-muted w-28">Unit price</th>
-                    <th className="text-right px-3 py-2 font-semibold text-ink-muted w-28">Line total</th>
-                  </>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => {
-                const sufficient = row.requiredQty === 0;
-                return (
-                  <tr key={row.id} className="border-b border-surface-border last:border-0">
-                    <td className="px-3 py-3">
-                      <p className="font-medium">{row.name}</p>
-                      {row.unit && !hasPricing && (
-                        <p className="text-xs text-ink-muted">{row.unit}</p>
-                      )}
-                    </td>
-                    <td className="px-3 py-3 text-right tabular-nums">
-                      {formatQuantity(row.requestedQty, row.unit)}
-                    </td>
-                    <td className="px-3 py-3 text-right tabular-nums">{row.availableQty}</td>
-                    <td
-                      className={cn(
-                        'px-3 py-3 text-right tabular-nums font-semibold',
-                        sufficient ? 'text-success' : 'text-warning-dark'
-                      )}
-                    >
-                      {row.requiredQty}
-                    </td>
-                    {hasPricing && (
-                      <>
-                        <td className="px-3 py-3 text-right tabular-nums text-ink-secondary">
-                          {formatCurrency(row.unitPrice ?? 0)}
-                        </td>
-                        <td className="px-3 py-3 text-right tabular-nums font-medium">
-                          {formatCurrency(row.lineTotal ?? 0)}
-                        </td>
-                      </>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-            {hasPricing && computedTotal != null && (
-              <tfoot>
-                <tr className="border-t-2 border-surface-border bg-surface-muted/30">
+      <div className="table-shell">
+        <table className="data-table min-w-[28rem]">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th className="num w-20">Requested</th>
+              <th className="num w-20">Available</th>
+              <th className="num w-20">Required</th>
+              {hasPricing && (
+                <>
+                  <th className="num w-24">Unit price</th>
+                  <th className="num w-24">Line total</th>
+                </>
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => {
+              const sufficient = row.requiredQty === 0;
+              return (
+                <tr key={row.id}>
+                  <td className="cell-text" title={row.name}>
+                    {row.name}
+                    {row.unit && !hasPricing ? ` (${row.unit})` : ''}
+                  </td>
+                  <td className="num">{formatQuantity(row.requestedQty, row.unit)}</td>
+                  <td className="num">{row.availableQty}</td>
                   <td
-                    colSpan={hasPricing ? 5 : 4}
-                    className="px-3 py-3 text-right font-semibold text-ink"
+                    className={cn(
+                      'num font-semibold',
+                      sufficient ? 'text-success' : 'text-warning-dark'
+                    )}
                   >
-                    Total estimated value
+                    {row.requiredQty}
                   </td>
-                  <td className="px-3 py-3 text-right tabular-nums font-bold text-ink">
-                    {formatCurrency(computedTotal)}
-                  </td>
+                  {hasPricing && (
+                    <>
+                      <td className="num text-ink-secondary">
+                        {formatCurrency(row.unitPrice ?? 0)}
+                      </td>
+                      <td className="num font-medium">{formatCurrency(row.lineTotal ?? 0)}</td>
+                    </>
+                  )}
                 </tr>
-              </tfoot>
-            )}
-          </table>
-        </div>
-      </Card>
+              );
+            })}
+          </tbody>
+          {hasPricing && computedTotal != null && (
+            <tfoot>
+              <tr className="bg-slate-100 font-semibold">
+                <td colSpan={hasPricing ? 5 : 4} className="text-right">
+                  Total estimated value
+                </td>
+                <td className="num font-bold">{formatCurrency(computedTotal)}</td>
+              </tr>
+            </tfoot>
+          )}
+        </table>
+      </div>
     </div>
   );
 }

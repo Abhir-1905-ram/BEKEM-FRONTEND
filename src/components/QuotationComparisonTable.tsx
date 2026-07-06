@@ -49,7 +49,7 @@ export function QuotationComparisonTable({
 
   return (
     <div className={cn('procurement-landscape-scroll -mx-1', className)}>
-      <table className="procurement-landscape-table">
+      <table className="data-table">
         <thead>
           <tr>
             <th className="w-24" />

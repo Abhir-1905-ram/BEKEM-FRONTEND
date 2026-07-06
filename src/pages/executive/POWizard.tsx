@@ -503,7 +503,7 @@ export function POWizardPage() {
                 Assign a vendor per line — different vendors allowed per material.
               </p>
               <div className="procurement-landscape-scroll panel overflow-hidden">
-                <table className="procurement-landscape-table min-w-[640px]">
+                <table className="data-table min-w-[640px]">
                   <thead>
                     <tr className="bg-surface-muted/40">
                       <th>Material</th>
@@ -624,7 +624,7 @@ export function POWizardPage() {
                 Line items from Material Master — GST 5% or 18% per line.
               </p>
               <div className="procurement-landscape-scroll panel overflow-hidden">
-                <table className="procurement-landscape-table min-w-[900px]">
+                <table className="data-table min-w-[900px]">
                   <thead>
                     <tr className="bg-surface-muted/40">
                       <th>Item</th>

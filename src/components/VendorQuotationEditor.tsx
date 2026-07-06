@@ -71,7 +71,7 @@ export function VendorQuotationEditor({
   return (
     <div className="space-y-2">
       <div className="procurement-landscape-scroll panel overflow-hidden">
-        <table className="procurement-landscape-table min-w-[880px]">
+        <table className="data-table min-w-[880px]">
           <thead>
             <tr className="bg-surface-muted/40">
               <th className="w-8">#</th>
