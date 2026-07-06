@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, FileText, Package, Building2, Users, X, HardHat, Truck, ArrowLeftRight, UserCircle } from 'lucide-react';
+import { Search, FileText, Package, Building2, Users, X, HardHat, Truck, ArrowLeftRight, UserCircle, MapPin } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import type { GlobalSearchDto } from '@afios/shared';
@@ -19,6 +19,7 @@ const ICONS: Record<keyof GlobalSearchDto, typeof FileText> = {
   grns: Truck,
   branchTransfers: ArrowLeftRight,
   employees: UserCircle,
+  sites: MapPin,
 };
 
 interface CommandPaletteProps {
@@ -107,7 +108,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
             autoFocus
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search requests, POs, materials, vendors…"
+            placeholder="Search requests, POs, materials, employees, sites…"
             className="flex-1 h-12 bg-transparent text-sm outline-none placeholder:text-ink-muted"
             aria-label="Search query"
           />

@@ -156,6 +156,15 @@ const IncidentsPage = lazy(() =>
 const FinancePage = lazy(() =>
   import('@/pages/finance/FinancePage').then((m) => ({ default: m.FinancePage }))
 );
+const MonthlyReportPage = lazy(() =>
+  import('@/pages/finance/MonthlyReportPage').then((m) => ({ default: m.MonthlyReportPage }))
+);
+const MiscPurchasesPage = lazy(() =>
+  import('@/pages/finance/MiscPurchasesPage').then((m) => ({ default: m.MiscPurchasesPage }))
+);
+const CategoryReportPage = lazy(() =>
+  import('@/pages/materials/CategoryReportPage').then((m) => ({ default: m.CategoryReportPage }))
+);
 const ExecutivePurchaseRequestsPage = lazy(() =>
   import('@/pages/executive/ExecutivePurchaseRequests').then((m) => ({
     default: m.ExecutivePurchaseRequestsPage,
@@ -615,6 +624,50 @@ export default function App() {
                 element={
                   <RoleGuard capability="VIEW_FINANCE">
                     <FinancePage />
+                  </RoleGuard>
+                }
+              />
+
+              {[
+                '/executive/finance/monthly-report',
+                '/coordinator/finance/monthly-report',
+                '/chairman/finance/monthly-report',
+                '/pm/finance/monthly-report',
+                '/store/finance/monthly-report',
+              ].map((path) => (
+                <Route
+                  key={path}
+                  path={path}
+                  element={
+                    <RoleGuard capability="VIEW_FINANCE">
+                      <MonthlyReportPage />
+                    </RoleGuard>
+                  }
+                />
+              ))}
+
+              {[
+                '/executive/misc-purchases',
+                '/coordinator/misc-purchases',
+                '/chairman/misc-purchases',
+                '/pm/misc-purchases',
+              ].map((path) => (
+                <Route
+                  key={path}
+                  path={path}
+                  element={
+                    <RoleGuard capability="VIEW_FINANCE">
+                      <MiscPurchasesPage />
+                    </RoleGuard>
+                  }
+                />
+              ))}
+
+              <Route
+                path="/admin/materials/category-report"
+                element={
+                  <RoleGuard capability="VIEW_FINANCE">
+                    <CategoryReportPage />
                   </RoleGuard>
                 }
               />

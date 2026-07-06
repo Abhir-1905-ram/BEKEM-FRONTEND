@@ -1,6 +1,5 @@
-import { useNavigate } from 'react-router-dom';
-import { ChevronRight, ClipboardCheck } from 'lucide-react';
-import { formatCurrency } from '@afios/shared';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ChevronRight, ClipboardCheck } from 'lucide-react';import { formatCurrency } from '@afios/shared';
 import type { PurchaseOrderDto } from '@afios/shared';
 import { api } from '@/lib/api';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -10,6 +9,7 @@ import { ListQueryBoundary } from '@/components/ListQueryBoundary';
 import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 import { AgeingBadge, daysSince } from '@/components/ui/AgeingBadge';
 import { PoEmailStatusChip } from '@/components/PoEmailStatusChip';
+import { WorkflowStatusTabs, type WorkflowStatusTab } from '@/components/WorkflowStatusTabs';
 
 interface POQueuePageProps {
   title: string;
@@ -29,6 +29,8 @@ export function POQueuePage({
   mobileDetailPath,
 }: POQueuePageProps) {
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const tab = (params.get('tab') as WorkflowStatusTab) || 'pending';
 
   const openPo = (id: string) => {
     if (mobileDetailPath && typeof window !== 'undefined' && window.innerWidth < 768) {
@@ -39,12 +41,12 @@ export function POQueuePage({
   };
 
   const { data: items, list } = useListQuery({
-    queryKey: [queryKey],
+    queryKey: [queryKey, tab],
     queryFn: async () => {
       const res = await api.get<{ data: PurchaseOrderDto[]; meta?: { count: number } }>(
         '/purchase-orders',
         {
-          params: { queue },
+          params: { queue, tab },
         }
       );
       return {
@@ -61,6 +63,10 @@ export function POQueuePage({
   return (
     <div className="page-container max-w-4xl">
       <PageHeader title={title} subtitle={subtitle} />
+
+      {queue === 'pm' && (
+        <WorkflowStatusTabs value={tab} onChange={(t) => setParams({ tab: t })} />
+      )}
 
       <ActionCard
         title="Pending verification"

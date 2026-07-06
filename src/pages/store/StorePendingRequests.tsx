@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { MaterialRequestDto } from '@afios/shared';
@@ -7,15 +7,18 @@ import { EmptyState } from '@/components/EmptyState';
 import { ListQueryBoundary } from '@/components/ListQueryBoundary';
 import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 import { cn } from '@/lib/utils';
+import { WorkflowStatusTabs, type WorkflowStatusTab } from '@/components/WorkflowStatusTabs';
 
 export function StorePendingRequestsPage() {
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const tab = (params.get('tab') as WorkflowStatusTab) || 'pending';
 
   const { data: pendingRequests, list } = useListQuery({
-    queryKey: ['store-pending-requests'],
+    queryKey: ['store-pending-requests', tab],
     queryFn: async () => {
       const res = await api.get<{ data: MaterialRequestDto[] }>('/material-requests', {
-        params: { tab: 'pending' },
+        params: { tab },
       });
       return normalizeListData<MaterialRequestDto>(res.data.data);
     },
@@ -31,8 +34,10 @@ export function StorePendingRequestsPage() {
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="font-semibold text-gray-900">Pending requests</h1>
+        <h1 className="font-semibold text-gray-900">Material requests</h1>
       </header>
+
+      <WorkflowStatusTabs value={tab} onChange={(t) => setParams({ tab: t })} />
 
       <ListQueryBoundary
         isLoading={list.isLoading}

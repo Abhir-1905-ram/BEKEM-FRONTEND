@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatCurrency, formatDate, UserRole, type FinanceSummaryDto, type PaymentBillDto } from '@afios/shared';
 import { api } from '@/lib/api';
@@ -26,6 +27,7 @@ function paymentStatusClass(status: string) {
 }
 
 export function FinancePage() {
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const role = user?.role as UserRole;
   const canRecordPayment = role === UserRole.COORDINATOR;
@@ -97,9 +99,43 @@ export function FinancePage() {
     ? 'Record partial or full payments, track aging, and sync to Tally'
     : 'Payment status and bill aging across your projects';
 
+  const monthlyReportPath =
+    role === UserRole.COORDINATOR
+      ? '/coordinator/finance/monthly-report'
+      : role === UserRole.CHAIRMAN
+        ? '/chairman/finance/monthly-report'
+        : role === UserRole.EXECUTIVE
+          ? '/executive/finance/monthly-report'
+          : role === UserRole.PROJECT_MANAGER
+            ? '/pm/finance/monthly-report'
+            : '/store/finance/monthly-report';
+
+  const miscPurchasesPath =
+    role === UserRole.COORDINATOR
+      ? '/coordinator/misc-purchases'
+      : role === UserRole.CHAIRMAN
+        ? '/chairman/misc-purchases'
+        : role === UserRole.EXECUTIVE
+          ? '/executive/misc-purchases'
+          : '/pm/misc-purchases';
+
   return (
     <div className="page-container max-w-4xl">
       <PageHeader title="Finance & Tally" subtitle={subtitle} />
+
+      <div className="flex flex-wrap gap-2 mb-4">
+        <Button variant="secondary" size="sm" onClick={() => navigate(monthlyReportPath)}>
+          Monthly audit report
+        </Button>
+        {(role === UserRole.PROJECT_MANAGER ||
+          role === UserRole.EXECUTIVE ||
+          role === UserRole.COORDINATOR ||
+          role === UserRole.CHAIRMAN) && (
+          <Button variant="secondary" size="sm" onClick={() => navigate(miscPurchasesPath)}>
+            Misc purchases
+          </Button>
+        )}
+      </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
         <Card className="p-4">

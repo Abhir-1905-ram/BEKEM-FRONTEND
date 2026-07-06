@@ -64,7 +64,25 @@ export function PmMobilePoApprovalPage() {
             {po.approvalRoutingNote && (
               <p className="text-xs text-ink-muted">{po.approvalRoutingNote}</p>
             )}
-            {firstLine && (
+            <div className="space-y-2 border-t border-surface-border pt-3">
+              {(po.lineItems ?? []).map((line, idx) => (
+                <div key={idx} className="flex justify-between gap-2 text-sm">
+                  <span className="text-ink-secondary truncate">{line.description}</span>
+                  <span className="tabular-nums font-medium shrink-0">
+                    {line.quantity} × ₹{line.rate}
+                  </span>
+                </div>
+              ))}
+            </div>
+            {po.lineItems && po.lineItems.length > 1 && firstLine && (
+              <GstSummaryBar
+                quantity={po.lineItems.reduce((s, l) => s + l.quantity, 0)}
+                rate={po.amount / Math.max(1, po.lineItems.reduce((s, l) => s + l.quantity, 0))}
+                gstPercent={firstLine.gstPercent ?? 18}
+                compact
+              />
+            )}
+            {firstLine && po.lineItems?.length === 1 && (
               <GstSummaryBar
                 quantity={firstLine.quantity}
                 rate={firstLine.rate}
@@ -72,9 +90,9 @@ export function PmMobilePoApprovalPage() {
                 compact
               />
             )}
-            {po.lineItems && po.lineItems.length > 1 && (
-              <p className="text-xs text-ink-muted">+ {po.lineItems.length - 1} more line(s)</p>
-            )}
+            <p className="text-[11px] text-ink-muted">
+              Web biometric gate — use Face ID / fingerprint when supported on this device.
+            </p>
             <div className="grid grid-cols-1 gap-3 pt-2">
               <Button
                 variant="primary"

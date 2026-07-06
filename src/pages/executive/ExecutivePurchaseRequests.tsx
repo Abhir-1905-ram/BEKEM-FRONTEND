@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { formatCurrency, formatDate } from '@afios/shared';
 import type { PurchaseRequestDto } from '@afios/shared';
@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ListQueryBoundary } from '@/components/ListQueryBoundary';
 import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
+import { WorkflowStatusTabs, type WorkflowStatusTab } from '@/components/WorkflowStatusTabs';
 
 function priorityLabel(priority?: string) {
   if (priority === 'HIGH') return 'High';
@@ -18,13 +19,19 @@ function priorityLabel(priority?: string) {
 
 export function ExecutivePurchaseRequestsPage() {
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const tab = (params.get('tab') as WorkflowStatusTab) || 'pending';
 
   const { data: requests, list } = useListQuery({
-    queryKey: ['executive-purchase-requests'],
+    queryKey: ['executive-purchase-requests', tab],
     queryFn: async () => {
       const res = await api.get<{ data: PurchaseRequestDto[]; meta?: { count: number } }>(
         '/purchase-requests',
-        { params: { queue: 'pending-po', readyForPo: 'true' } }
+        {
+          params: tab === 'pending'
+            ? { queue: 'pending-po', readyForPo: 'true' }
+            : { tab },
+        }
       );
       return normalizeListData<PurchaseRequestDto>(res.data.data);
     },
@@ -33,7 +40,7 @@ export function ExecutivePurchaseRequestsPage() {
   return (
     <div className="page-container max-w-3xl">
       <PageHeader
-        title="Pending purchase requests"
+        title="Purchase requests"
         subtitle="Process PM-forwarded indents — create PO or recommend branch transfer"
         action={
           <button
@@ -46,6 +53,8 @@ export function ExecutivePurchaseRequestsPage() {
           </button>
         }
       />
+
+      <WorkflowStatusTabs value={tab} onChange={(t) => setParams({ tab: t })} />
 
       <ListQueryBoundary
         isLoading={list.isLoading}

@@ -508,6 +508,38 @@ export function POWizardPage() {
               <p className="text-xs text-ink-secondary mb-2">
                 Assign a vendor per line — different vendors allowed per material.
               </p>
+              <div className="flex flex-wrap gap-2 mb-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    const next: Record<number, string> = { ...lineVendorByIndex };
+                    lineItems.forEach((_, i) => {
+                      if (skippedLines[i]) return;
+                      const options = vendorsForLineIndex(i);
+                      if (options.length === 1) {
+                        next[i] = options[0].id;
+                      } else if (options.length > 1) {
+                        next[i] = options[0].id;
+                      }
+                    });
+                    setLineVendorByIndex(next);
+                    const vendorCount = new Set(
+                      Object.entries(next)
+                        .filter(([idx]) => !skippedLines[Number(idx)])
+                        .map(([, id]) => id)
+                    ).size;
+                    toast.success(
+                      vendorCount > 1
+                        ? `Split across ${vendorCount} vendors — separate POs on submit`
+                        : 'All lines assigned to one vendor'
+                    );
+                  }}
+                >
+                  Split PO by vendor
+                </Button>
+              </div>
               <div className="procurement-landscape-scroll panel overflow-hidden">
                 <table className="data-table min-w-[640px]">
                   <thead>

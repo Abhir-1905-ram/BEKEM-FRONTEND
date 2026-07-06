@@ -281,6 +281,11 @@ export function GrnReceivePage() {
                   <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
                     GRN — PO #{selectedPo.displayPoNumber || '—'}
                   </p>
+                  {receiptLines.some((l) => l.previouslyReceived > 0) && (
+                    <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-2">
+                      Partial PO — enter only this delivery&apos;s qty/rates. Variances over tolerance go on hold.
+                    </p>
+                  )}
                   <p className="text-sm text-ink-muted font-mono mt-0.5">
                     {selectedPo.procurementRef || selectedPo.poNumber}
                   </p>

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { CheckCircle2, Circle } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { StatusHistoryDto } from '@afios/shared';
-import { formatDate } from '@afios/shared';
+import { formatDate, ROLE_LABELS, UserRole } from '@afios/shared';
 import { StatusBadge } from './ui/StatusBadge';
 
 interface StatusTimelineProps {
@@ -63,7 +63,15 @@ export function StatusTimeline({ entityType, entityId }: StatusTimelineProps) {
               <StatusBadge status={event.toStatus} />
               <span className="text-xs text-gray-400">{formatDate(event.timestamp)}</span>
             </div>
-            <p className="text-sm text-gray-700 mt-1">{event.actorName || 'System'}</p>
+            <p className="text-sm text-gray-700 mt-1">
+              {event.actorName || 'System'}
+              {event.actorRole && (
+                <span className="text-gray-500">
+                  {' '}
+                  · {ROLE_LABELS[event.actorRole as UserRole] || event.actorRole.replace(/_/g, ' ')}
+                </span>
+              )}
+            </p>
             {event.note && (
               <p className="text-sm text-gray-500 mt-0.5">{event.note}</p>
             )}
