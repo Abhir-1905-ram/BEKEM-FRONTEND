@@ -162,11 +162,13 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
 
         { id: 'procurement-decisions', label: 'Procurement Decisions', href: '/executive/procurement-decisions', icon: ClipboardCheck },
 
+        { id: 'rfq-inbox', label: 'RFQ inbox', href: '/executive/rfq/inbox', icon: FileStack },
+
+        { id: 'create-rfq', label: 'Create RFQ', href: '/executive/rfq/new', icon: FilePlus },
+
         { id: 'purchase-requests', label: 'Pending purchase requests', href: '/executive/purchase-requests', icon: FilePlus },
 
         { id: 'create-po', label: 'Create PO', href: '/executive/po/new', icon: ShoppingCart },
-
-        { id: 'create-rfq', label: 'Create RFQ', href: '/executive/rfq/new', icon: FileStack },
 
         { id: 'create-wo', label: 'Generate WO', href: '/executive/wo/new', icon: HardHat },
 

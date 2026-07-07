@@ -41,7 +41,7 @@ export function ExecutivePurchaseRequestsPage() {
     <div className="page-container max-w-3xl">
       <PageHeader
         title="Purchase requests"
-        subtitle="Process PM-forwarded indents — create PO or recommend branch transfer"
+        subtitle="PM-forwarded indents — create RFQ, compare vendors, then PO"
         action={
           <button
             type="button"
@@ -76,7 +76,13 @@ export function ExecutivePurchaseRequestsPage() {
               key={pr.id}
               type="button"
               className="w-full text-left"
-              onClick={() => navigate(`/executive/purchase-requests/${pr.id}`)}
+              onClick={() => {
+                if (pr.executiveRecommendation === 'PURCHASE_ORDER') {
+                  navigate(`/executive/rfq/new?purchaseRequestId=${pr.id}`);
+                } else {
+                  navigate(`/executive/purchase-requests/${pr.id}`);
+                }
+              }}
             >
               <Card className="hover:border-bekem-accent/40 transition-colors">
                 <div className="flex justify-between items-start gap-3">

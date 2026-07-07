@@ -144,7 +144,7 @@ export function ProcurementDecisionDetailPage({ listPath }: ProcurementDecisionD
 
     onSuccess: (data) => {
 
-      toast.success('Queued for Create PO — open the Create PO wizard to build the purchase order');
+      toast.success('Queued for RFQ — open Create RFQ to invite vendors and compare quotes');
 
       setRemark('');
 
@@ -156,17 +156,19 @@ export function ProcurementDecisionDetailPage({ listPath }: ProcurementDecisionD
 
       queryClient.invalidateQueries({ queryKey: ['dashboard-widgets'] });
 
-      if (data.redirect?.path) {
+      queryClient.invalidateQueries({ queryKey: ['executive-rfqs'] });
+
+      if (data.purchaseRequestId) {
+
+        navigate(`/executive/rfq/new?purchaseRequestId=${data.purchaseRequestId}`);
+
+      } else if (data.redirect?.path) {
 
         navigate(data.redirect.path);
 
-      } else if (data.purchaseRequestId) {
-
-        navigate(`/executive/po/new?purchaseRequestId=${data.purchaseRequestId}`);
-
       } else {
 
-        navigate('/executive/po/new');
+        navigate('/executive/rfq/new');
 
       }
 
@@ -534,13 +536,13 @@ export function ProcurementDecisionDetailPage({ listPath }: ProcurementDecisionD
 
               <Card className="mb-3 border-success/30 bg-success-light/20">
 
-                <p className="text-sm font-semibold text-ink">Queued for Create PO</p>
+                <p className="text-sm font-semibold text-ink">Ready for RFQ</p>
 
                 <p className="text-xs text-ink-secondary mt-1">
 
-                  {decision.prNumber} is in the Create PO queue. Build the official purchase order in the
+                  {decision.prNumber} is queued for procurement. Create an RFQ to invite vendors and compare
 
-                  Create PO wizard — do not create it here.
+                  quotes, then raise the purchase order from the winning quote.
 
                 </p>
 
@@ -561,7 +563,7 @@ export function ProcurementDecisionDetailPage({ listPath }: ProcurementDecisionD
                         navigate(`/executive/po/new?purchaseRequestId=${decision.purchaseRequestId}`)
                       }
                     >
-                      Open Create PO
+                      Skip to Create PO
                     </Button>
                   </div>
                 )}
@@ -580,9 +582,9 @@ export function ProcurementDecisionDetailPage({ listPath }: ProcurementDecisionD
 
                 <p className="text-xs text-ink-secondary">
 
-                  Review-only inbox — mark proceed with purchase order to queue this request in Create PO.
+                  Review-only inbox — approve to queue this request for RFQ. Invite vendors, compare quotes,
 
-                  PO creation happens only in the Create PO module.
+                  then create the purchase order from the winning vendor.
 
                 </p>
 
@@ -618,7 +620,7 @@ export function ProcurementDecisionDetailPage({ listPath }: ProcurementDecisionD
 
                 >
 
-                  Proceed with Purchase Order
+                  Proceed with RFQ
 
                 </Button>
 

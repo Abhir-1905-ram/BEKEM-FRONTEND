@@ -114,6 +114,9 @@ const RfqDetailPage = lazy(() =>
 );
 const POWizardPage = lazy(() => import('@/pages/executive/POWizard').then((m) => ({ default: m.POWizardPage })));
 const RfqWizardPage = lazy(() => import('@/pages/executive/RfqWizard').then((m) => ({ default: m.RfqWizardPage })));
+const ExecutiveRfqListPage = lazy(() =>
+  import('@/pages/executive/ExecutiveRfqList').then((m) => ({ default: m.ExecutiveRfqListPage }))
+);
 const PODetailPage = lazy(() => import('@/pages/procurement/PODetail').then((m) => ({ default: m.PODetailPage })));
 const AuditLogViewerPage = lazy(() =>
   import('@/pages/audit/AuditLogViewer').then((m) => ({ default: m.AuditLogViewerPage }))
@@ -521,9 +524,17 @@ export default function App() {
                 }
               />
 
-              <Route path="/executive/rfq" element={<Navigate to="/executive/ho-indents" replace />} />
-              <Route path="/executive/rfq" element={<Navigate to="/executive/rfq/new" replace />} />
-              <Route path="/executive/rfqs" element={<Navigate to="/executive/rfq/new" replace />} />
+              <Route path="/executive/rfq" element={<Navigate to="/executive/rfq/inbox" replace />} />
+              <Route path="/executive/rfqs" element={<Navigate to="/executive/rfq/inbox" replace />} />
+
+              <Route
+                path="/executive/rfq/inbox"
+                element={
+                  <RoleGuard roles={[UserRole.EXECUTIVE]}>
+                    <ExecutiveRfqListPage />
+                  </RoleGuard>
+                }
+              />
 
               <Route
                 path="/executive/ho-indents"
@@ -559,7 +570,7 @@ export default function App() {
                     <ProcurementDecisionsListPage
                       basePath="/executive/procurement-decisions"
                       title="Procurement Decisions"
-                      subtitle="Review PM-forwarded requests — mark proceed with purchase order to queue Create PO"
+                      subtitle="Review PM-forwarded requests — proceed with RFQ, then create PO"
                       emptyTitle="No pending procurement decisions"
                       emptyDescription="Indents forwarded to Head Office will appear here."
                     />

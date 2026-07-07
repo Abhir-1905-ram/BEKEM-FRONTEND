@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, ChevronRight, AlertTriangle } from 'lucide-react';
+import { ShoppingCart, ChevronRight, AlertTriangle, FileStack } from 'lucide-react';
 import { getGreeting, formatCurrency } from '@afios/shared';
-import type { DeliveryAlertDto, ExecutiveDashboardDto, PurchaseOrderDto } from '@afios/shared';
+import type { DeliveryAlertDto, ExecutiveDashboardDto, PurchaseOrderDto, RfqListItemDto } from '@afios/shared';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/EmptyState';
@@ -15,6 +15,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { DashboardWidgetCards } from '@/components/DashboardWidgetCards';
 import { ExecutiveProcurementWidget } from '@/components/ExecutiveProcurementWidget';
 import { ExecutivePurchaseRequestsWidget } from '@/components/ExecutivePurchaseRequestsWidget';
+import { ExecutiveRfqWidget } from '@/components/ExecutiveRfqWidget';
 import { FulfillmentStatusChip } from '@/components/FulfillmentStatusChip';
 import { PoEmailStatusChip } from '@/components/PoEmailStatusChip';
 import { TodayPanel } from '@/components/layout/TodayPanel';
@@ -59,6 +60,22 @@ export function ExecutiveHomePage() {
       return res.data.data;
     },
   });
+
+  const {
+    data: rfqs,
+    isLoading: rfqsLoading,
+  } = useQuery({
+    queryKey: ['executive-rfqs'],
+    queryFn: async () => {
+      const res = await api.get<{ data: RfqListItemDto[] }>('/rfqs');
+      return res.data.data ?? [];
+    },
+  });
+
+  const openRfqCount = useMemo(
+    () => (rfqs ?? []).filter((r) => r.status === 'OPEN').length,
+    [rfqs]
+  );
 
   const { data: deliveryAlerts } = useQuery({
     queryKey: ['delivery-alerts'],
@@ -107,10 +124,16 @@ export function ExecutiveHomePage() {
         title="All projects"
         subtitle="Company-wide procurement — no project switch required"
         action={
-          <Button variant="primary" size="lg" onClick={() => navigate('/executive/po/new')}>
-            <ShoppingCart className="h-4 w-4" />
-            Create PO
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="primary" size="lg" onClick={() => navigate('/executive/rfq/new')}>
+              <FileStack className="h-4 w-4" />
+              Create RFQ
+            </Button>
+            <Button variant="secondary" size="lg" onClick={() => navigate('/executive/po/new')}>
+              <ShoppingCart className="h-4 w-4" />
+              Create PO
+            </Button>
+          </div>
         }
       />
 
@@ -139,10 +162,17 @@ export function ExecutiveHomePage() {
         onClick={() => navigate('/executive/procurement-decisions')}
       />
 
+      <ExecutiveRfqWidget
+        openCount={openRfqCount}
+        totalCount={rfqs?.length ?? 0}
+        loading={rfqsLoading}
+        onClick={() => navigate('/executive/rfq/inbox')}
+      />
+
       <ExecutivePurchaseRequestsWidget
         count={widgets?.widgets.pendingPurchaseRequests}
         loading={widgetsLoading}
-        onClick={() => navigate('/executive/purchase-requests')}
+        onClick={() => navigate('/executive/rfq/inbox')}
       />
 
       <DashboardWidgetCards widgets={widgets?.widgets} loading={widgetsLoading} />

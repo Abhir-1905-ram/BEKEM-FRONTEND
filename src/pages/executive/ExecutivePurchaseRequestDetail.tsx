@@ -53,15 +53,16 @@ export function ExecutivePurchaseRequestDetailPage() {
     onSuccess: (data) => {
       toast.success(
         method === 'PURCHASE_ORDER'
-          ? 'Purchase order path recorded — proceed to create PO'
+          ? 'Queued for RFQ — invite vendors and compare quotes'
           : 'Branch transfer recommendation sent to Coordinator'
       );
       setRemark('');
       queryClient.invalidateQueries({ queryKey: ['purchase-request', id] });
       queryClient.invalidateQueries({ queryKey: ['executive-purchase-requests'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-widgets'] });
+      queryClient.invalidateQueries({ queryKey: ['executive-rfqs'] });
       if (method === 'PURCHASE_ORDER' && data.id) {
-        navigate(`/executive/po/new?purchaseRequestId=${data.id}`);
+        navigate(`/executive/rfq/new?purchaseRequestId=${data.id}`);
       }
     },
     onError: (err: Error & { response?: { data?: { message?: string } } }) => {
@@ -200,9 +201,9 @@ export function ExecutivePurchaseRequestDetailPage() {
                       className="mt-1"
                     />
                     <div>
-                      <p className="font-medium text-ink">Create purchase order</p>
+                      <p className="font-medium text-ink">Create RFQ (purchase order path)</p>
                       <p className="text-xs text-ink-secondary mt-0.5">
-                        Generate a PO draft and send to Coordinator for verification
+                        Invite vendors, compare quotes, then raise PO from the winning vendor
                       </p>
                     </div>
                   </label>
@@ -242,7 +243,7 @@ export function ExecutivePurchaseRequestDetailPage() {
                   {executiveDecide.isPending
                     ? 'Saving…'
                     : method === 'PURCHASE_ORDER'
-                      ? 'Record & create purchase order'
+                      ? 'Record & create RFQ'
                       : 'Recommend branch transfer'}
                 </Button>
               </Card>
@@ -251,15 +252,25 @@ export function ExecutivePurchaseRequestDetailPage() {
             {!canDecide &&
               pr.executiveRecommendation === 'PURCHASE_ORDER' &&
               pr.status === 'OPEN' && (
-                <Button
-                  variant="accent"
-                  accentColor={accent}
-                  size="lg"
-                  className="w-full"
-                  onClick={() => navigate(`/executive/po/new?purchaseRequestId=${pr.id}`)}
-                >
-                  Create purchase order
-                </Button>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    variant="accent"
+                    accentColor={accent}
+                    size="lg"
+                    className="w-full"
+                    onClick={() => navigate(`/executive/rfq/new?purchaseRequestId=${pr.id}`)}
+                  >
+                    Create RFQ
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="lg"
+                    className="w-full"
+                    onClick={() => navigate(`/executive/po/new?purchaseRequestId=${pr.id}`)}
+                  >
+                    Skip to Create PO
+                  </Button>
+                </div>
               )}
           </>
         )}

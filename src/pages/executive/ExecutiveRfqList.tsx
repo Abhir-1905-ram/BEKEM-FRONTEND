@@ -1,0 +1,218 @@
+import { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { ChevronRight, FileStack, Plus, ShoppingCart } from 'lucide-react';
+import { api } from '@/lib/api';
+import type { PurchaseRequestDto, RfqListItemDto } from '@afios/shared';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { EmptyState } from '@/components/EmptyState';
+import { ListQueryBoundary } from '@/components/ListQueryBoundary';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { formatCurrency, formatDate } from '@afios/shared';
+
+export function ExecutiveRfqListPage() {
+  const navigate = useNavigate();
+
+  const { data: rfqs, isLoading: rfqsLoading, isError: rfqsError, refetch: refetchRfqs, isFetching: rfqsFetching } = useQuery({
+    queryKey: ['executive-rfqs'],
+    queryFn: async () => {
+      const res = await api.get<{ data: RfqListItemDto[] }>('/rfqs');
+      return res.data.data ?? [];
+    },
+  });
+
+  const {
+    data: readyPurchaseRequests,
+    isLoading: prsLoading,
+    isError: prsError,
+    refetch: refetchPrs,
+    isFetching: prsFetching,
+  } = useQuery({
+    queryKey: ['purchase-requests', 'ready-for-rfq'],
+    queryFn: async () => {
+      const res = await api.get<{ data: PurchaseRequestDto[] }>('/purchase-requests', {
+        params: { readyForPo: 'true' },
+      });
+      return res.data.data ?? [];
+    },
+  });
+
+  const rfqByPrId = useMemo(() => {
+    const map = new Map<string, RfqListItemDto>();
+    for (const rfq of rfqs ?? []) {
+      if (rfq.purchaseRequestId) map.set(rfq.purchaseRequestId, rfq);
+    }
+    return map;
+  }, [rfqs]);
+
+  const openCount = (rfqs ?? []).filter((r) => r.status === 'OPEN').length;
+  const isLoading = rfqsLoading || prsLoading;
+  const isError = rfqsError || prsError;
+  const isFetching = rfqsFetching || prsFetching;
+
+  const refetch = () => {
+    refetchRfqs();
+    refetchPrs();
+  };
+
+  const startRfq = (purchaseRequestId: string, resume = false) => {
+    const params = new URLSearchParams({ purchaseRequestId });
+    if (resume) params.set('resume', '1');
+    navigate(`/executive/rfq/new?${params.toString()}`);
+  };
+
+  return (
+    <div className="page-container max-w-3xl">
+      <PageHeader
+        title="Request for quotation (RFQ)"
+        subtitle="Pick a purchase request, invite vendors, compare quotes — then create PO"
+        action={
+          <Button variant="primary" onClick={() => navigate('/executive/rfq/new')}>
+            <Plus className="h-4 w-4" />
+            Create RFQ
+          </Button>
+        }
+      />
+
+      <div className="panel p-3 mb-3 flex items-center gap-3">
+        <div className="h-10 w-10 rounded-lg bg-bekem-accent/10 text-bekem-accent flex items-center justify-center">
+          <FileStack className="h-5 w-5" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-ink">
+            {readyPurchaseRequests?.length ?? 0} ready for RFQ · {openCount} open RFQ
+            {openCount === 1 ? '' : 's'}
+          </p>
+          <p className="text-xs text-ink-muted">
+            Standard flow: Procurement decision → RFQ (3 vendors) → Compare → PO
+          </p>
+        </div>
+      </div>
+
+      <ListQueryBoundary
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={refetch}
+        retrying={isFetching && !isLoading}
+        isEmpty={!readyPurchaseRequests?.length && !rfqs?.length}
+        skeletonRows={4}
+        empty={
+          <EmptyState
+            title="No RFQs yet"
+            description="After a procurement decision, purchase requests appear here to start RFQ — compare vendor quotes before raising a PO."
+            actionLabel="Create RFQ"
+            onAction={() => navigate('/executive/rfq/new')}
+          />
+        }
+      >
+        <>
+          {!!readyPurchaseRequests?.length && (
+            <section className="mb-6">
+              <h2 className="section-label mb-3">Ready for RFQ</h2>
+              <p className="text-xs text-ink-secondary mb-3">
+                Same list as Create RFQ step 1 — tap a request to start or continue the RFQ wizard.
+              </p>
+              <div className="space-y-2">
+                {readyPurchaseRequests.map((pr) => {
+                  const rfq = rfqByPrId.get(pr.id);
+                  const isFinalized = rfq?.status === 'FINALIZED';
+                  const isOpen = rfq?.status === 'OPEN';
+
+                  return (
+                    <Card key={pr.id} className="hover:border-bekem-accent/40 transition-colors">
+                      <div className="flex justify-between items-start gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-ink">{pr.prNumber}</p>
+                          <p className="text-sm text-ink-secondary mt-0.5">
+                            {pr.materialRequest?.indentNumber
+                              ? `Indent ${pr.materialRequest.indentNumber}`
+                              : 'Purchase request'}
+                            {pr.project?.code ? ` · ${pr.project.code}` : ''}
+                          </p>
+                          <p className="text-xs text-ink-muted mt-1">
+                            Est. {formatCurrency(pr.amountEstimate)}
+                            {rfq ? ` · ${rfq.rfqNumber}` : ''}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          {rfq && <StatusBadge status={rfq.status} />}
+                          {isFinalized ? (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() =>
+                                navigate(`/executive/po/new?purchaseRequestId=${pr.id}`)
+                              }
+                            >
+                              <ShoppingCart className="h-3.5 w-3.5" />
+                              Create PO
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => startRfq(pr.id, isOpen)}
+                            >
+                              {isOpen ? 'Continue RFQ' : 'Create RFQ'}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {!!rfqs?.length && (
+            <section>
+              <h2 className="section-label mb-3">All RFQs</h2>
+              <div className="space-y-2">
+                {rfqs.map((rfq) => (
+                  <button
+                    key={rfq.id}
+                    type="button"
+                    className="w-full text-left"
+                    onClick={() => {
+                      if (rfq.purchaseRequestId && rfq.status === 'OPEN') {
+                        startRfq(rfq.purchaseRequestId, true);
+                        return;
+                      }
+                      if (rfq.purchaseRequestId && rfq.status === 'FINALIZED') {
+                        navigate(`/executive/po/new?purchaseRequestId=${rfq.purchaseRequestId}`);
+                        return;
+                      }
+                      navigate(`/rfqs/${rfq.id}`);
+                    }}
+                  >
+                    <Card className="hover:border-bekem-accent/40 transition-colors">
+                      <div className="flex justify-between items-start gap-3">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-ink">{rfq.rfqNumber}</p>
+                          <p className="text-sm text-ink-secondary mt-0.5">
+                            {rfq.indentNumber ? `Indent ${rfq.indentNumber}` : 'Purchase request'}
+                          </p>
+                          <p className="text-xs text-ink-muted mt-1">
+                            Created {formatDate(rfq.createdAt)}
+                            {rfq.dueDate ? ` · Due ${formatDate(rfq.dueDate)}` : ''}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <StatusBadge status={rfq.status} />
+                          <ChevronRight className="h-4 w-4 text-ink-muted" />
+                        </div>
+                      </div>
+                    </Card>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+        </>
+      </ListQueryBoundary>
+    </div>
+  );
+}

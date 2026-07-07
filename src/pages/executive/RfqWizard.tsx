@@ -65,6 +65,7 @@ export function RfqWizardPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const preselectedPrId = searchParams.get('purchaseRequestId');
+  const resumeRfq = searchParams.get('resume') === '1';
   const accent = ROLE_COLORS[UserRole.EXECUTIVE].primary;
 
   const [step, setStep] = useState(0);
@@ -183,9 +184,14 @@ export function RfqWizardPage() {
     if (!preselectedPrId || selectedPr || prLoading || selectingPr) return;
     const pr = openPurchaseRequests.find((p) => p.id === preselectedPrId);
     if (!pr) return;
-    void selectPurchaseRequest(pr);
+    void (async () => {
+      await selectPurchaseRequest(pr);
+      if (resumeRfq) {
+        previewRfq.mutate(pr.id);
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [preselectedPrId, openPurchaseRequests, prLoading, selectedPr, selectingPr]);
+  }, [preselectedPrId, resumeRfq, openPurchaseRequests, prLoading, selectedPr, selectingPr]);
 
   const l1VendorId = useMemo(
     () => pickL1VendorId(comparison?.comparison.vendors ?? []),
@@ -225,7 +231,7 @@ export function RfqWizardPage() {
     <div className="min-h-screen flex flex-col w-full max-w-lg lg:max-w-6xl mx-auto bg-[#F8FAFC]">
       <header className="flex items-center gap-3 px-4 pt-4 pb-2">
         <button
-          onClick={() => (step > 0 ? setStep(step - 1) : navigate('/'))}
+          onClick={() => (step > 0 ? setStep(step - 1) : navigate('/executive/rfq/inbox'))}
           className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-surface-muted"
           aria-label="Go back"
         >

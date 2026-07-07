@@ -17,11 +17,13 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { PoEmailStatusChip } from '@/components/PoEmailStatusChip';
 import { StatusTimeline } from '@/components/StatusTimeline';
 import { OverrideRemarkModal } from '@/components/OverrideRemarkModal';
-import { Input, Textarea } from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Input';
+import { PoEditForm } from '@/components/PoEditForm';
 import { SuccessScreen } from '@/components/SuccessScreen';
 import { forbiddenQueryOptions, isForbiddenError, useRedirectOnForbidden } from '@/lib/forbiddenRedirect';
 import { getRoleHomePath } from '@/lib/rolePaths';
 import { downloadExport } from '@/lib/downloadExport';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { PoTrackingTimeline } from '@/components/PoTrackingTimeline';
 import { ProcurementRefField } from '@/components/ProcurementRefField';
@@ -39,7 +41,6 @@ export function PODetailPage() {
   const role = user.role as UserRole;
   const [note, setNote] = useState('');
   const [editing, setEditing] = useState(false);
-  const [editPaymentTerms, setEditPaymentTerms] = useState('');
   const [showOverrideModal, setShowOverrideModal] = useState(false);
   const [done, setDone] = useState(false);
   const [doneMessage, setDoneMessage] = useState('');
@@ -174,17 +175,6 @@ export function PODetailPage() {
       toast.error(e.response?.data?.message || 'Override approval failed');
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['purchase-order', id] }),
-  });
-
-  const patchPo = useMutation({
-    mutationFn: () =>
-      api.patch(`/purchase-orders/${id}`, { paymentTerms: editPaymentTerms }),
-    onSuccess: () => {
-      toast.success('PO updated');
-      setEditing(false);
-      queryClient.invalidateQueries({ queryKey: ['purchase-order', id] });
-    },
-    onError: () => toast.error('Could not save changes'),
   });
 
   const reject = useMutation({
@@ -327,7 +317,7 @@ export function PODetailPage() {
   };
 
   return (
-    <div className="px-4 pt-4 pb-6 max-w-lg mx-auto">
+    <div className={cn('px-4 pt-4 pb-6 mx-auto', editing ? 'max-w-4xl' : 'max-w-lg')}>
       <header className="flex items-center gap-3 mb-3">
         <button
           onClick={() => navigate(-1)}
@@ -549,10 +539,7 @@ export function PODetailPage() {
                 <Button
                   variant={po.status === 'APPROVED' ? 'primary' : 'secondary'}
                   size="sm"
-                  onClick={() => {
-                    setEditPaymentTerms(po.paymentTerms);
-                    setEditing(true);
-                  }}
+                  onClick={() => setEditing(true)}
                 >
                   {po.status === 'APPROVED' ? 'Modify / Correct PO' : 'Edit PO'}
                 </Button>
@@ -562,10 +549,7 @@ export function PODetailPage() {
                   variant={po.status === 'APPROVED' ? 'ghost' : 'secondary'}
                   size="sm"
                   className={po.status === 'APPROVED' ? 'text-ink-muted' : undefined}
-                  onClick={() => {
-                    setEditPaymentTerms(po.paymentTerms);
-                    setEditing(true);
-                  }}
+                  onClick={() => setEditing(true)}
                 >
                   {po.status === 'APPROVED' ? 'Edit (exception)' : 'Edit PO'}
                 </Button>
@@ -573,26 +557,14 @@ export function PODetailPage() {
             </div>
           )}
           {editing && (
-            <div className="space-y-2 rounded-xl border border-surface-border p-3">
-              <label className="text-xs font-semibold text-ink-muted">Payment terms</label>
-              <Input
-                value={editPaymentTerms}
-                onChange={(e) => setEditPaymentTerms(e.target.value)}
-              />
-              <div className="flex gap-2">
-                <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  disabled={patchPo.isPending}
-                  onClick={() => patchPo.mutate()}
-                >
-                  Save changes
-                </Button>
-              </div>
-            </div>
+            <PoEditForm
+              po={po}
+              onCancel={() => setEditing(false)}
+              onSaved={() => {
+                setEditing(false);
+                queryClient.invalidateQueries({ queryKey: ['purchase-order', id] });
+              }}
+            />
           )}
           <Textarea
             value={note}
