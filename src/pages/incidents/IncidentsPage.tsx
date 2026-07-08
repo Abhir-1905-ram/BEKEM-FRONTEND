@@ -1,3 +1,4 @@
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, useLocation, Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { FileText, AlertCircle, RefreshCw } from 'lucide-react';
@@ -5,12 +6,18 @@ import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
 import type { MaterialRequestDto } from '@afios/shared';
 import { UserRole } from '@afios/shared';
-import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/EmptyState';
 import { normalizeListData } from '@/hooks/useListQuery';
 import { cn } from '@/lib/utils';
 import { MaterialIndentsTable } from '@/components/MaterialIndentsTable';
+import { IndentListFilters, IndentQueueQuickButtons } from '@/components/IndentListFilters';
+import {
+  filterMaterialIndents,
+  uniqueIndentCategories,
+  type IndentDaysFilter,
+  type IndentQueueQuickFilter,
+} from '@/lib/indentListFilters';
 
 const TABS = [
   { key: 'pending', label: 'Pending' },
@@ -48,19 +55,33 @@ export function IncidentsPage() {
   const tab = rawTab === 'approved' ? 'pending' : rawTab;
   const isSite = role === UserRole.SITE_INCHARGE;
 
-  if (rawTab === 'approved') {
-    return <Navigate to={`${location.pathname}?tab=pending`} replace />;
-  }
+  const search = params.get('q') || '';
+  const queue = (params.get('queue') as IndentQueueQuickFilter | '') || '';
+  const category = params.get('category') || '';
+  const days = (params.get('days') as IndentDaysFilter) || '';
 
-  if (role === UserRole.PROJECT_MANAGER && location.pathname === '/incidents') {
-    return <Navigate to="/pm/material-indents" replace />;
-  }
-  if (role === UserRole.EXECUTIVE && location.pathname === '/incidents') {
-    return <Navigate to="/executive/material-indents" replace />;
-  }
-  if (role === UserRole.COORDINATOR && location.pathname === '/incidents') {
-    return <Navigate to="/coordinator/material-indents" replace />;
-  }
+  const [localSearch, setLocalSearch] = useState(search);
+  useEffect(() => {
+    setLocalSearch(search);
+  }, [search]);
+
+  const patchParams = (patch: Record<string, string | undefined>) => {
+    const next = new URLSearchParams(params);
+    for (const [key, value] of Object.entries(patch)) {
+      if (!value) next.delete(key);
+      else next.set(key, value);
+    }
+    setParams(next);
+  };
+
+  const redirectPath =
+    role === UserRole.PROJECT_MANAGER && location.pathname === '/incidents'
+      ? '/pm/material-indents'
+      : role === UserRole.EXECUTIVE && location.pathname === '/incidents'
+        ? '/executive/material-indents'
+        : role === UserRole.COORDINATOR && location.pathname === '/incidents'
+          ? '/coordinator/material-indents'
+          : null;
 
   const { data: requests, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['material-requests', 'indents', tab, role],
@@ -71,30 +92,74 @@ export function IncidentsPage() {
       return normalizeListData<MaterialRequestDto>(res.data.data);
     },
     retry: 1,
+    enabled: !redirectPath && rawTab !== 'approved',
   });
+
+  const categories = useMemo(() => uniqueIndentCategories(requests ?? []), [requests]);
+  const filtered = useMemo(
+    () =>
+      filterMaterialIndents(requests ?? [], {
+        search,
+        queue,
+        category,
+        days,
+      }),
+    [requests, search, queue, category, days]
+  );
 
   const pendingCount =
     requests?.filter((r) => ['PENDING_STORE', 'FORWARDED_TO_PM'].includes(r.status)).length ?? 0;
+
+  if (rawTab === 'approved') {
+    return <Navigate to={`${location.pathname}?tab=pending`} replace />;
+  }
+  if (redirectPath) {
+    return <Navigate to={redirectPath} replace />;
+  }
 
   const errorMessage =
     isError && error && typeof error === 'object' && 'response' in error
       ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
       : null;
 
+  const setSearch = (value: string) => {
+    setLocalSearch(value);
+    patchParams({ q: value.trim() || undefined });
+  };
+
   return (
     <div className="page-container max-w-full">
-      <PageHeader
-        title="Material indents"
-        subtitle={subtitleForRole(role)}
-        action={
-          isSite ? (
-            <Button variant="primary" onClick={() => navigate('/request/new')}>
+      <div className="flex flex-col gap-2 mb-2 lg:mb-3">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:flex-wrap gap-2">
+              <h1 className="text-base lg:text-lg font-semibold text-ink tracking-tight shrink-0">
+                Material indents
+              </h1>
+              <IndentQueueQuickButtons
+                value={queue}
+                onChange={(next) => {
+                  patchParams({
+                    queue: next || undefined,
+                    tab: next ? 'pending' : tab === 'all' ? undefined : tab,
+                  });
+                }}
+              />
+            </div>
+            <p className="text-xs text-ink-secondary mt-0.5 max-w-xl">{subtitleForRole(role)}</p>
+            <p className="text-xs text-ink-muted mt-0.5">Material indents raised from your site</p>
+          </div>
+          {isSite && (
+            <Button
+              variant="primary"
+              className="shrink-0 self-start"
+              onClick={() => navigate('/request/new')}
+            >
               New indent
             </Button>
-          ) : undefined
-        }
-      />
-      <p className="text-xs text-ink-muted -mt-2 mb-3">Material indents raised from your site</p>
+          )}
+        </div>
+      </div>
 
       {!isSite && pendingCount > 0 && tab === 'all' && !isError && (
         <div className="mb-3 rounded-lg border border-warning/30 bg-warning-light px-3 py-2.5 flex items-center gap-3">
@@ -110,10 +175,16 @@ export function IncidentsPage() {
           <button
             key={t.key}
             type="button"
-            onClick={() => setParams(t.key === 'all' ? {} : { tab: t.key })}
+            onClick={() =>
+              patchParams({
+                tab: t.key === 'all' ? undefined : t.key,
+              })
+            }
             className={cn(
               'px-4 py-2 text-sm font-semibold rounded-md whitespace-nowrap transition-colors',
-              tab === t.key ? 'bg-white text-ink border border-surface-border' : 'text-ink-secondary hover:text-ink'
+              tab === t.key
+                ? 'bg-white text-ink border border-surface-border'
+                : 'text-ink-secondary hover:text-ink'
             )}
           >
             {t.label}
@@ -121,10 +192,29 @@ export function IncidentsPage() {
         ))}
       </div>
 
+      {!isLoading && !isError && (
+        <IndentListFilters
+          search={localSearch}
+          onSearchChange={setSearch}
+          queue={queue}
+          onQueueChange={(next) => patchParams({ queue: next || undefined })}
+          category={category}
+          onCategoryChange={(next) => patchParams({ category: next || undefined })}
+          categories={categories}
+          days={days}
+          onDaysChange={(next) => patchParams({ days: next || undefined })}
+          resultCount={filtered.length}
+          totalCount={requests?.length ?? 0}
+        />
+      )}
+
       {isLoading || isFetching ? (
         <div className="space-y-2">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-20 rounded-lg bg-surface-muted animate-pulse border border-surface-border" />
+            <div
+              key={i}
+              className="h-20 rounded-lg bg-surface-muted animate-pulse border border-surface-border"
+            />
           ))}
         </div>
       ) : isError ? (
@@ -132,7 +222,8 @@ export function IncidentsPage() {
           <AlertCircle className="h-10 w-10 text-danger mx-auto mb-4" />
           <h2 className="text-lg font-semibold text-ink">Could not load material indents</h2>
           <p className="text-sm text-ink-secondary mt-2 max-w-md mx-auto">
-            {errorMessage || 'The server returned an error. Please retry or contact support if this persists.'}
+            {errorMessage ||
+              'The server returned an error. Please retry or contact support if this persists.'}
           </p>
           <Button variant="secondary" className="mt-6" onClick={() => void refetch()}>
             <RefreshCw className="h-4 w-4" />
@@ -148,11 +239,16 @@ export function IncidentsPage() {
               : 'No indents match this view for your role.'
           }
         />
+      ) : !filtered.length ? (
+        <EmptyState
+          title="No matching indents"
+          description="Try another search, clear filters, or pick a different status chip."
+        />
       ) : (
         <MaterialIndentsTable
-          requests={requests ?? []}
+          requests={filtered}
           onRowClick={(id) => {
-            const row = requests?.find((r) => r.id === id);
+            const row = filtered.find((r) => r.id === id);
             if (role === UserRole.STORE_INCHARGE && row?.status === 'PENDING_STORE') {
               navigate(`/store/allocate/${id}`);
               return;
