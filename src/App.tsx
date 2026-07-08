@@ -65,11 +65,14 @@ const GrnReceivePage = lazy(() =>
 const GrnApprovalsPage = lazy(() =>
   import('@/pages/store/GrnApprovals').then((m) => ({ default: m.GrnApprovalsPage }))
 );
-const VerifyDeliveryPage = lazy(() =>
-  import('@/pages/store/VerifyDelivery').then((m) => ({ default: m.VerifyDeliveryPage }))
-);
 const IssueMaterialPage = lazy(() =>
   import('@/pages/store/IssueMaterial').then((m) => ({ default: m.IssueMaterialPage }))
+);
+const StoreRegistersPage = lazy(() =>
+  import('@/pages/store/StoreRegisters').then((m) => ({ default: m.StoreRegistersPage }))
+);
+const StockAgingPage = lazy(() =>
+  import('@/pages/store/StockAgingPage').then((m) => ({ default: m.StockAgingPage }))
 );
 const BranchTransfersPage = lazy(() =>
   import('@/pages/shared/BranchTransfers').then((m) => ({ default: m.BranchTransfersPage }))
@@ -150,6 +153,9 @@ const VendorAdminPage = lazy(() =>
 );
 const SettingsAdminPage = lazy(() =>
   import('@/pages/admin/SettingsAdmin').then((m) => ({ default: m.SettingsAdminPage }))
+);
+const IndentCategoryAdminPage = lazy(() =>
+  import('@/pages/admin/IndentCategoryAdmin').then((m) => ({ default: m.IndentCategoryAdminPage }))
 );
 const CreateMaterialPage = lazy(() =>
   import('@/pages/materials/CreateMaterial').then((m) => ({ default: m.CreateMaterialPage }))
@@ -486,6 +492,15 @@ export default function App() {
               />
 
               <Route
+                path="/admin/indent-categories"
+                element={
+                  <RoleGuard roles={[UserRole.COORDINATOR, UserRole.CHAIRMAN]}>
+                    <IndentCategoryAdminPage />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
                 path="/materials/new"
                 element={
                   <RoleGuard capability="CREATE_INVENTORY_ITEM">
@@ -757,9 +772,9 @@ export default function App() {
                     roles={[
                       UserRole.STORE_INCHARGE,
                       UserRole.PROJECT_MANAGER,
+                      UserRole.EXECUTIVE,
                       UserRole.COORDINATOR,
                       UserRole.CHAIRMAN,
-                      UserRole.EXECUTIVE,
                     ]}
                   >
 
@@ -804,19 +819,8 @@ export default function App() {
               />
 
               <Route
-
                 path="/store/verify-delivery"
-
-                element={
-
-                  <RoleGuard roles={[UserRole.STORE_INCHARGE]}>
-
-                    <VerifyDeliveryPage />
-
-                  </RoleGuard>
-
-                }
-
+                element={<Navigate to="/store/grn" replace />}
               />
 
               <Route
@@ -849,6 +853,31 @@ export default function App() {
 
                 }
 
+              />
+
+              <Route
+                path="/store/registers"
+                element={
+                  <RoleGuard roles={[UserRole.STORE_INCHARGE, UserRole.COORDINATOR, UserRole.CHAIRMAN]}>
+                    <StoreRegistersPage />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/store/stock-aging"
+                element={
+                  <RoleGuard
+                    roles={[
+                      UserRole.STORE_INCHARGE,
+                      UserRole.PROJECT_MANAGER,
+                      UserRole.COORDINATOR,
+                      UserRole.CHAIRMAN,
+                    ]}
+                  >
+                    <StockAgingPage />
+                  </RoleGuard>
+                }
               />
 
               <Route
@@ -998,11 +1027,7 @@ export default function App() {
 
               <Route
                 path="/executive/branch-transfers"
-                element={
-                  <RoleGuard roles={[UserRole.EXECUTIVE]}>
-                    <BranchTransfersPage />
-                  </RoleGuard>
-                }
+                element={<Navigate to="/executive" replace />}
               />
 
               <Route
@@ -1308,6 +1333,9 @@ export default function App() {
                       UserRole.PROJECT_MANAGER,
 
                       UserRole.STORE_INCHARGE,
+                      UserRole.EXECUTIVE,
+                      UserRole.COORDINATOR,
+                      UserRole.CHAIRMAN,
 
                     ]}
 
@@ -1336,6 +1364,9 @@ export default function App() {
                       UserRole.PROJECT_MANAGER,
 
                       UserRole.STORE_INCHARGE,
+                      UserRole.EXECUTIVE,
+                      UserRole.COORDINATOR,
+                      UserRole.CHAIRMAN,
 
                     ]}
 

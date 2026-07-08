@@ -18,6 +18,7 @@ import { StockComparisonTable } from '@/components/StockComparisonTable';
 import { CrossProjectStockPanel } from '@/components/CrossProjectStockPanel';
 import { PmDailyCapBanner } from '@/components/PmDailyCapBanner';
 import { useApprovalShortcuts } from '@/hooks/useApprovalShortcuts';
+import { DetailField, DetailFieldGrid } from '@/components/ui/DetailFields';
 
 export function RequestDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -242,56 +243,45 @@ export function RequestDetailPage() {
         </div>
       )}
 
-      <Card className="space-y-3 mb-3">
-        {request.project && (
-          <div>
-            <p className="text-xs text-gray-500">Project</p>
-            <p className="font-medium">
-              {request.project.code} — {request.project.name}
-            </p>
-          </div>
-        )}
-        {request.requester?.name && (
-          <div>
-            <p className="text-xs text-gray-500">Requested by</p>
-            <p className="font-medium">{request.requester.name}</p>
-          </div>
-        )}
-        {request.site?.chainageLabel && (
-          <div>
-            <p className="text-xs text-gray-500">Site</p>
-            <p className="font-medium">
+      <Card className="mb-3">
+        <DetailFieldGrid>
+          {(request.requestedByName || request.requester?.name) && (
+            <DetailField label="Indent raiser" labelClassName="text-gray-500">
+              {request.requestedByName || request.requester?.name}
+            </DetailField>
+          )}
+          {request.indentCategory?.name && (
+            <DetailField label="Indent category" labelClassName="text-gray-500">
+              {request.indentCategory.name}
+            </DetailField>
+          )}
+          {request.site && (
+            <DetailField label="Site" labelClassName="text-gray-500">
               {request.site.name}
               {request.site.chainageLabel ? ` · ${request.site.chainageLabel}` : ''}
-            </p>
-          </div>
-        )}
-        {request.indentRequestType && (
-          <div>
-            <p className="text-xs text-gray-500">Indent type</p>
-            <p className="font-medium">
+            </DetailField>
+          )}
+          {request.indentRequestType && (
+            <DetailField label="Indent type" labelClassName="text-gray-500">
               {INDENT_REQUEST_TYPE_LABELS[request.indentRequestType]}
-            </p>
-          </div>
-        )}
-        {!hidePricing && request.estimatedValue != null && request.estimatedValue > 0 && (
-          <div>
-            <p className="text-xs text-gray-500">Estimated value</p>
-            <p className="font-medium">{formatCurrency(request.estimatedValue)}</p>
-          </div>
-        )}
-        {request.purpose && (
-          <div>
-            <p className="text-xs text-gray-500">Reason for request</p>
-            <p className="font-medium">{request.purpose}</p>
-          </div>
-        )}
-        {request.requiredByDate && (
-          <div>
-            <p className="text-xs text-gray-500">Required by</p>
-            <p className="font-medium">{formatDate(request.requiredByDate)}</p>
-          </div>
-        )}
+            </DetailField>
+          )}
+          {!hidePricing && request.estimatedValue != null && request.estimatedValue > 0 && (
+            <DetailField label="Estimated value" labelClassName="text-gray-500">
+              {formatCurrency(request.estimatedValue)}
+            </DetailField>
+          )}
+          {request.requiredByDate && (
+            <DetailField label="Required by" labelClassName="text-gray-500">
+              {formatDate(request.requiredByDate)}
+            </DetailField>
+          )}
+          {request.purpose && (
+            <DetailField label="Reason for request" fullWidth labelClassName="text-gray-500" valueClassName="font-normal">
+              {request.purpose}
+            </DetailField>
+          )}
+        </DetailFieldGrid>
       </Card>
 
       <h2 className="font-semibold text-gray-900 mb-3">Stock comparison (requesting site)</h2>
@@ -314,90 +304,32 @@ export function RequestDetailPage() {
       ) : null}
 
       {canPmDecide && (
-        <div className="mb-3 space-y-3 panel p-3">
-          <div>
-            <p className="text-sm font-semibold text-ink">PM decision</p>
-            <p className="text-xs text-ink-secondary mt-1">
-              Store forwarded this indent because stock is short at site. Compare availability across
-              your supervised projects, then forward to Head Office for procurement, request a branch
-              transfer from another project, or reject.
-            </p>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-ink-secondary block mb-2">
-              Remark <span className="text-danger">*</span>
-            </label>
-            <Textarea
-              value={pmRemark}
-              onChange={(e) => {
-                setPmRemark(e.target.value);
-                if (e.target.value.trim()) setPmRemarkError('');
-              }}
-              placeholder="Decision rationale — visible in audit trail to all approvers…"
-            />
-            {pmRemarkError && <p className="text-xs text-danger mt-1">{pmRemarkError}</p>}
-          </div>
-
-          {showReject ? (
-            <div className="space-y-2 rounded-xl border border-danger/20 bg-danger-light/30 p-3">
-              <Textarea
-                value={rejectReason}
-                onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="Reason for rejection (required)…"
-              />
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="destructive"
-                  disabled={!rejectReason.trim() || reject.isPending}
-                  onClick={() => reject.mutate(rejectReason.trim())}
-                >
-                  Confirm reject
-                </Button>
-                <Button variant="ghost" onClick={() => setShowReject(false)}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          ) : showBranchTransfer ? (
-            <div className="space-y-3 rounded-xl border border-surface-border bg-surface-muted/40 p-3">
-              <p className="text-sm font-medium text-ink">Request branch transfer</p>
-              <p className="text-xs text-ink-secondary">
-                Select the supervised project with surplus stock. No purchase order will be created.
+        <div className="mb-3 panel p-3">
+          <div className="grid gap-3 lg:grid-cols-2">
+            <div>
+              <p className="text-sm font-semibold text-ink">PM decision</p>
+              <p className="text-xs text-ink-secondary mt-1">
+                Store forwarded this indent because stock is short at site. Close it within PM limit
+                after your verification.
               </p>
-              <label className="text-xs font-semibold text-ink-muted block">Source project (has stock)</label>
-              <SearchSelect
-                placeholder="Search project code or name…"
-                value={fromProjectId || null}
-                onChange={(id) => setFromProjectId(id)}
-                searchPath="/branch-transfers/targets/search"
-                searchParams={destProjectId ? { excludeProjectId: destProjectId } : undefined}
-                mapResult={(raw) => {
-                  const row = raw as { id: string; code: string; name: string };
-                  return { id: row.id, label: `${row.code} — ${row.name}` };
-                }}
-              />
-              <Textarea
-                value={btNote}
-                onChange={(e) => setBtNote(e.target.value)}
-                placeholder="Optional note for coordinator…"
-              />
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="accent"
-                  accentColor={accent}
-                  disabled={!fromProjectId || branchTransfer.isPending}
-                  onClick={() => branchTransfer.mutate()}
-                >
-                  Submit branch transfer request
-                </Button>
-                <Button variant="ghost" onClick={() => setShowBranchTransfer(false)}>
-                  Cancel
-                </Button>
+
+              <div className="mt-3">
+                <label className="text-sm font-medium text-ink-secondary block mb-2">
+                  Remark <span className="text-danger">*</span>
+                </label>
+                <Textarea
+                  value={pmRemark}
+                  onChange={(e) => {
+                    setPmRemark(e.target.value);
+                    if (e.target.value.trim()) setPmRemarkError('');
+                  }}
+                  placeholder="Decision rationale — visible in audit trail to all approvers…"
+                />
+                {pmRemarkError && <p className="text-xs text-danger mt-1">{pmRemarkError}</p>}
               </div>
             </div>
-          ) : (
-            <div className="flex flex-col gap-2">
+
+            <div className="flex flex-col justify-end gap-2">
               <Button
                 variant="accent"
                 accentColor={accent}
@@ -407,42 +339,10 @@ export function RequestDetailPage() {
                   pmLocalClose.mutate(pmRemark.trim());
                 }}
               >
-                Approve &amp; close (within PM limit)
-              </Button>
-              <Button
-                variant="secondary"
-                disabled={forwardToHo.isPending}
-                onClick={() => {
-                  if (!requirePmRemark()) return;
-                  forwardToHo.mutate(pmRemark.trim());
-                }}
-              >
-                Forward to Head Office
-              </Button>
-              <Button
-                variant="secondary"
-                disabled={branchTransfer.isPending}
-                onClick={() => setShowBranchTransfer(true)}
-              >
-                Request branch transfer
-              </Button>
-              <Button
-                variant="ghost"
-                className="text-danger"
-                onClick={() => {
-                  if (!requirePmRemark()) {
-                    setShowReject(true);
-                    setRejectReason(pmRemark);
-                    return;
-                  }
-                  setRejectReason(pmRemark);
-                  setShowReject(true);
-                }}
-              >
-                Reject request
+                Approve
               </Button>
             </div>
-          )}
+          </div>
         </div>
       )}
 

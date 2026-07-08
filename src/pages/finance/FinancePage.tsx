@@ -120,7 +120,7 @@ export function FinancePage() {
           : '/pm/misc-purchases';
 
   return (
-    <div className="page-container max-w-4xl">
+    <div className="page-container max-w-full">
       <PageHeader title="Finance & Tally" subtitle={subtitle} />
 
       <div className="flex flex-wrap gap-2 mb-4">
@@ -190,115 +190,117 @@ export function FinancePage() {
           </Card>
         }
       >
-        <div className="space-y-3">
-          {(bills ?? []).map((bill) => {
-            const draft = getDraft(bill.id);
-            const installment = Number(draft.amount) || 0;
-            const canSubmit =
-              installment > 0 && installment <= (bill.outstandingAmount || bill.invoiceValue);
+        <div className="table-shell">
+          <table className="data-table min-w-[96rem]">
+            <thead>
+              <tr>
+                <th>Bill No</th>
+                <th>Vendor</th>
+                <th>Project</th>
+                <th>Invoice</th>
+                <th>Due</th>
+                <th>Aging</th>
+                <th>Status</th>
+                <th className="num">Invoice Value</th>
+                <th className="num">Paid</th>
+                <th className="num">Outstanding</th>
+                <th>Tally</th>
+                {canRecordPayment && <th>Actions</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {(bills ?? []).map((bill) => {
+                const draft = getDraft(bill.id);
+                const installment = Number(draft.amount) || 0;
+                const canSubmit =
+                  installment > 0 && installment <= (bill.outstandingAmount || bill.invoiceValue);
 
-            return (
-              <Card key={bill.id} className="p-4 space-y-3">
-                <div className="flex flex-wrap justify-between gap-2">
-                  <div>
-                    <p className="font-semibold">{bill.billNumber}</p>
-                    <p className="text-sm text-ink-secondary">
-                      {bill.vendorName} · {bill.projectCode}
-                    </p>
-                  </div>
-                  <div className="text-right text-sm">
-                    <p className="font-semibold">{formatCurrency(bill.invoiceValue)}</p>
-                    <span
-                      className={`inline-block mt-1 rounded-full px-2 py-0.5 text-xs font-medium capitalize ${paymentStatusClass(bill.paymentStatus)}`}
-                    >
-                      {bill.paymentStatus.toLowerCase()}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-ink-secondary">
-                  <span>Invoice: {bill.invoiceNumber || '—'}</span>
-                  <span>Invoice date: {bill.invoiceDate ? formatDate(bill.invoiceDate) : '—'}</span>
-                  <span>Due: {bill.dueDate ? formatDate(bill.dueDate) : '—'}</span>
-                  <span>Aging: {bill.agingDays} days</span>
-                  <span>Paid: {formatCurrency(bill.paidAmount)}</span>
-                  <span>Outstanding: {formatCurrency(bill.outstandingAmount)}</span>
-                  <span>Tally: {bill.tallySyncStatus}</span>
-                  {bill.paidDate ? (
-                    <span>Last payment: {formatDate(bill.paidDate)}</span>
-                  ) : (
-                    <span />
-                  )}
-                </div>
-
-                {bill.paymentRemark ? (
-                  <p className="text-xs text-ink-muted border-t border-surface-border pt-2">
-                    Note: {bill.paymentRemark}
-                  </p>
-                ) : null}
-
-                {canRecordPayment && bill.paymentStatus !== 'PAID' && (
-                  <div className="border-t border-surface-border pt-3 space-y-2">
-                    <p className="text-xs font-semibold text-ink">Record payment</p>
-                    <div className="grid sm:grid-cols-2 gap-2">
-                      <Input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        placeholder={`Up to ${formatCurrency(bill.outstandingAmount)}`}
-                        value={draft.amount}
-                        onChange={(e) => setDraft(bill.id, { amount: e.target.value })}
-                      />
-                      <Input
-                        placeholder="Payment reference / remark"
-                        value={draft.remark}
-                        onChange={(e) => setDraft(bill.id, { remark: e.target.value })}
-                      />
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        size="sm"
-                        variant="accent"
-                        disabled={!canSubmit || recordPayment.isPending}
-                        onClick={() =>
-                          recordPayment.mutate({
-                            id: bill.id,
-                            paymentAmount: installment,
-                            paymentRemark: draft.remark || undefined,
-                            tallySyncStatus:
-                              installment >= bill.outstandingAmount ? 'SYNCED' : undefined,
-                            tallyVoucherId:
-                              installment >= bill.outstandingAmount
-                                ? `TALLY-${bill.billNumber}`
-                                : undefined,
-                          })
-                        }
+                return (
+                  <tr key={bill.id}>
+                    <td className="cell-code whitespace-nowrap">{bill.billNumber}</td>
+                    <td className="cell-text">{bill.vendorName}</td>
+                    <td className="cell-text whitespace-nowrap">{bill.projectCode}</td>
+                    <td className="whitespace-nowrap">{bill.invoiceNumber || '—'}</td>
+                    <td className="whitespace-nowrap">{bill.dueDate ? formatDate(bill.dueDate) : '—'}</td>
+                    <td className="whitespace-nowrap">{bill.agingDays} days</td>
+                    <td>
+                      <span
+                        className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${paymentStatusClass(bill.paymentStatus)}`}
                       >
-                        Record payment
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        disabled={recordPayment.isPending}
-                        onClick={() => {
-                          setDraft(bill.id, { amount: String(bill.outstandingAmount) });
-                          recordPayment.mutate({
-                            id: bill.id,
-                            paymentAmount: bill.outstandingAmount,
-                            paymentRemark: draft.remark || 'Full settlement',
-                            tallySyncStatus: 'SYNCED',
-                            tallyVoucherId: `TALLY-${bill.billNumber}`,
-                          });
-                        }}
-                      >
-                        Pay full &amp; sync Tally
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </Card>
-            );
-          })}
+                        {bill.paymentStatus.toLowerCase()}
+                      </span>
+                    </td>
+                    <td className="num tabular-nums">{formatCurrency(bill.invoiceValue)}</td>
+                    <td className="num tabular-nums">{formatCurrency(bill.paidAmount)}</td>
+                    <td className="num tabular-nums">{formatCurrency(bill.outstandingAmount)}</td>
+                    <td className="whitespace-nowrap">{bill.tallySyncStatus}</td>
+                    {canRecordPayment && (
+                      <td>
+                        {bill.paymentStatus === 'PAID' ? (
+                          <span className="text-xs text-ink-muted">Settled</span>
+                        ) : (
+                          <div className="flex items-center gap-2 min-w-[28rem]">
+                            <Input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              placeholder="Amount"
+                              value={draft.amount}
+                              onChange={(e) => setDraft(bill.id, { amount: e.target.value })}
+                              className="h-8"
+                            />
+                            <Input
+                              placeholder="Remark"
+                              value={draft.remark}
+                              onChange={(e) => setDraft(bill.id, { remark: e.target.value })}
+                              className="h-8"
+                            />
+                            <Button
+                              size="sm"
+                              variant="accent"
+                              disabled={!canSubmit || recordPayment.isPending}
+                              onClick={() =>
+                                recordPayment.mutate({
+                                  id: bill.id,
+                                  paymentAmount: installment,
+                                  paymentRemark: draft.remark || undefined,
+                                  tallySyncStatus:
+                                    installment >= bill.outstandingAmount ? 'SYNCED' : undefined,
+                                  tallyVoucherId:
+                                    installment >= bill.outstandingAmount
+                                      ? `TALLY-${bill.billNumber}`
+                                      : undefined,
+                                })
+                              }
+                            >
+                              Record
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              disabled={recordPayment.isPending}
+                              onClick={() => {
+                                setDraft(bill.id, { amount: String(bill.outstandingAmount) });
+                                recordPayment.mutate({
+                                  id: bill.id,
+                                  paymentAmount: bill.outstandingAmount,
+                                  paymentRemark: draft.remark || 'Full settlement',
+                                  tallySyncStatus: 'SYNCED',
+                                  tallyVoucherId: `TALLY-${bill.billNumber}`,
+                                });
+                              }}
+                            >
+                              Full Pay
+                            </Button>
+                          </div>
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </ListQueryBoundary>
     </div>

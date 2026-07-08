@@ -3,7 +3,6 @@ import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { formatCurrency, formatDate } from '@afios/shared';
 import type { PurchaseRequestDto } from '@afios/shared';
 import { api } from '@/lib/api';
-import { Card } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -38,7 +37,7 @@ export function ExecutivePurchaseRequestsPage() {
   });
 
   return (
-    <div className="page-container max-w-3xl">
+    <div className="page-container max-w-full">
       <PageHeader
         title="Purchase requests"
         subtitle="PM-forwarded indents — create RFQ, compare vendors, then PO"
@@ -70,70 +69,49 @@ export function ExecutivePurchaseRequestsPage() {
           />
         }
       >
-        <div className="space-y-3">
-          {(requests ?? []).map((pr) => (
-            <button
-              key={pr.id}
-              type="button"
-              className="w-full text-left"
-              onClick={() => {
-                if (pr.executiveRecommendation === 'PURCHASE_ORDER') {
-                  navigate(`/executive/rfq/new?purchaseRequestId=${pr.id}`);
-                } else {
-                  navigate(`/executive/purchase-requests/${pr.id}`);
-                }
-              }}
-            >
-              <Card className="hover:border-bekem-accent/40 transition-colors">
-                <div className="flex justify-between items-start gap-3">
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-semibold text-ink">{pr.prNumber}</p>
-                      <StatusBadge status={pr.status} />
-                      {pr.priority && (
-                        <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-amber-50 text-amber-800">
-                          {priorityLabel(pr.priority)}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-ink-secondary">
-                      {pr.project?.code} — {pr.project?.name}
-                    </p>
-                    {pr.pmName && (
-                      <p className="text-xs text-ink-muted">
-                        <span className="font-semibold">PM:</span> {pr.pmName}
-                      </p>
-                    )}
-                    {pr.materialsSummary && (
-                      <p className="text-xs text-ink-secondary line-clamp-2">
-                        <span className="font-semibold text-ink-muted">Materials:</span>{' '}
-                        {pr.materialsSummary}
-                      </p>
-                    )}
-                    {pr.pmRemarks && (
-                      <p className="text-xs text-ink-secondary line-clamp-2">
-                        <span className="font-semibold text-ink-muted">PM remarks:</span>{' '}
-                        {pr.pmRemarks}
-                      </p>
-                    )}
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-muted">
-                      <span>
-                        <span className="font-semibold">Value:</span>{' '}
-                        {formatCurrency(pr.totalValue ?? pr.amountEstimate)}
-                      </span>
-                      {pr.requestDate && (
-                        <span>
-                          <span className="font-semibold">Requested:</span>{' '}
-                          {formatDate(pr.requestDate)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-ink-muted shrink-0 mt-1" />
-                </div>
-              </Card>
-            </button>
-          ))}
+        <div className="table-shell">
+          <table className="data-table min-w-[72rem]">
+            <thead>
+              <tr>
+                <th>PR No</th>
+                <th>Project</th>
+                <th>PM</th>
+                <th className="num">Value</th>
+                <th>Requested</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Materials</th>
+                <th className="w-10" />
+              </tr>
+            </thead>
+            <tbody>
+              {(requests ?? []).map((pr) => (
+                <tr
+                  key={pr.id}
+                  className="cursor-pointer"
+                  onClick={() => {
+                    if (pr.executiveRecommendation === 'PURCHASE_ORDER') {
+                      navigate(`/executive/rfq/new?purchaseRequestId=${pr.id}`);
+                    } else {
+                      navigate(`/executive/purchase-requests/${pr.id}`);
+                    }
+                  }}
+                >
+                  <td className="cell-code whitespace-nowrap">{pr.prNumber}</td>
+                  <td className="cell-text whitespace-nowrap">{pr.project?.code} — {pr.project?.name}</td>
+                  <td className="cell-text whitespace-nowrap">{pr.pmName || '—'}</td>
+                  <td className="num tabular-nums whitespace-nowrap">{formatCurrency(pr.totalValue ?? pr.amountEstimate)}</td>
+                  <td className="whitespace-nowrap">{pr.requestDate ? formatDate(pr.requestDate) : '—'}</td>
+                  <td className="whitespace-nowrap">{priorityLabel(pr.priority)}</td>
+                  <td><StatusBadge status={pr.status} /></td>
+                  <td className="cell-text">{pr.materialsSummary || pr.pmRemarks || '—'}</td>
+                  <td className="text-right">
+                    <ChevronRight className="h-4 w-4 text-ink-muted inline-block" />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </ListQueryBoundary>
     </div>

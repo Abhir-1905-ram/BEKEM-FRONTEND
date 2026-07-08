@@ -15,6 +15,7 @@ import { SuccessScreen } from '@/components/SuccessScreen';
 import { SearchSelect } from '@/components/SearchSelect';
 import type { MaterialSearchResultDto } from '@afios/shared';
 import { getRoleHomePath } from '@/lib/rolePaths';
+import { DetailField, DetailFieldGrid } from '@/components/ui/DetailFields';
 
 export function BranchTransferDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -157,40 +158,39 @@ export function BranchTransferDetailPage() {
         </div>
       </header>
 
-      <Card className="space-y-3 mb-3">
-        <div>
-          <p className="text-xs text-gray-500">Route</p>
-          <p className="font-medium">
-            {transfer.fromProjectName || transfer.fromProject} → {transfer.toProjectName || transfer.toProject}
-          </p>
-        </div>
-        {transfer.items?.map((item, i) => (
-          <div key={i}>
-            <p className="text-xs text-gray-500">Material</p>
-            <p className="font-medium">
+      <Card className="mb-3">
+        <DetailFieldGrid>
+          <DetailField label="Route" labelClassName="text-gray-500">
+            {transfer.fromProjectName || transfer.fromProject} →{' '}
+            {transfer.toProjectName || transfer.toProject}
+          </DetailField>
+          {transfer.items?.map((item, i) => (
+            <DetailField key={i} label="Material" labelClassName="text-gray-500">
               {item.materialName}: {item.quantity}
+            </DetailField>
+          ))}
+          {transfer.note && (
+            <DetailField label="Note" fullWidth labelClassName="text-gray-500" valueClassName="text-sm font-normal">
+              {transfer.note}
+            </DetailField>
+          )}
+          {transfer.requestedBy && (
+            <DetailField label="Requested by" labelClassName="text-gray-500">
+              {transfer.requestedBy}
+            </DetailField>
+          )}
+          {role === UserRole.PROJECT_MANAGER && transfer.status === 'REQUESTED' && (
+            <p className="w-full basis-full text-xs text-ink-secondary rounded-lg bg-surface-muted px-3 py-2">
+              Awaiting Executive approval. You cannot approve your own branch transfer request.
             </p>
-          </div>
-        ))}
-        {transfer.note && (
-          <div>
-            <p className="text-xs text-gray-500">Note</p>
-            <p className="text-sm">{transfer.note}</p>
-          </div>
-        )}
-        {transfer.requestedBy && (
-          <p className="text-xs text-ink-muted">Requested by {transfer.requestedBy}</p>
-        )}
-        {role === UserRole.PROJECT_MANAGER && transfer.status === 'REQUESTED' && (
-          <p className="text-xs text-ink-secondary rounded-lg bg-surface-muted px-3 py-2">
-            Awaiting Executive approval. You cannot approve your own branch transfer request.
-          </p>
-        )}
-        {role === UserRole.EXECUTIVE && transfer.status === 'REQUESTED' && (
-          <p className="text-xs text-ink-secondary rounded-lg bg-surface-muted px-3 py-2">
-            Review only — approve or reject as submitted. You cannot modify source, material, or quantity.
-          </p>
-        )}
+          )}
+          {role === UserRole.EXECUTIVE && transfer.status === 'REQUESTED' && (
+            <p className="w-full basis-full text-xs text-ink-secondary rounded-lg bg-surface-muted px-3 py-2">
+              Review only — approve or reject as submitted. You cannot modify source, material, or
+              quantity.
+            </p>
+          )}
+        </DetailFieldGrid>
       </Card>
 
       <h2 className="font-semibold text-sm mb-3">Timeline</h2>
@@ -204,7 +204,7 @@ export function BranchTransferDetailPage() {
             onChange={(e) => setNote(e.target.value)}
             placeholder="Optional note for audit trail…"
           />
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               variant="accent"
               size="lg"

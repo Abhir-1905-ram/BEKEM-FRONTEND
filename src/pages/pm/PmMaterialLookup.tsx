@@ -84,7 +84,7 @@ export function PmMaterialLookupPage() {
   });
 
   return (
-    <div className="page-container max-w-3xl">
+    <div className="page-container max-w-full">
       <PageHeader
         title="Material search"
         subtitle="Search materials and act on stock without leaving this page"

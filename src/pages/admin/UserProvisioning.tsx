@@ -98,7 +98,7 @@ export function UserProvisioningPage() {
           >
             Projects
           </button>{' '}
-          to assign Site Managers, Store Managers, and Project Managers.
+          to assign Site Managers, Store Incharges, and Project Managers.
         </p>
         <p className="mt-1">
           Executive, Coordinator, and Chairman are on <strong className="text-ink">all projects</strong>{' '}

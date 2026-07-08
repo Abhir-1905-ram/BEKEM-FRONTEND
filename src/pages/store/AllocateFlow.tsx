@@ -87,7 +87,10 @@ export function AllocateFlowPage() {
         title="Done!"
         message="Indent updated successfully."
         accentColor={accent}
-        primaryAction={{ label: 'Back to store', onClick: () => navigate('/store') }}
+        primaryAction={{
+          label: 'Back to pending indents',
+          onClick: () => navigate('/store/requests?tab=pending'),
+        }}
       />
     );
   }
@@ -122,7 +125,7 @@ export function AllocateFlowPage() {
     <div className="px-4 pt-4 pb-6 max-w-3xl mx-auto">
       <header className="flex items-center gap-3 mb-3">
         <button
-          onClick={() => navigate('/store')}
+          onClick={() => navigate('/store/requests?tab=pending')}
           className="h-10 w-10 rounded-xl hover:bg-gray-100 flex items-center justify-center"
         >
           <ArrowLeft className="h-5 w-5" />

@@ -28,6 +28,7 @@ import { toast } from 'sonner';
 import { PoTrackingTimeline } from '@/components/PoTrackingTimeline';
 import { ProcurementRefField } from '@/components/ProcurementRefField';
 import { FulfillmentStatusChip } from '@/components/FulfillmentStatusChip';
+import { DetailField, DetailFieldGrid } from '@/components/ui/DetailFields';
 import { useApprovalShortcuts } from '@/hooks/useApprovalShortcuts';
 import type { DelegationStatusDto, PoGrnsDto } from '@afios/shared';
 
@@ -382,49 +383,47 @@ export function PODetailPage() {
         </p>
       )}
 
-      <Card className="space-y-3 mb-3">
-        <div>
-          <p className="text-xs text-gray-500">Vendor (To)</p>
-          <p className="font-medium">{po.vendor?.name}</p>
-          {po.vendor?.address && (
-            <p className="text-xs text-gray-600 whitespace-pre-line mt-1">{po.vendor.address}</p>
+      <Card className="mb-3">
+        <DetailFieldGrid>
+          <DetailField label="Vendor (To)" fullWidth valueClassName="font-medium">
+            <span>{po.vendor?.name}</span>
+            {po.vendor?.address && (
+              <p className="text-xs text-gray-600 whitespace-pre-line mt-1 font-normal">
+                {po.vendor.address}
+              </p>
+            )}
+            {po.vendor?.gstNumber && (
+              <p className="text-xs text-gray-500 mt-1 font-normal">GST: {po.vendor.gstNumber}</p>
+            )}
+          </DetailField>
+          <DetailField label="Amount" valueClassName="text-lg">
+            {formatCurrency(po.amount)}
+          </DetailField>
+          <DetailField label="Payment terms">{po.paymentTerms}</DetailField>
+          {po.billingAddress && (
+            <DetailField label="Buyer's address" fullWidth valueClassName="text-sm font-normal whitespace-pre-line">
+              {po.billingAddress}
+            </DetailField>
           )}
-          {po.vendor?.gstNumber && (
-            <p className="text-xs text-gray-500 mt-1">GST: {po.vendor.gstNumber}</p>
+          {po.deliveryAddress && (
+            <DetailField
+              label="Consignee (store site)"
+              fullWidth
+              valueClassName="text-sm font-normal whitespace-pre-line"
+            >
+              {po.deliveryAddress}
+            </DetailField>
           )}
-        </div>
-        <div>
-          <p className="text-xs text-gray-500">Amount</p>
-          <p className="font-medium text-lg">{formatCurrency(po.amount)}</p>
-        </div>
-        <div>
-          <p className="text-xs text-gray-500">Payment terms</p>
-          <p className="font-medium">{po.paymentTerms}</p>
-        </div>
-        {po.billingAddress && (
-          <div>
-            <p className="text-xs text-gray-500">Buyer&apos;s address</p>
-            <p className="text-sm whitespace-pre-line">{po.billingAddress}</p>
-          </div>
-        )}
-        {po.deliveryAddress && (
-          <div>
-            <p className="text-xs text-gray-500">Consignee (store site)</p>
-            <p className="text-sm whitespace-pre-line">{po.deliveryAddress}</p>
-          </div>
-        )}
-        {po.purchaseRequest?.prNumber && (
-          <div>
-            <p className="text-xs text-gray-500">Purchase request</p>
-            <p className="font-medium">{po.purchaseRequest.prNumber}</p>
-          </div>
-        )}
+          {po.purchaseRequest?.prNumber && (
+            <DetailField label="Purchase request">{po.purchaseRequest.prNumber}</DetailField>
+          )}
+        </DetailFieldGrid>
       </Card>
 
       {po.lineItems && po.lineItems.length > 0 && (
         <div className="mb-3">
           <h2 className="font-semibold text-sm mb-2">Line items</h2>
-          <div className="space-y-2">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {(po.lineItems ?? []).map((item, idx) => (
               <Card key={item.id || idx} className="py-2">
                 <p className="text-sm font-medium">{item.description}</p>

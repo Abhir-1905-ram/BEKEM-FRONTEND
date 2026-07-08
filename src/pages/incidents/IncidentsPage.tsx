@@ -1,22 +1,22 @@
 import { useNavigate, useSearchParams, useLocation, Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronRight, FileText, AlertCircle, RefreshCw } from 'lucide-react';
+import { FileText, AlertCircle, RefreshCw } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
 import type { MaterialRequestDto } from '@afios/shared';
-import { UserRole, formatDate } from '@afios/shared';
+import { UserRole } from '@afios/shared';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
-import { StatusBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/EmptyState';
 import { normalizeListData } from '@/hooks/useListQuery';
 import { cn } from '@/lib/utils';
+import { MaterialIndentsTable } from '@/components/MaterialIndentsTable';
 
 const TABS = [
-  { key: 'all', label: 'All' },
   { key: 'pending', label: 'Pending' },
-  { key: 'approved', label: 'In progress' },
   { key: 'completed', label: 'Completed' },
+  { key: 'rejected', label: 'Rejected' },
+  { key: 'all', label: 'All' },
 ];
 
 function subtitleForRole(role: UserRole): string {
@@ -44,8 +44,13 @@ export function IncidentsPage() {
   const role = user.role as UserRole;
   const [params, setParams] = useSearchParams();
   const location = useLocation();
-  const tab = params.get('tab') || 'all';
+  const rawTab = params.get('tab') || 'pending';
+  const tab = rawTab === 'approved' ? 'pending' : rawTab;
   const isSite = role === UserRole.SITE_INCHARGE;
+
+  if (rawTab === 'approved') {
+    return <Navigate to={`${location.pathname}?tab=pending`} replace />;
+  }
 
   if (role === UserRole.PROJECT_MANAGER && location.pathname === '/incidents') {
     return <Navigate to="/pm/material-indents" replace />;
@@ -77,7 +82,7 @@ export function IncidentsPage() {
       : null;
 
   return (
-    <div className="page-container max-w-4xl">
+    <div className="page-container max-w-full">
       <PageHeader
         title="Material indents"
         subtitle={subtitleForRole(role)}
@@ -89,6 +94,7 @@ export function IncidentsPage() {
           ) : undefined
         }
       />
+      <p className="text-xs text-ink-muted -mt-2 mb-3">Material indents raised from your site</p>
 
       {!isSite && pendingCount > 0 && tab === 'all' && !isError && (
         <div className="mb-3 rounded-lg border border-warning/30 bg-warning-light px-3 py-2.5 flex items-center gap-3">
@@ -143,45 +149,10 @@ export function IncidentsPage() {
           }
         />
       ) : (
-        <div className="table-shell">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Indent</th>
-                <th>Project</th>
-                <th>Status</th>
-                <th className="w-10" />
-              </tr>
-            </thead>
-            <tbody>
-              {(requests ?? []).map((r) => (
-                <tr
-                  key={r.id}
-                  className="cursor-pointer"
-                  onClick={() => navigate(`/requests/${r.id}`)}
-                >
-                  <td>
-                    <p className="font-semibold">{r.indentNumber}</p>
-                    <p className="text-xs text-ink-secondary mt-0.5 line-clamp-1">
-                      {r.material?.name || r.purpose || '—'}
-                    </p>
-                    <p className="text-xs text-ink-muted mt-0.5">{formatDate(r.createdAt)}</p>
-                  </td>
-                  <td className="text-ink-secondary">
-                    {r.project?.code}
-                    {r.site?.name ? ` · ${r.site.name}` : ''}
-                  </td>
-                  <td>
-                    <StatusBadge status={r.status} />
-                  </td>
-                  <td className="text-right">
-                    <ChevronRight className="h-4 w-4 text-ink-muted inline-block" />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <MaterialIndentsTable
+          requests={requests ?? []}
+          onRowClick={(id) => navigate(`/requests/${id}`)}
+        />
       )}
     </div>
   );

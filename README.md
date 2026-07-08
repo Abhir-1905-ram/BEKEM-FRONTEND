@@ -1,4 +1,4 @@
-﻿# BEKEM Frontend (AFIOS 2.0)
+# BEKEM Frontend (AFIOS 2.0)
 
 React + Vite frontend for **Bekem OS**.
 

@@ -69,7 +69,7 @@ api.interceptors.response.use(
       }
       useAuthStore.getState().logout();
       toast.error('Session expired. Please log in again.');
-    } else if (status !== 403) {
+    } else if (status !== 403 && !isAuthRoute) {
       toast.error(text);
     }
 

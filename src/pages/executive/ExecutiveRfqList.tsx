@@ -1,11 +1,10 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronRight, FileStack, Plus, ShoppingCart } from 'lucide-react';
+import { ChevronRight, FileStack, Plus } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { PurchaseRequestDto, RfqListItemDto } from '@afios/shared';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
 import { ListQueryBoundary } from '@/components/ListQueryBoundary';
@@ -64,7 +63,7 @@ export function ExecutiveRfqListPage() {
   };
 
   return (
-    <div className="page-container max-w-3xl">
+    <div className="page-container max-w-full">
       <PageHeader
         title="Request for quotation (RFQ)"
         subtitle="Pick a purchase request, invite vendors, compare quotes — then create PO"
@@ -114,30 +113,34 @@ export function ExecutiveRfqListPage() {
               <p className="text-xs text-ink-secondary mb-3">
                 Same list as Create RFQ step 1 — tap a request to start or continue the RFQ wizard.
               </p>
-              <div className="space-y-2">
+              <div className="table-shell">
+                <table className="data-table min-w-[72rem]">
+                  <thead>
+                    <tr>
+                      <th>PR No</th>
+                      <th>Indent</th>
+                      <th>Project</th>
+                      <th className="num">Estimate</th>
+                      <th>RFQ</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                 {readyPurchaseRequests.map((pr) => {
                   const rfq = rfqByPrId.get(pr.id);
                   const isFinalized = rfq?.status === 'FINALIZED';
                   const isOpen = rfq?.status === 'OPEN';
 
                   return (
-                    <Card key={pr.id} className="hover:border-bekem-accent/40 transition-colors">
-                      <div className="flex justify-between items-start gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-ink">{pr.prNumber}</p>
-                          <p className="text-sm text-ink-secondary mt-0.5">
-                            {pr.materialRequest?.indentNumber
-                              ? `Indent ${pr.materialRequest.indentNumber}`
-                              : 'Purchase request'}
-                            {pr.project?.code ? ` · ${pr.project.code}` : ''}
-                          </p>
-                          <p className="text-xs text-ink-muted mt-1">
-                            Est. {formatCurrency(pr.amountEstimate)}
-                            {rfq ? ` · ${rfq.rfqNumber}` : ''}
-                          </p>
-                        </div>
-                        <div className="flex flex-col items-end gap-2 shrink-0">
-                          {rfq && <StatusBadge status={rfq.status} />}
+                    <tr key={pr.id}>
+                      <td className="cell-code whitespace-nowrap">{pr.prNumber}</td>
+                      <td className="cell-text whitespace-nowrap">{pr.materialRequest?.indentNumber || 'Purchase request'}</td>
+                      <td className="cell-text whitespace-nowrap">{pr.project?.code || '—'}</td>
+                      <td className="num tabular-nums whitespace-nowrap">{formatCurrency(pr.amountEstimate)}</td>
+                      <td className="cell-code whitespace-nowrap">{rfq?.rfqNumber || '—'}</td>
+                      <td>{rfq ? <StatusBadge status={rfq.status} /> : '—'}</td>
+                      <td>
                           {isFinalized ? (
                             <Button
                               variant="secondary"
@@ -146,7 +149,6 @@ export function ExecutiveRfqListPage() {
                                 navigate(`/executive/po/new?purchaseRequestId=${pr.id}`)
                               }
                             >
-                              <ShoppingCart className="h-3.5 w-3.5" />
                               Create PO
                             </Button>
                           ) : (
@@ -158,11 +160,12 @@ export function ExecutiveRfqListPage() {
                               {isOpen ? 'Continue RFQ' : 'Create RFQ'}
                             </Button>
                           )}
-                        </div>
-                      </div>
-                    </Card>
+                      </td>
+                    </tr>
                   );
                 })}
+                  </tbody>
+                </table>
               </div>
             </section>
           )}
@@ -170,12 +173,23 @@ export function ExecutiveRfqListPage() {
           {!!rfqs?.length && (
             <section>
               <h2 className="section-label mb-3">All RFQs</h2>
-              <div className="space-y-2">
+              <div className="table-shell">
+                <table className="data-table min-w-[64rem]">
+                  <thead>
+                    <tr>
+                      <th>RFQ No</th>
+                      <th>Indent</th>
+                      <th>Created</th>
+                      <th>Due</th>
+                      <th>Status</th>
+                      <th className="w-10" />
+                    </tr>
+                  </thead>
+                  <tbody>
                 {rfqs.map((rfq) => (
-                  <button
+                  <tr
                     key={rfq.id}
-                    type="button"
-                    className="w-full text-left"
+                    className="cursor-pointer"
                     onClick={() => {
                       if (rfq.purchaseRequestId && rfq.status === 'OPEN') {
                         startRfq(rfq.purchaseRequestId, true);
@@ -188,26 +202,16 @@ export function ExecutiveRfqListPage() {
                       navigate(`/rfqs/${rfq.id}`);
                     }}
                   >
-                    <Card className="hover:border-bekem-accent/40 transition-colors">
-                      <div className="flex justify-between items-start gap-3">
-                        <div className="min-w-0">
-                          <p className="font-semibold text-ink">{rfq.rfqNumber}</p>
-                          <p className="text-sm text-ink-secondary mt-0.5">
-                            {rfq.indentNumber ? `Indent ${rfq.indentNumber}` : 'Purchase request'}
-                          </p>
-                          <p className="text-xs text-ink-muted mt-1">
-                            Created {formatDate(rfq.createdAt)}
-                            {rfq.dueDate ? ` · Due ${formatDate(rfq.dueDate)}` : ''}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <StatusBadge status={rfq.status} />
-                          <ChevronRight className="h-4 w-4 text-ink-muted" />
-                        </div>
-                      </div>
-                    </Card>
-                  </button>
+                    <td className="cell-code whitespace-nowrap">{rfq.rfqNumber}</td>
+                    <td className="cell-text whitespace-nowrap">{rfq.indentNumber || 'Purchase request'}</td>
+                    <td className="whitespace-nowrap">{formatDate(rfq.createdAt)}</td>
+                    <td className="whitespace-nowrap">{rfq.dueDate ? formatDate(rfq.dueDate) : '—'}</td>
+                    <td><StatusBadge status={rfq.status} /></td>
+                    <td className="text-right"><ChevronRight className="h-4 w-4 text-ink-muted inline-block" /></td>
+                  </tr>
                 ))}
+                  </tbody>
+                </table>
               </div>
             </section>
           )}

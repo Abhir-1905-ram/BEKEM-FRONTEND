@@ -23,6 +23,7 @@ import { StepIndicator } from '@/components/StepIndicator';
 import { SuccessScreen } from '@/components/SuccessScreen';
 import { EmptyState } from '@/components/EmptyState';
 import { cn } from '@/lib/utils';
+import { DetailField, DetailFieldGrid, DetailFieldInline, DetailFieldRow } from '@/components/ui/DetailFields';
 import { PoPreviewDocument } from '@/components/PoPreviewDocument';
 import { SearchSelect } from '@/components/SearchSelect';
 import { computePoLineTotals } from '@/lib/poLineTotals';
@@ -33,11 +34,21 @@ import type {
   QuotationComparisonDto,
   MaterialPurchaseHistoryDto,
 } from '@afios/shared';
-import { QuotationComparisonTable } from '@/components/QuotationComparisonTable';
 import { PurchaseHistoryPanel } from '@/components/PurchaseHistoryPanel';
 import { PoWizardStockPanel } from '@/components/PoWizardStockPanel';
 import { GstPercentSelect } from '@/components/GstPercentSelect';
+import { PoMaterialVendorAssign } from '@/components/PoMaterialVendorAssign';
+import { PoProductCompareStep } from '@/components/PoProductCompareStep';
 import { pickL1VendorId } from '@/lib/quotationTotals';
+import {
+  bestOfferForQuantity,
+  effectiveBreakdown,
+  offersForMaterialId,
+  resolveOfferQuote,
+  type LineVendorQuoteMap,
+  type MaterialVendorOfferRow,
+  type VendorQuoteOverride,
+} from '@/lib/vendorOffersForMaterial';
 
 const STEPS = [
   'Choose request',
@@ -53,6 +64,21 @@ interface LineVendorRow {
   materialId: string;
   material: { id: string; code: string; name: string; unit: string } | null;
   vendors: VendorDto[];
+}
+
+interface MaterialOfferRow {
+  materialId: string;
+  material: { id: string; code: string; name: string; unit: string } | null;
+  offers: Array<{
+    vendorId: string;
+    vendorName: string;
+    gstNumber?: string;
+    rate: number | null;
+    gstPercent?: number;
+    lastQuotedAt?: string | null;
+  }>;
+  minQuotedRate: number | null;
+  maxQuotedRate: number | null;
 }
 
 interface PoAttachment {
@@ -81,9 +107,14 @@ export function POWizardPage() {
   const [selectedMr, setSelectedMr] = useState<MaterialRequestDto | null>(null);
   const [selectedPr, setSelectedPr] = useState<PurchaseRequestDto | null>(null);
   const [lineVendorByIndex, setLineVendorByIndex] = useState<Record<number, string>>({});
+  const [lineVendorsByIndex, setLineVendorsByIndex] = useState<Record<number, string[]>>({});
+  const [lineVendorQuotesByIndex, setLineVendorQuotesByIndex] = useState<
+    Record<number, LineVendorQuoteMap>
+  >({});
   /** Lines skipped because no vendor (custom products) — PO proceeds for the rest. */
   const [skippedLines, setSkippedLines] = useState<Record<number, boolean>>({});
   const [vendorRows, setVendorRows] = useState<LineVendorRow[]>([]);
+  const [vendorOfferRows, setVendorOfferRows] = useState<MaterialVendorOfferRow[]>([]);
   const [quotations, setQuotations] = useState<QuotationDto[]>([]);
   const [lineItems, setLineItems] = useState<PoLineItemDto[]>([]);
   const [registeredOfficeAddress, setRegisteredOfficeAddress] = useState('');
@@ -121,15 +152,32 @@ export function POWizardPage() {
   const stepLoading = prLoading;
   const hasReadyItems = openPurchaseRequests.length > 0;
 
-  const loadVendorRows = async (materialIds: string[]) => {
+  const loadVendorOffers = async (materialIds: string[], purchaseRequestId?: string) => {
     if (!materialIds.length) {
+      setVendorOfferRows([]);
       setVendorRows([]);
       return;
     }
-    const res = await api.get<{ data: LineVendorRow[] }>('/vendors/for-materials', {
-      params: { materialIds: materialIds.join(',') },
+    const res = await api.get<{ data: MaterialOfferRow[] }>('/vendors/offers-for-materials', {
+      params: {
+        materialIds: materialIds.join(','),
+        strict: 'true',
+        purchaseRequestId,
+      },
     });
-    setVendorRows(res.data.data);
+    const rows = res.data.data;
+    setVendorOfferRows(rows);
+    setVendorRows(
+      rows.map((row) => ({
+        materialId: row.materialId,
+        material: row.material,
+        vendors: row.offers.map((o) => ({
+          id: o.vendorId,
+          name: o.vendorName,
+          gstNumber: o.gstNumber,
+        })) as VendorDto[],
+      }))
+    );
   };
 
   const createPo = useMutation({
@@ -151,8 +199,10 @@ export function POWizardPage() {
         };
       };
 
+      // Req 60 — one PO per vendor; group active lines by selected vendor.
       lineItems.forEach((row, index) => {
-        const vendorId = lineVendorByIndex[index];
+        if (skippedLines[index]) return;
+        const vendorId = lineVendorsByIndex[index]?.[0] || lineVendorByIndex[index];
         if (!vendorId) return;
         const item = mapLine(row);
         const existing = ordersMap.get(vendorId);
@@ -269,13 +319,22 @@ export function POWizardPage() {
     const nextLines = [...lineItems, newLine];
     setLineItems(nextLines);
     const materialIds = nextLines.map((l) => l.materialId).filter(Boolean) as string[];
-    await loadVendorRows(materialIds);
+    await loadVendorOffers(materialIds, selectedPr?.id);
   };
 
   const removeLineItem = (index: number) => {
     setLineItems((rows) => rows.filter((_, i) => i !== index));
     setLineVendorByIndex((prev) => {
       const next: Record<number, string> = {};
+      Object.entries(prev).forEach(([k, v]) => {
+        const i = Number(k);
+        if (i < index) next[i] = v;
+        else if (i > index) next[i - 1] = v;
+      });
+      return next;
+    });
+    setLineVendorsByIndex((prev) => {
+      const next: Record<number, string[]> = {};
       Object.entries(prev).forEach(([k, v]) => {
         const i = Number(k);
         if (i < index) next[i] = v;
@@ -322,11 +381,51 @@ export function POWizardPage() {
     return vendorRows.find((r) => r.materialId === materialId)?.vendors ?? [];
   };
 
+  const offersForLineIndex = (index: number) => {
+    const row = lineItems[index];
+    return offersForMaterialId(row?.materialId, vendorOfferRows);
+  };
+
+  const getVendorQuote = (
+    lineIdx: number,
+    materialId: string | undefined,
+    vendorId: string,
+    row: PoLineItemDto
+  ) => {
+    const offer = offersForMaterialId(materialId, vendorOfferRows).find((o) => o.vendorId === vendorId);
+    const override = lineVendorQuotesByIndex[lineIdx]?.[vendorId];
+    const resolved = offer
+      ? resolveOfferQuote(offer, override)
+      : { rate: override?.rate ?? null, gstPercent: override?.gstPercent ?? row.gstPercent ?? 18 };
+    return {
+      rate: resolved.rate ?? row.rate,
+      gstPercent: resolved.gstPercent,
+    };
+  };
+
+  const handleVendorQuoteChange = (
+    lineIndex: number,
+    vendorId: string,
+    patch: VendorQuoteOverride
+  ) => {
+    setLineVendorQuotesByIndex((prev) => ({
+      ...prev,
+      [lineIndex]: {
+        ...(prev[lineIndex] || {}),
+        [vendorId]: { ...(prev[lineIndex]?.[vendorId] || {}), ...patch },
+      },
+    }));
+  };
+
   const activeLineIndexes = lineItems
     .map((_, i) => i)
     .filter((i) => !skippedLines[i]);
   const assignedVendorIds = [
-    ...new Set(activeLineIndexes.map((i) => lineVendorByIndex[i]).filter(Boolean)),
+    ...new Set(
+      activeLineIndexes
+        .flatMap((i) => lineVendorsByIndex[i] || (lineVendorByIndex[i] ? [lineVendorByIndex[i]] : []))
+        .filter(Boolean)
+    ),
   ];
   const allActiveLinesHaveVendor =
     activeLineIndexes.length > 0 &&
@@ -336,6 +435,8 @@ export function POWizardPage() {
     setSelectingPr(true);
     setSelectedPr(pr);
     setLineVendorByIndex({});
+    setLineVendorsByIndex({});
+    setLineVendorQuotesByIndex({});
     setSkippedLines({});
     setQuotations([]);
     setLineItems([]);
@@ -351,16 +452,19 @@ export function POWizardPage() {
         setSelectedMr(null);
       }
       const preview = await loadQuotations.mutateAsync(pr.id);
+      if (preview.comparison) setComparison(preview.comparison);
+      if (preview.data?.length) setQuotations(preview.data);
       const items = preview.lineItems?.length ? preview.lineItems : [];
       setLineItems(items);
       if (mr) {
         const ids =
           mr.items?.map((i) => i.materialId || i.material?.id).filter(Boolean) ||
           (mr.materialId || mr.material?.id ? [mr.materialId || mr.material?.id] : []);
-        await loadVendorRows(ids as string[]);
+        await loadVendorOffers(ids as string[], pr.id);
         if (mr.projectId) await loadProjectBilling(mr.projectId);
       } else {
         setVendorRows([]);
+        setVendorOfferRows([]);
       }
       setStep(1);
     } finally {
@@ -377,29 +481,85 @@ export function POWizardPage() {
   }, [preselectedPrId, openPurchaseRequests, prLoading, selectedPr, selectingPr]);
 
   useEffect(() => {
-    if (step !== 1 || !lineItems.length || !vendorRows.length) return;
-    setLineVendorByIndex((prev) => {
+    if (step !== 1 || !lineItems.length || !vendorOfferRows.length) return;
+    setLineVendorsByIndex((prev) => {
       const next = { ...prev };
       let changed = false;
       lineItems.forEach((row, i) => {
-        if (skippedLines[i] || next[i]) return;
-        const opts =
-          vendorRows.find((r) => r.materialId === row.materialId)?.vendors ?? [];
-        if (opts.length === 1) {
-          next[i] = opts[0].id;
+        if (skippedLines[i] || (next[i]?.length ?? 0) > 0) return;
+        const offers = offersForMaterialId(row.materialId, vendorOfferRows);
+        if (offers.length === 1) {
+          next[i] = [offers[0].vendorId];
           changed = true;
         }
       });
       return changed ? next : prev;
     });
-  }, [step, lineItems, vendorRows, skippedLines]);
+  }, [step, lineItems, vendorOfferRows, skippedLines]);
 
-  const continueFromVendorAssign = () => {
-    if (!allActiveLinesHaveVendor) {
-      toast.error('Select a vendor for each line you are ordering (or skip lines with no vendor)');
+  useEffect(() => {
+    if (step !== 3 || !lineItems.length || !vendorOfferRows.length) return;
+    setLineVendorByIndex((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      lineItems.forEach((row, i) => {
+        if (skippedLines[i] || next[i]) return;
+        const offers = offersForMaterialId(row.materialId, vendorOfferRows);
+        if (offers.length === 1) {
+          next[i] = offers[0].vendorId;
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [step, lineItems, vendorOfferRows, skippedLines]);
+
+  const allActiveLinesHaveRatesForCompare =
+    activeLineIndexes.length > 0 &&
+    activeLineIndexes.every((i) => {
+      const row = lineItems[i];
+      const offers = offersForLineIndex(i);
+      const quotes = lineVendorQuotesByIndex[i] || {};
+      return offers.some((offer) => effectiveBreakdown(offer, row.quantity, quotes[offer.vendorId]));
+    });
+
+  const allActiveLinesHaveVendorSelected =
+    activeLineIndexes.length > 0 &&
+    activeLineIndexes.every((i) => (lineVendorsByIndex[i]?.length ?? 0) > 0);
+
+  const runCompare = () => {
+    if (!allActiveLinesHaveRatesForCompare) {
+      toast.error('Enter quoted rate and GST for at least one vendor on each product');
       return;
     }
-    const firstVendorId = lineVendorByIndex[activeLineIndexes[0]];
+    const next: Record<number, string[]> = {};
+    activeLineIndexes.forEach((i) => {
+      const row = lineItems[i];
+      const offers = offersForLineIndex(i);
+      const quotes = lineVendorQuotesByIndex[i] || {};
+      const best = bestOfferForQuantity(offers, row.quantity, quotes);
+      if (best) next[i] = [best.vendorId];
+    });
+    setLineVendorsByIndex(next);
+    setStep(2);
+  };
+
+  const confirmVendorSelection = () => {
+    if (!allActiveLinesHaveVendorSelected) {
+      toast.error('Select a vendor for each product');
+      return;
+    }
+    for (const i of activeLineIndexes) {
+      const row = lineItems[i];
+      const vendorId = lineVendorsByIndex[i]?.[0];
+      if (!vendorId) continue;
+      const { rate } = getVendorQuote(i, row.materialId, vendorId, row);
+      if (!rate || rate <= 0) {
+        toast.error(`Missing rate for selected vendor on ${row.description}`);
+        return;
+      }
+    }
+    const firstVendorId = lineVendorsByIndex[activeLineIndexes[0]]?.[0];
     const quote = quotations.find((q) => q.vendorId === firstVendorId);
     if (quote?.terms) setPaymentTerms(quote.terms);
     const skipped = Object.values(skippedLines).filter(Boolean).length;
@@ -408,16 +568,48 @@ export function POWizardPage() {
         `${skipped} line(s) skipped — order the rest; add vendors in Vendors admin for skipped items`
       );
     }
-    // Compact to only lines being ordered
-    const keptItems = activeLineIndexes.map((i) => lineItems[i]);
-    const keptVendors: Record<number, string> = {};
-    activeLineIndexes.forEach((oldIdx, newIdx) => {
-      keptVendors[newIdx] = lineVendorByIndex[oldIdx];
+
+    const expandedItems: PoLineItemDto[] = [];
+    const expandedVendors: Record<number, string> = {};
+    let newIdx = 0;
+
+    activeLineIndexes.forEach((oldIdx) => {
+      const row = lineItems[oldIdx];
+      const vendorIds = lineVendorsByIndex[oldIdx]?.filter(Boolean) ?? [];
+      if (!vendorIds.length) return;
+
+      if (vendorIds.length === 1) {
+        const { rate, gstPercent } = getVendorQuote(oldIdx, row.materialId, vendorIds[0], row);
+        const totals = computePoLineTotals(row.quantity, rate, gstPercent);
+        expandedItems.push({ ...row, rate, gstPercent, amount: totals.lineTotal });
+        expandedVendors[newIdx++] = vendorIds[0];
+        return;
+      }
+
+      let remaining = row.quantity;
+      vendorIds.forEach((vendorId, vi) => {
+        const qty =
+          vi === vendorIds.length - 1 ? remaining : Math.floor(row.quantity / vendorIds.length);
+        remaining -= qty;
+        if (qty <= 0) return;
+        const { rate, gstPercent } = getVendorQuote(oldIdx, row.materialId, vendorId, row);
+        const totals = computePoLineTotals(qty, rate, gstPercent);
+        expandedItems.push({
+          ...row,
+          quantity: qty,
+          rate,
+          gstPercent,
+          amount: totals.lineTotal,
+        });
+        expandedVendors[newIdx++] = vendorId;
+      });
     });
-    setLineItems(keptItems);
-    setLineVendorByIndex(keptVendors);
+
+    setLineItems(expandedItems);
+    setLineVendorByIndex(expandedVendors);
+    setLineVendorsByIndex({});
     setSkippedLines({});
-    setStep(2);
+    setStep(3);
   };
 
   const l1VendorId =
@@ -485,14 +677,18 @@ export function POWizardPage() {
                           )}
                           onClick={() => selectPurchaseRequest(pr)}
                         >
-                          <p className="font-medium">{pr.prNumber}</p>
-                          <p className="text-sm text-ink-secondary">
-                            {pr.materialRequest?.indentNumber ?? 'Material request'} ·{' '}
-                            {pr.project?.code}
-                          </p>
-                          <p className="text-xs text-ink-muted mt-1">
-                            Est. {formatCurrency(pr.amountEstimate)}
-                          </p>
+                          <DetailFieldRow className="items-center gap-2">
+                            <p className="font-medium">{pr.prNumber}</p>
+                          </DetailFieldRow>
+                          <DetailFieldRow className="text-sm text-ink-secondary mt-1">
+                            <DetailFieldInline label="Indent">
+                              {pr.materialRequest?.indentNumber ?? 'Material request'}
+                            </DetailFieldInline>
+                            <DetailFieldInline label="Project">{pr.project?.code}</DetailFieldInline>
+                            <DetailFieldInline label="Est.">
+                              {formatCurrency(pr.amountEstimate)}
+                            </DetailFieldInline>
+                          </DetailFieldRow>
                         </Card>
                       ))}
                 </div>
@@ -513,171 +709,66 @@ export function POWizardPage() {
                 requestingProjectId={selectedPr?.projectId || selectedMr?.projectId}
                 className="mb-2"
               />
-              <p className="text-xs text-ink-secondary mb-2">
-                Assign a vendor per line — different vendors allowed per material.
-              </p>
-              <div className="flex flex-wrap gap-2 mb-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    const next: Record<number, string> = { ...lineVendorByIndex };
-                    lineItems.forEach((_, i) => {
-                      if (skippedLines[i]) return;
-                      const options = vendorsForLineIndex(i);
-                      if (options.length === 1) {
-                        next[i] = options[0].id;
-                      } else if (options.length > 1) {
-                        next[i] = options[0].id;
-                      }
-                    });
-                    setLineVendorByIndex(next);
-                    const vendorCount = new Set(
-                      Object.entries(next)
-                        .filter(([idx]) => !skippedLines[Number(idx)])
-                        .map(([, id]) => id)
-                    ).size;
-                    toast.success(
-                      vendorCount > 1
-                        ? `Split across ${vendorCount} vendors — separate POs on submit`
-                        : 'All lines assigned to one vendor'
-                    );
-                  }}
-                >
-                  Split PO by vendor
-                </Button>
-              </div>
-              <div className="procurement-landscape-scroll panel overflow-x-auto overflow-y-visible">
-                <table className="data-table min-w-[640px]">
-                  <thead>
-                    <tr className="bg-surface-muted/40">
-                      <th>Material</th>
-                      <th className="w-16">Qty</th>
-                      <th className="min-w-[280px]">Vendor</th>
-                      <th className="w-28" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lineItems.map((row, i) => {
-                      const options = vendorsForLineIndex(i);
-                      const selectedId = lineVendorByIndex[i] || '';
-                      const isSkipped = !!skippedLines[i];
-                      return (
-                        <tr key={i} className={cn(isSkipped && 'opacity-60')}>
-                          <td>
-                            <p className="font-medium">{row.description}</p>
-                            {options.length === 0 && !isSkipped && (
-                              <p className="text-[10px] text-danger">No vendor mapped</p>
-                            )}
-                            {isSkipped && (
-                              <p className="text-[10px] text-amber-700 font-medium">Skipped</p>
-                            )}
-                          </td>
-                          <td className="tabular-nums">{row.quantity}</td>
-                          <td className="align-top min-w-[280px]">
-                            {!isSkipped && (
-                              <div className="space-y-2 py-1">
-                                {options.length > 0 && (
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {options.map((v) => (
-                                      <button
-                                        key={v.id}
-                                        type="button"
-                                        onClick={() =>
-                                          setLineVendorByIndex((prev) => ({ ...prev, [i]: v.id }))
-                                        }
-                                        className={cn(
-                                          'text-[11px] leading-tight px-2.5 py-1.5 rounded-lg border text-left max-w-full',
-                                          selectedId === v.id
-                                            ? 'border-bekem-accent bg-bekem-accent/10 text-bekem-accent font-semibold'
-                                            : 'border-surface-border text-ink-secondary hover:border-bekem-accent/40'
-                                        )}
-                                      >
-                                        <span className="block truncate">{v.name}</span>
-                                        {v.gstNumber && (
-                                          <span className="block text-[10px] opacity-70 truncate">
-                                            {v.gstNumber}
-                                          </span>
-                                        )}
-                                      </button>
-                                    ))}
-                                  </div>
-                                )}
-                                <SearchSelect
-                                  compact
-                                  value={selectedId || null}
-                                  onChange={(id) =>
-                                    setLineVendorByIndex((prev) => ({ ...prev, [i]: id }))
-                                  }
-                                  searchPath="/vendors/search"
-                                  searchParams={
-                                    row.materialId ? { materialId: row.materialId } : undefined
-                                  }
-                                  options={options.map((v) => ({
-                                    id: v.id,
-                                    label: v.name,
-                                    sublabel: v.gstNumber ? `GST ${v.gstNumber}` : undefined,
-                                  }))}
-                                  placeholder={
-                                    options.length
-                                      ? 'Or search another vendor…'
-                                      : 'Search vendor by name or GST…'
-                                  }
-                                  emptyMessage="No vendors found"
-                                />
-                                {selectedId && (
-                                  <p className="text-[10px] text-emerald-700 font-medium">
-                                    Selected:{' '}
-                                    {options.find((v) => v.id === selectedId)?.name ||
-                                      'Vendor assigned'}
-                                  </p>
-                                )}
-                              </div>
-                            )}
-                          </td>
-                          <td>
-                            {(options.length === 0 || isSkipped) && (
-                              <Button
-                                type="button"
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => {
-                                  setSkippedLines((prev) => {
-                                    const next = { ...prev };
-                                    if (next[i]) {
-                                      delete next[i];
-                                    } else {
-                                      next[i] = true;
-                                      setLineVendorByIndex((v) => {
-                                        const nv = { ...v };
-                                        delete nv[i];
-                                        return nv;
-                                      });
-                                    }
-                                    return next;
-                                  });
-                                }}
-                              >
-                                {isSkipped ? 'Include' : 'Skip'}
-                              </Button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <PoMaterialVendorAssign
+                lineItems={lineItems}
+                lineVendorsByIndex={lineVendorsByIndex}
+                vendorQuotesByLineIndex={lineVendorQuotesByIndex}
+                skippedLines={skippedLines}
+                offersForLineIndex={offersForLineIndex}
+                onVendorsChange={(i, vendorIds) =>
+                  setLineVendorsByIndex((prev) => ({ ...prev, [i]: vendorIds }))
+                }
+                onVendorQuoteChange={handleVendorQuoteChange}
+                showVendorSelection={false}
+                onSkipToggle={(i) => {
+                  setSkippedLines((prev) => {
+                    const next = { ...prev };
+                    if (next[i]) {
+                      delete next[i];
+                    } else {
+                      next[i] = true;
+                      setLineVendorsByIndex((v) => {
+                        const nv = { ...v };
+                        delete nv[i];
+                        return nv;
+                      });
+                    }
+                    return next;
+                  });
+                }}
+                onSplitByVendor={() => {
+                  const next: Record<number, string[]> = { ...lineVendorsByIndex };
+                  lineItems.forEach((row, i) => {
+                    if (skippedLines[i]) return;
+                    const offers = offersForLineIndex(i);
+                    const quotes = lineVendorQuotesByIndex[i];
+                    const best = bestOfferForQuantity(offers, row.quantity, quotes);
+                    if (best) {
+                      next[i] = [best.vendorId];
+                    }
+                  });
+                  setLineVendorsByIndex(next);
+                  const vendorCount = new Set(
+                    Object.entries(next)
+                      .filter(([idx]) => !skippedLines[Number(idx)])
+                      .flatMap(([, ids]) => ids)
+                  ).size;
+                  toast.success(
+                    vendorCount > 1
+                      ? `Split across ${vendorCount} vendors — separate POs on submit`
+                      : 'All lines assigned to suggested vendors'
+                  );
+                }}
+              />
               <Button
                 className="mt-4"
                 variant="accent"
                 size="lg"
                 accentColor={accent}
-                disabled={!allActiveLinesHaveVendor}
-                onClick={continueFromVendorAssign}
+                disabled={!allActiveLinesHaveRatesForCompare}
+                onClick={runCompare}
               >
-                Continue
+                Compare
               </Button>
             </motion.div>
           )}
@@ -685,24 +776,26 @@ export function POWizardPage() {
           {step === 2 && (
             <motion.div key="s2" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}>
               <PurchaseHistoryPanel history={purchaseHistory} className="mb-4" />
-              <p className="text-sm text-ink-secondary mb-3">
-                Compare top vendor quotations (L1 highlighted)
-              </p>
-              {loadQuotations.isPending ? (
-                <div className="h-32 bg-surface-muted rounded-xl animate-pulse" />
-              ) : comparison ? (
-                <QuotationComparisonTable comparison={comparison} />
-              ) : (
-                <p className="text-sm text-ink-muted">No comparison data yet.</p>
-              )}
+              <PoProductCompareStep
+                lineItems={lineItems}
+                activeLineIndexes={activeLineIndexes}
+                skippedLines={skippedLines}
+                offersForLineIndex={offersForLineIndex}
+                vendorQuotesByLineIndex={lineVendorQuotesByIndex}
+                lineVendorsByIndex={lineVendorsByIndex}
+                onSelectVendor={(lineIndex, vendorId) =>
+                  setLineVendorsByIndex((prev) => ({ ...prev, [lineIndex]: [vendorId] }))
+                }
+              />
               <Button
                 className="mt-4"
                 variant="accent"
                 size="lg"
                 accentColor={accent}
-                onClick={() => setStep(3)}
+                disabled={!allActiveLinesHaveVendorSelected}
+                onClick={confirmVendorSelection}
               >
-                Continue
+                Continue with selected vendors
               </Button>
             </motion.div>
           )}
@@ -868,8 +961,14 @@ export function POWizardPage() {
                 variant="accent"
                 size="lg"
                 accentColor={accent}
-                disabled={!lineItems.length}
-                onClick={() => setStep(4)}
+                disabled={!lineItems.length || !allActiveLinesHaveVendor}
+                onClick={() => {
+                  if (!allActiveLinesHaveVendor) {
+                    toast.error('Assign a vendor to every line item before continuing');
+                    return;
+                  }
+                  setStep(4);
+                }}
               >
                 Continue
               </Button>
@@ -1035,39 +1134,55 @@ export function POWizardPage() {
                 variant="accent"
                 size="lg"
                 accentColor={accent}
-                disabled={!paymentTerms.trim() || !expectedDeliveryDate}
-                onClick={() => setStep(5)}
+                disabled={
+                  !paymentTerms.trim() || !expectedDeliveryDate || !allActiveLinesHaveVendor
+                }
+                onClick={() => {
+                  if (!allActiveLinesHaveVendor) {
+                    toast.error('Assign a vendor to every line item before reviewing');
+                    return;
+                  }
+                  setStep(5);
+                }}
               >
                 Continue
               </Button>
             </motion.div>
           )}
 
-          {step === 5 && selectedMr && allActiveLinesHaveVendor && (
+          {step === 5 && selectedPr && !allActiveLinesHaveVendor && (
+            <motion.div key="s5-missing" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}>
+              <EmptyState
+                title="Missing vendor on one or more lines"
+                description="Every line item needs a vendor before you can review the purchase order."
+                actionLabel="Back to line items"
+                onAction={() => setStep(3)}
+              />
+            </motion.div>
+          )}
+
+          {step === 5 && selectedPr && allActiveLinesHaveVendor && (
             <motion.div key="s5" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}>
-              <Card className="space-y-3 mb-4">
-                <div>
-                  <p className="text-xs text-ink-secondary">Indent</p>
-                  <p className="font-medium">{selectedMr.indentNumber}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-ink-secondary">Purchase request</p>
-                  <p className="font-medium">{selectedPr?.prNumber}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-ink-secondary">Payment terms</p>
-                  <p className="font-medium">{paymentTerms}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-ink-secondary">Expected delivery date</p>
-                  <p className="font-medium">{expectedDeliveryDate || '—'}</p>
-                </div>
-                {attachments.length > 0 && (
-                  <div>
-                    <p className="text-xs text-ink-secondary">Documents</p>
-                    <p className="text-sm">{attachments.map((a) => a.name).join(', ')}</p>
-                  </div>
-                )}
+              <Card className="mb-4">
+                <DetailFieldGrid>
+                  <DetailField label="Indent" labelClassName="text-ink-secondary">
+                    {selectedMr?.indentNumber ?? '—'}
+                  </DetailField>
+                  <DetailField label="Purchase request" labelClassName="text-ink-secondary">
+                    {selectedPr?.prNumber}
+                  </DetailField>
+                  <DetailField label="Payment terms" labelClassName="text-ink-secondary">
+                    {paymentTerms}
+                  </DetailField>
+                  <DetailField label="Expected delivery date" labelClassName="text-ink-secondary">
+                    {expectedDeliveryDate || '—'}
+                  </DetailField>
+                  {attachments.length > 0 && (
+                    <DetailField label="Documents" fullWidth labelClassName="text-ink-secondary" valueClassName="text-sm font-normal">
+                      {attachments.map((a) => a.name).join(', ')}
+                    </DetailField>
+                  )}
+                </DetailFieldGrid>
               </Card>
 
               {assignedVendorIds.map((vendorId) => {
@@ -1079,18 +1194,35 @@ export function POWizardPage() {
                   .filter(({ i }) => lineVendorByIndex[i] === vendorId);
                 const vendorSubtotal = vendorLines.reduce((s, { row }) => s + lineTotal(row), 0);
                 return (
-                  <Card key={vendorId} className="space-y-2 mb-3">
-                    <p className="text-xs text-ink-secondary">PO for vendor</p>
-                    <p className="font-medium">{vendor?.name ?? 'Vendor'}</p>
-                    {vendor?.address && (
-                      <p className="text-xs text-ink-muted whitespace-pre-line">{vendor.address}</p>
-                    )}
-                    {vendorLines.map(({ row, i }) => (
-                      <p key={i} className="text-sm">
-                        {row.description} — {row.quantity} × {formatCurrency(row.rate)}
-                      </p>
-                    ))}
-                    <p className="text-sm font-semibold">Subtotal: {formatCurrency(vendorSubtotal)}</p>
+                  <Card key={vendorId} className="mb-3">
+                    <DetailFieldGrid>
+                      <DetailField label="PO for vendor" labelClassName="text-ink-secondary">
+                        {vendor?.name ?? 'Vendor'}
+                      </DetailField>
+                      {vendor?.address && (
+                        <DetailField
+                          label="Address"
+                          fullWidth
+                          labelClassName="text-ink-secondary"
+                          valueClassName="text-xs text-ink-muted font-normal whitespace-pre-line"
+                        >
+                          {vendor.address}
+                        </DetailField>
+                      )}
+                      {vendorLines.map(({ row, i }) => (
+                        <DetailField
+                          key={i}
+                          label={row.description}
+                          labelClassName="text-ink-secondary"
+                          valueClassName="text-sm"
+                        >
+                          {row.quantity} × {formatCurrency(row.rate)}
+                        </DetailField>
+                      ))}
+                      <DetailField label="Subtotal" valueClassName="text-sm font-semibold">
+                        {formatCurrency(vendorSubtotal)}
+                      </DetailField>
+                    </DetailFieldGrid>
                   </Card>
                 );
               })}
@@ -1112,7 +1244,18 @@ export function POWizardPage() {
             </motion.div>
           )}
 
-          {step === 6 && selectedMr && allActiveLinesHaveVendor && (
+          {step === 6 && selectedPr && !allActiveLinesHaveVendor && (
+            <motion.div key="s6-missing" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}>
+              <EmptyState
+                title="Missing vendor on one or more lines"
+                description="Go back and assign a vendor to every line item before previewing the PO."
+                actionLabel="Back to line items"
+                onAction={() => setStep(3)}
+              />
+            </motion.div>
+          )}
+
+          {step === 6 && selectedPr && allActiveLinesHaveVendor && (
             <motion.div key="s6" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}>
               <p className="text-sm text-ink-secondary mb-3">
                 Review the purchase order exactly as the vendor will receive it. Confirm only when
@@ -1145,7 +1288,11 @@ export function POWizardPage() {
                           deliveryAddressType === 'other'
                             ? deliveryAddressOtherText
                             : deliveryAddress,
-                        referenceNote: referenceNote || selectedMr.indentNumber,
+                        referenceNote:
+                          referenceNote ||
+                          selectedMr?.indentNumber ||
+                          selectedPr?.prNumber ||
+                          '',
                         expectedDeliveryDate,
                         lineItems: vendorLines,
                       }}

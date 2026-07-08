@@ -235,43 +235,43 @@ export function ExecutiveHomePage() {
             <EmptyState title="No projects match filters" description="Clear filters to see all projects." />
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                {filteredProjects.map((p) => (
-                  <div
-                    key={p.id}
-                    className="panel p-3 cursor-pointer hover:border-bekem-accent/30 transition-colors"
-                    onClick={() => navigate(`/admin/projects`)}
-                  >
-                    <div className="flex justify-between items-start gap-2">
-                      <div>
-                        <p className="font-semibold text-ink">
-                          {p.code} — {p.name}
-                        </p>
-                        <p className="text-xs text-ink-muted mt-0.5">{p.location}</p>
-                      </div>
-                      <StatusBadge status={p.status} />
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
-                      <div>
-                        <p className="text-ink-muted">Open POs</p>
-                        <p className="font-semibold tabular-nums">{p.openPoCount}</p>
-                      </div>
-                      <div>
-                        <p className="text-ink-muted">Open PRs</p>
-                        <p className="font-semibold tabular-nums">{p.openPrCount}</p>
-                      </div>
-                      <div>
-                        <p className="text-ink-muted">Indents</p>
-                        <p className="font-semibold tabular-nums">{p.pendingIndentCount}</p>
-                      </div>
-                    </div>
-                    <p className="text-xs text-ink-secondary mt-2">
-                      PO value {formatCurrency(p.openPoValue)}
-                      {p.healthScore != null ? ` · Health ${p.healthScore}%` : ''}
-                      {p.deployPct != null ? ` · Budget ${p.deployPct}%` : ''}
-                    </p>
-                  </div>
-                ))}
+              <div className="table-shell mb-4">
+                <table className="data-table min-w-[72rem]">
+                  <thead>
+                    <tr>
+                      <th>Code</th>
+                      <th>Project</th>
+                      <th>Location</th>
+                      <th>Status</th>
+                      <th className="num">Open POs</th>
+                      <th className="num">Open PRs</th>
+                      <th className="num">Indents</th>
+                      <th className="num">PO Value</th>
+                      <th className="num">Health</th>
+                      <th className="num">Budget</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProjects.map((p) => (
+                      <tr
+                        key={p.id}
+                        className="cursor-pointer"
+                        onClick={() => navigate(`/admin/projects`)}
+                      >
+                        <td className="cell-code whitespace-nowrap">{p.code}</td>
+                        <td className="cell-text">{p.name}</td>
+                        <td className="cell-text">{p.location || '—'}</td>
+                        <td><StatusBadge status={p.status} /></td>
+                        <td className="num tabular-nums">{p.openPoCount}</td>
+                        <td className="num tabular-nums">{p.openPrCount}</td>
+                        <td className="num tabular-nums">{p.pendingIndentCount}</td>
+                        <td className="num tabular-nums whitespace-nowrap">{formatCurrency(p.openPoValue)}</td>
+                        <td className="num tabular-nums">{p.healthScore ?? '—'}{p.healthScore != null ? '%' : ''}</td>
+                        <td className="num tabular-nums">{p.deployPct ?? '—'}{p.deployPct != null ? '%' : ''}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
               {dashboard?.pagination && (
                 <PaginationBar
@@ -302,32 +302,37 @@ export function ExecutiveHomePage() {
             />
           }
         >
-          <div className="space-y-2">
-            {filteredPos.map((po) => (
-              <div
-                key={po.id}
-                className="data-row"
-                onClick={() => navigate(`/purchase-orders/${po.id}`)}
-              >
-                <div>
-                  <p className="font-semibold text-ink">{po.poNumber || po.draftRef || 'Draft PO'}</p>
-                  <p className="text-sm text-ink-secondary mt-0.5">
-                    {po.vendor?.name ?? 'Vendor TBD'} · {formatCurrency(po.amount)}
-                  </p>
-                  {po.fulfillmentStatus && po.status === 'APPROVED' && (
-                    <div className="mt-1">
-                      <FulfillmentStatusChip status={po.fulfillmentStatus} />
-                    </div>
-                  )}
-                  {po.status === 'APPROVED' && po.emailStatus && (
-                    <div className="mt-1">
-                      <PoEmailStatusChip status={po.emailStatus} sentAt={po.emailSentAt} />
-                    </div>
-                  )}
-                </div>
-                <ChevronRight className="h-4 w-4 text-ink-muted" />
-              </div>
-            ))}
+          <div className="table-shell">
+            <table className="data-table min-w-[64rem]">
+              <thead>
+                <tr>
+                  <th>PO No</th>
+                  <th>Vendor</th>
+                  <th className="num">Amount</th>
+                  <th>Status</th>
+                  <th>Fulfillment</th>
+                  <th>Email</th>
+                  <th className="w-10" />
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPos.map((po) => (
+                  <tr
+                    key={po.id}
+                    className="cursor-pointer"
+                    onClick={() => navigate(`/purchase-orders/${po.id}`)}
+                  >
+                    <td className="cell-code whitespace-nowrap">{po.poNumber || po.draftRef || 'Draft PO'}</td>
+                    <td className="cell-text">{po.vendor?.name ?? 'Vendor TBD'}</td>
+                    <td className="num tabular-nums whitespace-nowrap">{formatCurrency(po.amount)}</td>
+                    <td><StatusBadge status={po.status} /></td>
+                    <td>{po.fulfillmentStatus && po.status === 'APPROVED' ? <FulfillmentStatusChip status={po.fulfillmentStatus} /> : '—'}</td>
+                    <td>{po.status === 'APPROVED' && po.emailStatus ? <PoEmailStatusChip status={po.emailStatus} sentAt={po.emailSentAt} /> : '—'}</td>
+                    <td className="text-right"><ChevronRight className="h-4 w-4 text-ink-muted inline-block" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </ListQueryBoundary>
       </section>

@@ -29,6 +29,7 @@ import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
 
 import { Card } from '@/components/ui/Card';
+import { DetailField, DetailFieldGrid } from '@/components/ui/DetailFields';
 
 import { Button } from '@/components/ui/Button';
 
@@ -338,95 +339,59 @@ export function ProcurementDecisionDetailPage({ listPath }: ProcurementDecisionD
 
           <>
 
-            <Card className="space-y-3 mb-3">
+            <Card className="mb-3">
 
-              <div className="grid sm:grid-cols-2 gap-3">
+              <DetailFieldGrid>
 
                 {decision.prNumber && (
 
-                  <div>
-
-                    <p className="text-xs text-ink-muted">Purchase request</p>
-
-                    <p className="font-medium">{decision.prNumber}</p>
-
-                  </div>
+                  <DetailField label="Purchase request">{decision.prNumber}</DetailField>
 
                 )}
 
-                <div>
+                <DetailField label="Project">
 
-                  <p className="text-xs text-ink-muted">Project</p>
+                  {decision.projectCode} — {decision.projectName}
 
-                  <p className="font-medium">
+                </DetailField>
 
-                    {decision.projectCode} — {decision.projectName}
+                <DetailField label="Requested date">
 
-                  </p>
+                  {decision.indentDate ? formatDate(decision.indentDate) : '—'}
 
-                </div>
+                </DetailField>
 
-                <div>
+                <DetailField label="Priority">{priorityLabel(decision.priority)}</DetailField>
 
-                  <p className="text-xs text-ink-muted">Requested date</p>
+                <DetailField label="Requested by">{decision.requestedBy || '—'}</DetailField>
 
-                  <p className="font-medium">
+                <DetailField label="Estimated value">
 
-                    {decision.indentDate ? formatDate(decision.indentDate) : '—'}
+                  {formatCurrency(decision.estimatedValue)}
 
-                  </p>
+                </DetailField>
 
-                </div>
+                {decision.purpose && (
 
-                <div>
+                  <DetailField label="Reason for request" fullWidth valueClassName="text-sm font-normal">
 
-                  <p className="text-xs text-ink-muted">Priority</p>
+                    {decision.purpose}
 
-                  <p className="font-medium">{priorityLabel(decision.priority)}</p>
+                  </DetailField>
 
-                </div>
+                )}
 
-                <div>
+                {decision.pmRemarks && (
 
-                  <p className="text-xs text-ink-muted">Requested by</p>
+                  <DetailField label="PM remarks" fullWidth valueClassName="text-sm font-normal">
 
-                  <p className="font-medium">{decision.requestedBy || '—'}</p>
+                    {decision.pmRemarks}
 
-                </div>
+                  </DetailField>
 
-                <div>
+                )}
 
-                  <p className="text-xs text-ink-muted">Estimated value</p>
-
-                  <p className="font-medium">{formatCurrency(decision.estimatedValue)}</p>
-
-                </div>
-
-              </div>
-
-              {decision.purpose && (
-
-                <div>
-
-                  <p className="text-xs text-ink-muted">Reason for request</p>
-
-                  <p className="text-sm mt-0.5">{decision.purpose}</p>
-
-                </div>
-
-              )}
-
-              {decision.pmRemarks && (
-
-                <div>
-
-                  <p className="text-xs text-ink-muted">PM remarks</p>
-
-                  <p className="text-sm mt-0.5">{decision.pmRemarks}</p>
-
-                </div>
-
-              )}
+              </DetailFieldGrid>
 
             </Card>
 

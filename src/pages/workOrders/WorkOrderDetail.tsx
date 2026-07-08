@@ -18,6 +18,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { StatusTimeline } from '@/components/StatusTimeline';
 import { Input, Textarea } from '@/components/ui/Input';
 import { SuccessScreen } from '@/components/SuccessScreen';
+import { DetailField, DetailFieldGrid } from '@/components/ui/DetailFields';
 import { forbiddenQueryOptions, isForbiddenError, useRedirectOnForbidden } from '@/lib/forbiddenRedirect';
 import { getRoleHomePath } from '@/lib/rolePaths';
 import { downloadExport } from '@/lib/downloadExport';
@@ -256,33 +257,28 @@ export function WorkOrderDetailPage() {
         </Button>
       </header>
 
-      <Card className="space-y-3 mb-3">
-        <div>
-          <p className="text-xs text-gray-500">Scope</p>
-          <p className="font-medium">{wo.scope}</p>
-        </div>
-        <div>
-          <p className="text-xs text-gray-500">Contractor</p>
-          <p className="font-medium">{wo.vendor?.name}</p>
-        </div>
-        <div>
-          <p className="text-xs text-gray-500">Contract value</p>
-          <p className="font-medium text-lg">{formatCurrency(wo.contractValue)}</p>
-        </div>
-        {wo.purchaseOrder && (
-          <div>
-            <p className="text-xs text-gray-500">Linked PO</p>
-            <p className="font-medium">{wo.purchaseOrder.poNumber}</p>
-          </div>
-        )}
-        {wo.project && (
-          <div>
-            <p className="text-xs text-gray-500">Project</p>
-            <p className="font-medium">
+      <Card className="mb-3">
+        <DetailFieldGrid>
+          <DetailField label="Scope" labelClassName="text-gray-500">
+            {wo.scope}
+          </DetailField>
+          <DetailField label="Contractor" labelClassName="text-gray-500">
+            {wo.vendor?.name}
+          </DetailField>
+          <DetailField label="Contract value" labelClassName="text-gray-500" valueClassName="text-lg">
+            {formatCurrency(wo.contractValue)}
+          </DetailField>
+          {wo.purchaseOrder && (
+            <DetailField label="Linked PO" labelClassName="text-gray-500">
+              {wo.purchaseOrder.poNumber}
+            </DetailField>
+          )}
+          {wo.project && (
+            <DetailField label="Project" labelClassName="text-gray-500">
               {wo.project.code} — {wo.project.name}
-            </p>
-          </div>
-        )}
+            </DetailField>
+          )}
+        </DetailFieldGrid>
       </Card>
 
       {['ACCEPTED', 'IN_PROGRESS', 'CLOSED'].includes(wo.status) && (

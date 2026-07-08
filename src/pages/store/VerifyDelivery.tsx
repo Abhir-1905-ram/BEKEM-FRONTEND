@@ -10,7 +10,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ListQueryBoundary } from '@/components/ListQueryBoundary';
 import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 import { QuantityStepper } from '@/components/QuantityStepper';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ChevronRight } from 'lucide-react';
 
 export function VerifyDeliveryPage() {
   const accent = ROLE_COLORS[UserRole.STORE_INCHARGE].primary;
@@ -62,7 +62,7 @@ export function VerifyDeliveryPage() {
   if (selectedPo) {
     const project = selectedPo.purchaseRequest?.project;
     return (
-      <div className="page-container max-w-lg">
+      <div className="page-container max-w-4xl">
         <button
           type="button"
           onClick={() => setSelectedPo(null)}
@@ -89,21 +89,34 @@ export function VerifyDeliveryPage() {
         </div>
 
         <p className="text-sm font-medium mb-3">Verify quantities received at store gate</p>
-        <div className="space-y-3 mb-4">
-          {selectedPo.lineItems?.map((line) => (
-            <div key={line.id || line.materialId} className="panel p-3">
-              <p className="font-medium text-sm">{line.description}</p>
-              <p className="text-xs text-ink-muted mb-2">Ordered: {line.quantity}</p>
-              <QuantityStepper
-                value={receivedByLine[line.materialId!] ?? line.quantity}
-                onChange={(v) =>
-                  setReceivedByLine((prev) => ({ ...prev, [line.materialId!]: v }))
-                }
-                min={0}
-                max={line.quantity * 2}
-              />
-            </div>
-          ))}
+        <div className="table-shell mb-4">
+          <table className="data-table min-w-[44rem]">
+            <thead>
+              <tr>
+                <th>Material</th>
+                <th className="num">Ordered</th>
+                <th className="num">Verified</th>
+              </tr>
+            </thead>
+            <tbody>
+              {selectedPo.lineItems?.map((line) => (
+                <tr key={line.id || line.materialId}>
+                  <td className="cell-text">{line.description}</td>
+                  <td className="num tabular-nums">{line.quantity}</td>
+                  <td>
+                    <QuantityStepper
+                      value={receivedByLine[line.materialId!] ?? line.quantity}
+                      onChange={(v) =>
+                        setReceivedByLine((prev) => ({ ...prev, [line.materialId!]: v }))
+                      }
+                      min={0}
+                      max={line.quantity * 2}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
         <Input
@@ -128,7 +141,7 @@ export function VerifyDeliveryPage() {
   }
 
   return (
-    <div className="page-container max-w-3xl">
+    <div className="page-container max-w-full">
       <PageHeader
         title="Verify delivery"
         subtitle="Physical check at project store — does not update inventory"
@@ -147,22 +160,33 @@ export function VerifyDeliveryPage() {
           />
         }
       >
-        <div className="space-y-2">
-          {(orders ?? []).map((po) => (
-            <button
-              key={po.id}
-              type="button"
-              onClick={() => selectPo(po)}
-              className="panel w-full p-4 text-left hover:shadow-card-hover"
-            >
-              <p className="font-semibold">PO #{po.displayPoNumber || '—'}</p>
-              <p className="text-xs text-ink-muted mt-0.5">{po.procurementRef || po.poNumber}</p>
-              <p className="text-sm text-ink-secondary mt-1">
-                {po.vendor?.name} · {po.purchaseRequest?.project?.code}
-              </p>
-              <p className="text-xs text-ink-muted mt-1">{formatDate(po.createdAt)}</p>
-            </button>
-          ))}
+        <div className="table-shell">
+          <table className="data-table min-w-[64rem]">
+            <thead>
+              <tr>
+                <th>PO No</th>
+                <th>Reference</th>
+                <th>Vendor</th>
+                <th>Project</th>
+                <th>Date</th>
+                <th className="w-10" />
+              </tr>
+            </thead>
+            <tbody>
+              {(orders ?? []).map((po) => (
+                <tr key={po.id} className="cursor-pointer" onClick={() => selectPo(po)}>
+                  <td className="cell-code whitespace-nowrap">PO #{po.displayPoNumber || '—'}</td>
+                  <td className="cell-text whitespace-nowrap">{po.procurementRef || po.poNumber}</td>
+                  <td className="cell-text">{po.vendor?.name || '—'}</td>
+                  <td className="cell-text whitespace-nowrap">{po.purchaseRequest?.project?.code || '—'}</td>
+                  <td className="whitespace-nowrap">{formatDate(po.createdAt)}</td>
+                  <td className="text-right">
+                    <ChevronRight className="h-4 w-4 text-ink-muted inline-block" />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </ListQueryBoundary>
     </div>

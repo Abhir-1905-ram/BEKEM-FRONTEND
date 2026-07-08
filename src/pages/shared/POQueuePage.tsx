@@ -11,6 +11,7 @@ import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 import { AgeingBadge, daysSince } from '@/components/ui/AgeingBadge';
 import { PoEmailStatusChip } from '@/components/PoEmailStatusChip';
 import { WorkflowStatusTabs, type WorkflowStatusTab } from '@/components/WorkflowStatusTabs';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 
 interface POQueuePageProps {
   title: string;
@@ -62,7 +63,7 @@ export function POQueuePage({
   const rows = items?.items ?? [];
 
   return (
-    <div className="page-container max-w-4xl">
+    <div className="page-container max-w-full">
       <PageHeader title={title} subtitle={subtitle} />
 
       {queue === 'pm' && (
@@ -92,39 +93,59 @@ export function POQueuePage({
           />
         }
       >
-        <div className="space-y-2">
-          {(rows ?? []).map((po) => (
-            <button
-              key={po.id}
-              type="button"
-              className="data-row w-full text-left"
-              onClick={() => openPo(po.id)}
-            >
-              <div className="min-w-0">
-                <p className="font-semibold text-ink">
-                  {po.procurementRef || po.poNumber || 'Draft PO'}
-                </p>
-                <p className="text-sm text-ink-secondary mt-0.5">
-                  {po.vendor?.name} · {formatCurrency(po.amount)}
-                  {po.procurementRef && po.poNumber ? ` · ${po.poNumber}` : ''}
-                </p>
-                {po.approvedAsChairmanOverride && (
-                  <span className="text-[10px] font-bold uppercase text-amber-700 mt-1 inline-block">
-                    Approved in Chairman&apos;s absence
-                  </span>
-                )}
-                {po.status === 'APPROVED' && (
-                  <div className="mt-1">
-                    <PoEmailStatusChip status={po.emailStatus} sentAt={po.emailSentAt} />
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <AgeingBadge days={daysSince(po.createdAt)} />
-                <ChevronRight className="h-4 w-4 text-ink-muted" />
-              </div>
-            </button>
-          ))}
+        <div className="table-shell">
+          <table className="data-table min-w-[56rem]">
+            <thead>
+              <tr>
+                <th>PO / Ref</th>
+                <th>Vendor</th>
+                <th className="num">Amount</th>
+                <th>Age</th>
+                <th>Status</th>
+                <th>Email</th>
+                <th className="w-10" />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((po) => (
+                <tr
+                  key={po.id}
+                  className="cursor-pointer"
+                  onClick={() => openPo(po.id)}
+                >
+                  <td className="cell-code whitespace-nowrap">
+                    <div>{po.procurementRef || po.poNumber || 'Draft PO'}</div>
+                    {po.procurementRef && po.poNumber && (
+                      <div className="text-xs text-ink-muted">{po.poNumber}</div>
+                    )}
+                    {po.approvedAsChairmanOverride && (
+                      <span className="text-[10px] font-bold uppercase text-amber-700">
+                        Chairman override
+                      </span>
+                    )}
+                  </td>
+                  <td className="cell-text">{po.vendor?.name || '—'}</td>
+                  <td className="num tabular-nums whitespace-nowrap">{formatCurrency(po.amount)}</td>
+                  <td>
+                    <AgeingBadge days={daysSince(po.createdAt)} />
+                  </td>
+                  <td>
+                    <StatusBadge status={po.status} />
+                  </td>
+                  <td>
+                    {po.status === 'APPROVED' ? (
+                      <PoEmailStatusChip status={po.emailStatus} sentAt={po.emailSentAt} />
+                    ) : (
+                      '—'
+                    )}
+                  </td>
+                  <td className="text-right">
+                    <ChevronRight className="h-4 w-4 text-ink-muted inline-block" />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </ListQueryBoundary>
     </div>

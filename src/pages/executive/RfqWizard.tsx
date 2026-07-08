@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Download, Mail, MessageCircle } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import {
@@ -15,51 +15,26 @@ import {
 } from '@afios/shared';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { Input, Textarea } from '@/components/ui/Input';
+import { Input } from '@/components/ui/Input';
 import { StepIndicator } from '@/components/StepIndicator';
-import { SuccessScreen } from '@/components/SuccessScreen';
 import { EmptyState } from '@/components/EmptyState';
 import { PoWizardStockPanel } from '@/components/PoWizardStockPanel';
-import { QuotationComparisonTable } from '@/components/QuotationComparisonTable';
-import { PurchaseHistoryPanel } from '@/components/PurchaseHistoryPanel';
 import {
   VendorQuotationEditor,
   type VendorQuotationDraft,
-  computeDraftFinalCost,
 } from '@/components/VendorQuotationEditor';
-import { downloadExport } from '@/lib/downloadExport';
-import { pickL1VendorId } from '@/lib/quotationTotals';
+import { RfqVendorShareList, mergeAssignedVendors } from '@/components/RfqVendorShareList';
+import { draftsFromComparison, onlyAssignedDrafts } from '@/lib/rfqVendorAssignments';
 import { cn } from '@/lib/utils';
+
+import { DetailFieldInline, DetailFieldRow } from '@/components/ui/DetailFields';
 
 const STEPS = [
   'Choose request',
   'Items & stock',
   'Vendor quotations (3+)',
-  'Compare quotes',
   'Review & share',
 ];
-
-function draftsFromComparison(data: RfqComparisonDto): VendorQuotationDraft[] {
-  const rows = data.comparison.vendors.map((v) => ({
-    vendorId: v.vendorId,
-    vendorName: v.vendorName,
-    rate: v.rate,
-    gstPercent: v.gstPercent,
-    paymentTerms: v.paymentTerms,
-    deliveryTerms: v.deliveryTerms,
-  }));
-  while (rows.length < 3) {
-    rows.push({
-      vendorId: '',
-      vendorName: '',
-      rate: 0,
-      gstPercent: 18,
-      paymentTerms: '100% payment within 30 days from the date of supply',
-      deliveryTerms: 'Delivery as per project schedule',
-    });
-  }
-  return rows;
-}
 
 export function RfqWizardPage() {
   const navigate = useNavigate();
@@ -80,10 +55,6 @@ export function RfqWizardPage() {
     d.setDate(d.getDate() + 7);
     return d.toISOString().slice(0, 10);
   });
-  const [selectedVendorId, setSelectedVendorId] = useState('');
-  const [whyWeChoseThisVendor, setWhyWeChoseThisVendor] = useState('');
-  const [vendorSelectionReason, setVendorSelectionReason] = useState('');
-  const [success, setSuccess] = useState(false);
   const [selectingPr, setSelectingPr] = useState(false);
 
   const { data: purchaseRequests, isLoading: prLoading, isError: prError } = useQuery({
@@ -121,7 +92,6 @@ export function RfqWizardPage() {
       setRfqNumber(data.rfqNumber);
       setComparison(data);
       setDrafts(draftsFromComparison(data));
-      setSelectedVendorId(data.selectedVendorId || data.comparison.l1VendorId || '');
       setStep(2);
     },
     onError: (e: Error & { response?: { data?: { message?: string } } }) => {
@@ -130,32 +100,24 @@ export function RfqWizardPage() {
   });
 
   const submitRfq = useMutation({
-    mutationFn: async (finalize: boolean) => {
+    mutationFn: async () => {
       const res = await api.post<{ data: { rfqNumber?: string; status?: string } }>(
         '/rfqs/wizard/submit',
         {
           rfqId,
-          quotations: drafts.filter((d) => d.vendorId),
+          quotations: onlyAssignedDrafts(drafts),
           dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
-          finalize,
-          selectedVendorId: finalize ? selectedVendorId : undefined,
-          whyWeChoseThisVendor: finalize ? whyWeChoseThisVendor : undefined,
-          vendorSelectionReason: finalize ? vendorSelectionReason : undefined,
+          finalize: false,
         }
       );
       return res.data.data;
     },
-    onSuccess: (data, finalize) => {
-      if (finalize) {
-        setSuccess(true);
-        toast.success('RFQ finalized — ready for PO creation');
-      } else {
-        if (data && typeof data === 'object' && 'comparison' in data) {
-          setComparison(data as RfqComparisonDto);
-        }
-        toast.success('RFQ saved');
-        setStep(3);
+    onSuccess: (data) => {
+      if (data && typeof data === 'object' && 'comparison' in data) {
+        setComparison(data as RfqComparisonDto);
       }
+      toast.success('RFQ saved');
+      setStep(3);
     },
     onError: (e: Error & { response?: { data?: { message?: string } } }) => {
       toast.error(e.response?.data?.message || 'Could not save RFQ');
@@ -193,39 +155,18 @@ export function RfqWizardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preselectedPrId, resumeRfq, openPurchaseRequests, prLoading, selectedPr, selectingPr]);
 
-  const l1VendorId = useMemo(
-    () => pickL1VendorId(comparison?.comparison.vendors ?? []),
-    [comparison]
+  useEffect(() => {
+    if (step !== 2) return;
+    const assigned = onlyAssignedDrafts(drafts);
+    if (assigned.length !== drafts.length) {
+      setDrafts(assigned);
+    }
+  }, [step, drafts]);
+  const assignedDrafts = onlyAssignedDrafts(drafts);
+  const assignedVendors = useMemo(
+    () => mergeAssignedVendors(assignedDrafts, comparison?.comparison?.vendors ?? []),
+    [assignedDrafts, comparison]
   );
-  const isNonL1 = selectedVendorId && l1VendorId && selectedVendorId !== l1VendorId;
-  const canFinalize =
-    !!selectedVendorId &&
-    whyWeChoseThisVendor.trim().length > 0 &&
-    (!isNonL1 || vendorSelectionReason.trim().length > 0);
-  const validDrafts = drafts.filter((d) => d.vendorId && d.rate > 0);
-
-  if (success) {
-    return (
-      <SuccessScreen
-        title="RFQ created!"
-        message={`${rfqNumber} is ready. Share with vendors or proceed to Create PO when quotes are finalized.`}
-        accentColor={accent}
-        primaryAction={{
-          label: 'View RFQ',
-          onClick: () => navigate(rfqId ? `/rfqs/${rfqId}` : '/executive'),
-        }}
-        secondaryAction={{
-          label: 'Create PO',
-          onClick: () =>
-            navigate(
-              selectedPr
-                ? `/executive/po/new?purchaseRequestId=${selectedPr.id}`
-                : '/executive/po/new'
-            ),
-        }}
-      />
-    );
-  }
 
   return (
     <div className="min-h-screen flex flex-col w-full max-w-lg lg:max-w-6xl mx-auto bg-[#F8FAFC]">
@@ -248,8 +189,8 @@ export function RfqWizardPage() {
           {step === 0 && (
             <motion.div key="s0" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}>
               <p className="text-xs text-ink-muted mb-3">
-                RFQ is separate from PO — invite at least 3 vendors, compare quotes, then create PO
-                from the winning vendor.
+                RFQ is separate from PO — invite at least 3 vendors, then share the RFQ and create PO
+                when quotes are received.
               </p>
               {prLoading ? (
                 <div className="space-y-2">
@@ -275,13 +216,18 @@ export function RfqWizardPage() {
                       )}
                       onClick={() => selectPurchaseRequest(pr)}
                     >
-                      <p className="font-medium">{pr.prNumber}</p>
-                      <p className="text-sm text-ink-secondary">
-                        {pr.materialRequest?.indentNumber ?? 'Material request'} · {pr.project?.code}
-                      </p>
-                      <p className="text-xs text-ink-muted mt-1">
-                        Est. {formatCurrency(pr.amountEstimate)}
-                      </p>
+                      <DetailFieldRow className="items-center gap-2">
+                        <p className="font-medium">{pr.prNumber}</p>
+                      </DetailFieldRow>
+                      <DetailFieldRow className="text-sm text-ink-secondary mt-1">
+                        <DetailFieldInline label="Indent">
+                          {pr.materialRequest?.indentNumber ?? 'Material request'}
+                        </DetailFieldInline>
+                        <DetailFieldInline label="Project">{pr.project?.code}</DetailFieldInline>
+                        <DetailFieldInline label="Est.">
+                          {formatCurrency(pr.amountEstimate)}
+                        </DetailFieldInline>
+                      </DetailFieldRow>
                     </Card>
                   ))}
                 </div>
@@ -340,7 +286,7 @@ export function RfqWizardPage() {
                 disabled={previewRfq.isPending}
                 onClick={() => previewRfq.mutate(selectedPr.id)}
               >
-                {previewRfq.isPending ? 'Creating RFQ…' : 'Continue — suggest 3 vendors'}
+                {previewRfq.isPending ? 'Creating RFQ…' : 'Continue'}
               </Button>
             </motion.div>
           )}
@@ -348,13 +294,14 @@ export function RfqWizardPage() {
           {step === 2 && comparison && (
             <motion.div key="s2" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}>
               <p className="text-xs text-ink-secondary mb-2">
-                RFQ <span className="font-mono font-semibold">{rfqNumber}</span> — enter rates for at
-                least 3 vendors. Suggested vendors are pre-filled where available.
+                RFQ <span className="font-mono font-semibold">{rfqNumber}</span> — assign at least
+                3 vendors per product.
               </p>
               <VendorQuotationEditor
                 quotations={drafts}
                 quantity={quantity}
-                onChange={setDrafts}
+                items={comparison.items}
+                onChange={(rows) => setDrafts(onlyAssignedDrafts(rows))}
                 minRows={3}
               />
               <Button
@@ -362,135 +309,45 @@ export function RfqWizardPage() {
                 variant="accent"
                 accentColor={accent}
                 size="lg"
-                disabled={validDrafts.length < 1 || submitRfq.isPending}
-                onClick={() => submitRfq.mutate(false)}
+                disabled={assignedDrafts.length < 3 || submitRfq.isPending}
+                onClick={() => submitRfq.mutate()}
               >
-                {submitRfq.isPending ? 'Saving…' : 'Save quotes & compare'}
+                {submitRfq.isPending ? 'Saving…' : 'Continue to review & share'}
               </Button>
             </motion.div>
           )}
 
-          {step === 3 && comparison && (
-            <motion.div key="s3" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}>
-              <QuotationComparisonTable comparison={comparison.comparison} className="mb-3" />
-              {comparison.purchaseHistory?.length ? (
-                <PurchaseHistoryPanel history={comparison.purchaseHistory} className="mb-3" />
-              ) : null}
-              <Button variant="accent" accentColor={accent} size="lg" onClick={() => setStep(4)}>
-                Continue to review & share
-              </Button>
-            </motion.div>
-          )}
-
-          {step === 4 && rfqId && (
-            <motion.div key="s4" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} className="space-y-3">
+          {step === 3 && rfqId && (
+            <motion.div key="s3" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} className="space-y-3">
               <div className="panel p-3">
                 <p className="font-semibold text-ink">{rfqNumber}</p>
                 <p className="text-sm text-ink-secondary mt-1">
                   {comparison?.indentNumber ? `Indent ${comparison.indentNumber}` : ''} ·{' '}
-                  {validDrafts.length} vendor quote(s)
+                  {assignedVendors.length} vendor RFQ(s)
                 </p>
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => downloadExport(`/rfqs/${rfqId}/pdf`, `${rfqNumber}.pdf`)}
-                >
-                  <Download className="h-3.5 w-3.5 mr-1" /> Download RFQ
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={async () => {
-                    try {
-                      await api.post(`/rfqs/${rfqId}/email`, {});
-                      toast.success('RFQ email sent');
-                    } catch {
-                      toast.error('Email failed');
-                    }
-                  }}
-                >
-                  <Mail className="h-3.5 w-3.5 mr-1" /> Email
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={async () => {
-                    const res = await api.get<{ data: { url: string } }>(
-                      `/rfqs/${rfqId}/share/whatsapp`
-                    );
-                    window.open(res.data.data.url, '_blank', 'noopener,noreferrer');
-                  }}
-                >
-                  <MessageCircle className="h-3.5 w-3.5 mr-1" /> WhatsApp
-                </Button>
-              </div>
+              <RfqVendorShareList
+                rfqId={rfqId}
+                rfqNumber={rfqNumber}
+                vendors={assignedVendors}
+                items={comparison?.items ?? []}
+              />
 
-              <div className="panel p-3 space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                  Finalize preferred vendor (optional)
-                </p>
-                <div>
-                  <label className="text-xs font-semibold text-ink-muted">Preferred vendor</label>
-                  <select
-                    value={selectedVendorId}
-                    onChange={(e) => setSelectedVendorId(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
-                  >
-                    <option value="">Select vendor</option>
-                    {validDrafts.map((d) => (
-                      <option key={d.vendorId} value={d.vendorId}>
-                        {d.vendorName || d.vendorId} —{' '}
-                        {formatCurrency(computeDraftFinalCost(d, quantity))}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-ink-muted">
-                    Why we chose this vendor *
-                  </label>
-                  <Textarea
-                    value={whyWeChoseThisVendor}
-                    onChange={(e) => setWhyWeChoseThisVendor(e.target.value)}
-                    rows={2}
-                    className="mt-1"
-                  />
-                </div>
-                {isNonL1 && (
-                  <div>
-                    <label className="text-xs font-semibold text-ink-muted">
-                      Reason for non-L1 selection *
-                    </label>
-                    <Textarea
-                      value={vendorSelectionReason}
-                      onChange={(e) => setVendorSelectionReason(e.target.value)}
-                      rows={2}
-                      className="mt-1"
-                    />
-                  </div>
-                )}
-              </div>
+              <p className="text-xs text-ink-secondary">
+                Share each vendor&apos;s RFQ above. Vendor selection happens later when creating the PO.
+              </p>
 
               <div className="flex flex-wrap gap-2">
                 <Button
-                  variant="secondary"
+                  variant="accent"
+                  accentColor={accent}
                   onClick={() => navigate(`/rfqs/${rfqId}`)}
                 >
                   Open RFQ detail
                 </Button>
-                <Button
-                  variant="accent"
-                  accentColor={accent}
-                  disabled={!canFinalize || submitRfq.isPending}
-                  onClick={() => submitRfq.mutate(true)}
-                >
-                  Finalize RFQ
+                <Button variant="secondary" onClick={() => navigate('/executive/rfq/inbox')}>
+                  Back to RFQ inbox
                 </Button>
                 <Button
                   variant="secondary"
@@ -502,7 +359,7 @@ export function RfqWizardPage() {
                     )
                   }
                 >
-                  Skip — Create PO
+                  Create PO
                 </Button>
               </div>
             </motion.div>

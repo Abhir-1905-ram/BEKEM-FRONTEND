@@ -3,7 +3,8 @@ import { motion } from 'framer-motion';
 import { CheckCircle2, Circle } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { StatusHistoryDto } from '@afios/shared';
-import { formatDate, ROLE_LABELS, UserRole } from '@afios/shared';
+import { formatDateTime, UserRole } from '@afios/shared';
+import { roleDisplayLabel } from '@/lib/roleDisplay';
 import { StatusBadge } from './ui/StatusBadge';
 
 interface StatusTimelineProps {
@@ -61,15 +62,18 @@ export function StatusTimeline({ entityType, entityId }: StatusTimelineProps) {
           <div className="flex-1 min-w-0 pt-0.5">
             <div className="flex items-center gap-2 flex-wrap">
               <StatusBadge status={event.toStatus} />
-              <span className="text-xs text-gray-400">{formatDate(event.timestamp)}</span>
+              <span className="text-xs text-gray-400 tabular-nums">
+                {formatDateTime(event.timestamp)}
+              </span>
             </div>
             <p className="text-sm text-gray-700 mt-1">
-              {event.actorName || 'System'}
-              {event.actorRole && (
-                <span className="text-gray-500">
-                  {' '}
-                  · {ROLE_LABELS[event.actorRole as UserRole] || event.actorRole.replace(/_/g, ' ')}
+              {event.actorRole ? (
+                <span>
+                  {roleDisplayLabel(event.actorRole as UserRole) ||
+                    event.actorRole.replace(/_/g, ' ')}
                 </span>
+              ) : (
+                <span className="text-gray-500">System</span>
               )}
             </p>
             {event.note && (

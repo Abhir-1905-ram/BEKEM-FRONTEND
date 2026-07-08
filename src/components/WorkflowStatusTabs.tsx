@@ -1,10 +1,10 @@
 import { cn } from '@/lib/utils';
 
 export const WORKFLOW_STATUS_TABS = [
+  { key: 'all', label: 'All' },
   { key: 'pending', label: 'Pending' },
   { key: 'approved', label: 'Approved' },
   { key: 'completed', label: 'Completed' },
-  { key: 'all', label: 'All' },
 ] as const;
 
 export type WorkflowStatusTab = (typeof WORKFLOW_STATUS_TABS)[number]['key'];

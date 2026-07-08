@@ -2,9 +2,9 @@ import { NavLink } from 'react-router-dom';
 import { LogOut, ArrowLeftRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
-import { ROLE_LABELS, UserRole } from '@afios/shared';
+import { UserRole } from '@afios/shared';
+import { roleDisplayLabel } from '@/lib/roleDisplay';
 import { useI18n } from '@/i18n/I18nContext';
-import { getFirstName } from '@afios/shared';
 import { BekemLogo } from '@/components/brand/BekemLogo';
 import { useSignOut } from '@/lib/signOut';
 import { getRoleNavShortcuts } from '@/lib/roleNav';
@@ -78,21 +78,17 @@ export function AppSidebar({ unread }: AppSidebarProps) {
         {user && (
           <div className="rounded-lg bg-white/8 border border-white/10 p-2.5 mb-2">
             <div className="flex items-center gap-3">
-              <div
-                className="h-10 w-10 rounded-lg bg-white/15 flex items-center justify-center text-white text-sm font-bold shrink-0"
-                style={user.avatarColor ? { backgroundColor: user.avatarColor } : undefined}
-              >
-                {user.name?.charAt(0) || 'U'}
+              <div className="h-10 w-10 rounded-lg bg-white/15 flex items-center justify-center text-white text-sm font-bold shrink-0">
+                {roleDisplayLabel(role).charAt(0) || 'U'}
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-white truncate">{getFirstName(user.name)}</p>
                 <p
                   className={cn(
-                    'text-[11px] font-medium mt-0.5 truncate',
-                    role === UserRole.CHAIRMAN ? 'text-gold' : 'text-white/60'
+                    'text-sm font-semibold truncate',
+                    role === UserRole.CHAIRMAN ? 'text-gold' : 'text-white'
                   )}
                 >
-                  {ROLE_LABELS[role]}
+                  {roleDisplayLabel(role)}
                 </p>
               </div>
             </div>

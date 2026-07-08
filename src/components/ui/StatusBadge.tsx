@@ -109,25 +109,30 @@ const STATUS_DOT: Record<string, string> = {
   CANCELLED: REJECTED_DOT,
 };
 
+/** Req 58 — prefer next-approver phrasing over "Accepted at Store" style labels. */
 const STATUS_LABELS: Record<string, string> = {
-  PENDING_STORE: 'Pending',
-  ALLOCATED: 'Store accepted',
-  FORWARDED_TO_PM: 'With PM',
-  BRANCH_TRANSFER_REQUESTED: 'Branch transfer',
-  PENDING_HO: 'Head Office',
-  PENDING_EXECUTIVE_DECISION: 'Executive decision',
-  EXECUTIVE_DECISION_PO: 'Executive: PO',
-  EXECUTIVE_DECISION_BRANCH_TRANSFER: 'Executive: branch transfer',
-  PM_APPROVED: 'Approved',
-  PURCHASE_REQUESTED: 'Purchase request created',
-  CHAIRMAN_APPROVED: 'Approved',
+  PENDING_STORE: 'Pending at Store',
+  ALLOCATED: 'Pending at Store',
+  FORWARDED_TO_PM: 'Pending at PM',
+  BRANCH_TRANSFER_REQUESTED: 'Pending at PM',
+  PENDING_HO: 'Pending at Executive',
+  PENDING_EXECUTIVE_DECISION: 'Pending at Executive',
+  EXECUTIVE_DECISION_PO: 'Pending at Coordinator',
+  EXECUTIVE_DECISION_BRANCH_TRANSFER: 'Pending at Coordinator',
+  PM_APPROVED: 'Pending at Executive',
+  PURCHASE_REQUESTED: 'Pending at Executive',
+  RFQ_OPEN: 'Pending at Executive',
+  QUOTED: 'Pending at Executive',
+  VENDOR_SELECTED: 'Pending at Executive',
+  PO_CREATED: 'Pending at Coordinator',
+  COORDINATOR_VERIFIED: 'Pending at Chairman',
+  CHAIRMAN_APPROVED: 'Pending at Store',
   REJECTED: 'Rejected',
   CANCELLED: 'Cancelled',
-  PO_CREATED: 'Processing',
-  CHAIRMAN_PENDING: 'Pending approval',
-  COORDINATOR_PENDING: 'Pending review',
-  PENDING_REVIEW: 'Pending review',
-  PENDING_APPROVAL: 'Pending approval',
+  CHAIRMAN_PENDING: 'Pending at Chairman',
+  COORDINATOR_PENDING: 'Pending at Coordinator',
+  PENDING_REVIEW: 'Pending at Coordinator',
+  PENDING_APPROVAL: 'Pending at Chairman',
   PENDING_ACCEPTANCE: 'Awaiting contractor',
   ACCEPTED: 'Accepted',
   IN_PROGRESS: 'In progress',
@@ -135,9 +140,9 @@ const STATUS_LABELS: Record<string, string> = {
   RUNNING: 'Running',
   COMPLETED: 'Completed',
   PENDING: 'Pending',
-  PENDING_PM: 'Pending PM',
+  PENDING_PM: 'Pending at PM',
   PM_VERIFIED: 'Verified',
-  MATERIAL_RECEIVED: 'Received',
+  MATERIAL_RECEIVED: 'Material received',
   ISSUED: 'Issued',
   APPROVED: 'Approved',
   ACTIVE: 'Active',
@@ -145,26 +150,27 @@ const STATUS_LABELS: Record<string, string> = {
   OPEN: 'Open',
   IN_REVIEW: 'In review',
   RESOLVED: 'Resolved',
-  PENDING_DESTINATION_PM: 'Awaiting destination PM',
-  PENDING_SOURCE_FINAL: 'Awaiting your final approval',
+  PENDING_DESTINATION_PM: 'Pending at PM',
+  PENDING_SOURCE_FINAL: 'Pending at PM',
   DISPATCHED: 'Dispatched',
   RECEIVED: 'Received',
   REQUESTED: 'Requested',
   COORDINATOR_DECIDED: 'Ready to transfer',
   TRANSFERRED: 'Transferred',
   RAISE_PO_INSTEAD: 'Raise PO instead',
-  EXECUTIVE_PENDING: 'Executive review',
-  PM_PENDING: 'PM approval',
+  EXECUTIVE_PENDING: 'Pending at Executive',
+  PM_PENDING: 'Pending at PM',
 };
 
 interface StatusBadgeProps {
   status: string;
+  label?: string;
   className?: string;
 }
 
-export function StatusBadge({ status, className }: StatusBadgeProps) {
+export function StatusBadge({ status, label, className }: StatusBadgeProps) {
   const dot = STATUS_DOT[status] || NEUTRAL_DOT;
-  const label = STATUS_LABELS[status] || status.replace(/_/g, ' ');
+  const displayLabel = label ?? STATUS_LABELS[status] ?? status.replace(/_/g, ' ');
 
   return (
     <span
@@ -175,7 +181,11 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
       )}
     >
       <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', dot)} aria-hidden />
-      {label}
+      {displayLabel}
     </span>
   );
+}
+
+export function getStatusLabel(status: string): string {
+  return STATUS_LABELS[status] || status.replace(/_/g, ' ');
 }

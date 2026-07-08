@@ -9,10 +9,10 @@ interface MaterialAvailabilityPanelProps {
 }
 
 export function MaterialAvailabilityPanel({ availability, className }: MaterialAvailabilityPanelProps) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
 
   return (
-    <div className={cn('panel p-3 space-y-2', className)}>
+    <div className={cn('panel p-3 space-y-3', className)}>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <div className="rounded-lg border border-surface-border bg-bekem-accent-soft/30 px-2.5 py-1.5">
           <div className="flex items-center gap-1.5 text-ink-muted mb-0.5">
@@ -41,7 +41,7 @@ export function MaterialAvailabilityPanel({ availability, className }: MaterialA
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="flex items-center justify-between w-full text-left py-2"
+            className="flex items-center justify-between w-full text-left py-1"
           >
             <span className="text-sm font-semibold text-ink">Project-wise stock availability</span>
             {expanded ? (
@@ -51,21 +51,27 @@ export function MaterialAvailabilityPanel({ availability, className }: MaterialA
             )}
           </button>
           {expanded && (
-            <div className="space-y-2 mt-1">
-              {availability.projectWise.map((p) => (
-                <div
-                  key={p.projectId}
-                  className="flex items-center justify-between rounded-lg border border-surface-border px-3 py-2 text-sm"
-                >
-                  <div>
-                    <p className="font-medium text-ink">{p.projectName}</p>
-                    <p className="text-xs text-ink-muted">{p.projectCode}</p>
-                  </div>
-                  <p className="font-semibold tabular-nums">
-                    {p.availableQty} {availability.unit}
-                  </p>
-                </div>
-              ))}
+            <div className="table-shell mt-2">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Project</th>
+                    <th>Code</th>
+                    <th className="num">Available</th>
+                    <th>UOM</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {availability.projectWise.map((p) => (
+                    <tr key={p.projectId}>
+                      <td className="cell-text">{p.projectName}</td>
+                      <td className="cell-code whitespace-nowrap">{p.projectCode}</td>
+                      <td className="num tabular-nums">{p.availableQty}</td>
+                      <td className="whitespace-nowrap">{availability.unit}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -74,18 +80,27 @@ export function MaterialAvailabilityPanel({ availability, className }: MaterialA
       {availability.stores.length > 0 && expanded && (
         <div className="pt-2 border-t border-surface-border">
           <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted mb-2">By store</p>
-          <div className="space-y-1">
-            {availability.stores.map((s) => (
-              <div key={s.siteId} className="flex justify-between text-sm text-ink-secondary">
-                <span>
-                  {s.siteName}
-                  {s.projectCode ? ` · ${s.projectCode}` : ''}
-                </span>
-                <span className="tabular-nums font-medium text-ink">
-                  {s.availableQty} {availability.unit}
-                </span>
-              </div>
-            ))}
+          <div className="table-shell">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Store</th>
+                  <th>Project</th>
+                  <th className="num">Available</th>
+                  <th>UOM</th>
+                </tr>
+              </thead>
+              <tbody>
+                {availability.stores.map((s) => (
+                  <tr key={s.siteId}>
+                    <td className="cell-text">{s.siteName}</td>
+                    <td className="cell-code whitespace-nowrap">{s.projectCode || '—'}</td>
+                    <td className="num tabular-nums">{s.availableQty}</td>
+                    <td className="whitespace-nowrap">{availability.unit}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

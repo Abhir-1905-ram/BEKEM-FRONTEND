@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Textarea } from '@/components/ui/Input';
 import { ListQueryBoundary } from '@/components/ListQueryBoundary';
+import { DetailField, DetailFieldGrid } from '@/components/ui/DetailFields';
 
 function priorityLabel(priority?: string) {
   if (priority === 'HIGH') return 'High';
@@ -74,7 +75,7 @@ export function ExecutivePurchaseRequestDetailPage() {
   const hasRecommendation = !!pr?.executiveRecommendation;
 
   return (
-    <div className="page-container max-w-2xl">
+    <div className="page-container max-w-4xl">
       <header className="flex items-center gap-3 mb-3">
         <button
           type="button"
@@ -109,58 +110,47 @@ export function ExecutivePurchaseRequestDetailPage() {
       >
         {pr && (
           <>
-            <Card className="space-y-3 mb-3">
-              <div>
-                <p className="text-xs text-ink-muted">Project</p>
-                <p className="font-medium">
+            <Card className="mb-3">
+              <DetailFieldGrid>
+                <DetailField label="Project">
                   {pr.project?.code} — {pr.project?.name}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-ink-muted">Indent</p>
-                <p className="font-medium">{pr.materialRequest?.indentNumber || '—'}</p>
-              </div>
-              {pr.pmName && (
-                <div>
-                  <p className="text-xs text-ink-muted">PM name</p>
-                  <p className="font-medium">{pr.pmName}</p>
-                </div>
-              )}
-              {(pr.requestDate || pr.indentDate) && (
-                <div>
-                  <p className="text-xs text-ink-muted">Request date</p>
-                  <p className="font-medium">{formatDate(pr.requestDate || pr.indentDate)}</p>
-                </div>
-              )}
-              {pr.requestedBy && (
-                <div>
-                  <p className="text-xs text-ink-muted">Requested by</p>
-                  <p className="font-medium">{pr.requestedBy}</p>
-                </div>
-              )}
-              <div>
-                <p className="text-xs text-ink-muted">Total value</p>
-                <p className="font-medium">{formatCurrency(pr.totalValue ?? pr.amountEstimate)}</p>
-              </div>
-              {pr.pmRemarks && (
-                <div>
-                  <p className="text-xs text-ink-muted">PM remarks</p>
-                  <p className="text-sm mt-0.5">{pr.pmRemarks}</p>
-                </div>
-              )}
-              {hasRecommendation && (
-                <div className="rounded-lg bg-surface-muted/60 px-3 py-2 text-sm">
-                  <p className="text-xs text-ink-muted">Executive recommendation</p>
-                  <p className="font-medium">
-                    {pr.executiveRecommendation === 'BRANCH_TRANSFER'
-                      ? 'Recommend branch transfer'
-                      : 'Create purchase order'}
-                  </p>
-                  {pr.executiveRecommendationRemark && (
-                    <p className="text-xs text-ink-secondary mt-1">{pr.executiveRecommendationRemark}</p>
-                  )}
-                </div>
-              )}
+                </DetailField>
+                <DetailField label="Indent">
+                  {pr.materialRequest?.indentNumber || '—'}
+                </DetailField>
+                {pr.pmName && <DetailField label="PM name">{pr.pmName}</DetailField>}
+                {(pr.requestDate || pr.indentDate) && (
+                  <DetailField label="Request date">
+                    {formatDate(pr.requestDate || pr.indentDate)}
+                  </DetailField>
+                )}
+                {pr.requestedBy && (
+                  <DetailField label="Requested by">{pr.requestedBy}</DetailField>
+                )}
+                <DetailField label="Total value">
+                  {formatCurrency(pr.totalValue ?? pr.amountEstimate)}
+                </DetailField>
+                {pr.pmRemarks && (
+                  <DetailField label="PM remarks" fullWidth valueClassName="text-sm font-normal">
+                    {pr.pmRemarks}
+                  </DetailField>
+                )}
+                {hasRecommendation && (
+                  <div className="w-full basis-full rounded-lg bg-surface-muted/60 px-3 py-2 text-sm">
+                    <p className="text-xs text-ink-muted">Executive recommendation</p>
+                    <p className="font-medium">
+                      {pr.executiveRecommendation === 'BRANCH_TRANSFER'
+                        ? 'Recommend branch transfer'
+                        : 'Create purchase order'}
+                    </p>
+                    {pr.executiveRecommendationRemark && (
+                      <p className="text-xs text-ink-secondary mt-1">
+                        {pr.executiveRecommendationRemark}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </DetailFieldGrid>
             </Card>
 
             <h2 className="section-label mb-3">Materials requested</h2>
@@ -191,7 +181,7 @@ export function ExecutivePurchaseRequestDetailPage() {
                 <p className="text-sm text-ink-secondary">
                   Prepare your recommendation — this does not final-approve the request.
                 </p>
-                <div className="space-y-2">
+                <div className="grid sm:grid-cols-2 gap-2">
                   <label className="flex items-start gap-3 rounded-xl border border-surface-border p-3 cursor-pointer hover:border-bekem-accent/40">
                     <input
                       type="radio"
@@ -252,12 +242,11 @@ export function ExecutivePurchaseRequestDetailPage() {
             {!canDecide &&
               pr.executiveRecommendation === 'PURCHASE_ORDER' &&
               pr.status === 'OPEN' && (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     variant="accent"
                     accentColor={accent}
                     size="lg"
-                    className="w-full"
                     onClick={() => navigate(`/executive/rfq/new?purchaseRequestId=${pr.id}`)}
                   >
                     Create RFQ
@@ -265,7 +254,6 @@ export function ExecutivePurchaseRequestDetailPage() {
                   <Button
                     variant="secondary"
                     size="lg"
-                    className="w-full"
                     onClick={() => navigate(`/executive/po/new?purchaseRequestId=${pr.id}`)}
                   >
                     Skip to Create PO

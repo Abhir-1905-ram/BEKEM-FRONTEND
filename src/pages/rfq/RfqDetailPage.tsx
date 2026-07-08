@@ -10,8 +10,6 @@ import { api } from '@/lib/api';
 
 import type { RfqComparisonDto, RfqDetailDto } from '@afios/shared';
 
-import { DEFAULT_GST_PERCENT } from '@afios/shared';
-
 import { Button } from '@/components/ui/Button';
 
 import { Textarea } from '@/components/ui/Input';
@@ -34,30 +32,9 @@ import { toast } from 'sonner';
 
 
 
-function draftsFromComparison(data: RfqComparisonDto): VendorQuotationDraft[] {
-
-  return data.comparison.vendors.map((v) => ({
-
-    vendorId: v.vendorId,
-
-    vendorName: v.vendorName,
-
-    rate: v.rate,
-
-    gstPercent: v.gstPercent,
-
-    paymentTerms: v.paymentTerms,
-
-    deliveryTerms: v.deliveryTerms,
-
-  }));
-
-}
-
-
+import { draftsFromComparison, onlyAssignedDrafts } from '@/lib/rfqVendorAssignments';
 
 export function RfqDetailPage() {
-
   const { id } = useParams<{ id: string }>();
 
   const queryClient = useQueryClient();
@@ -114,7 +91,13 @@ export function RfqDetailPage() {
 
     setDrafts(draftsFromComparison(comparison));
 
-    setSelectedVendorId(comparison.selectedVendorId || comparison.comparison.l1VendorId || '');
+    const assigned = onlyAssignedDrafts(draftsFromComparison(comparison));
+    setSelectedVendorId(
+      comparison.selectedVendorId ||
+        comparison.comparison.l1VendorId ||
+        assigned[0]?.vendorId ||
+        ''
+    );
 
     setWhyWeChoseThisVendor(comparison.whyWeChoseThisVendor || '');
 
@@ -147,7 +130,7 @@ export function RfqDetailPage() {
 
       await api.put(`/rfqs/${id}/quotations`, {
 
-        quotations: drafts.filter((d) => d.vendorId),
+        quotations: onlyAssignedDrafts(drafts),
 
       });
 
@@ -365,11 +348,13 @@ export function RfqDetailPage() {
 
                 <VendorQuotationEditor
 
-                  quotations={drafts.length ? drafts : [{ vendorId: '', rate: 0, gstPercent: DEFAULT_GST_PERCENT, paymentTerms: '', deliveryTerms: '' }]}
+                  quotations={drafts}
 
                   quantity={quantity}
 
-                  onChange={setDrafts}
+                  items={comparison.items}
+
+                  onChange={(rows) => setDrafts(onlyAssignedDrafts(rows))}
 
                 />
 
@@ -413,16 +398,10 @@ export function RfqDetailPage() {
 
                     <option value="">Choose vendor</option>
 
-                    {comparison.comparison.vendors.map((v) => (
-
+                    {onlyAssignedDrafts(drafts).map((v) => (
                       <option key={v.vendorId} value={v.vendorId}>
-
-                        {v.vendorName}
-
-                        {v.isL1 ? ' (L1)' : ''}
-
+                        {v.vendorName || v.vendorId}
                       </option>
-
                     ))}
 
                   </select>
@@ -510,6 +489,5 @@ export function RfqDetailPage() {
     </div>
 
   );
-
 }
 

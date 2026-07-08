@@ -3,7 +3,8 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { Bell, Search, Rows3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
-import { ROLE_LABELS, UserRole } from '@afios/shared';
+import { UserRole } from '@afios/shared';
+import { roleDisplayLabel } from '@/lib/roleDisplay';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import type { NotificationDto } from '@afios/shared';
@@ -14,11 +15,13 @@ import { AccessDeniedToast } from '@/components/AccessDeniedToast';
 import { CommandPalette, SearchTrigger } from '@/components/layout/CommandPalette';
 import { BekemLogo } from '@/components/brand/BekemLogo';
 import { useTableDensity } from '@/hooks/useTableDensity';
+import { useNavbarContext } from '@/hooks/useNavbarContext';
 import { RouteErrorBoundary } from '@/components/RouteErrorBoundary';
 
 export function AppShell() {
   const user = useAuthStore((s) => s.user);
   const location = useLocation();
+  const { projectLabel } = useNavbarContext();
   const role = user?.role as UserRole;
   const homePath = role ? getRoleHomePath(role) : '/';
   const [searchOpen, setSearchOpen] = useState(false);
@@ -75,9 +78,13 @@ export function AppShell() {
             <div className="hidden lg:flex h-10 items-center justify-between px-3">
               <div className="flex items-center gap-2.5 min-w-0">
                 <p className="text-sm text-ink-secondary truncate">
-                  <span className="font-semibold text-ink">{user.name}</span>
+                  {projectLabel ? (
+                    <span className="font-semibold text-ink">{projectLabel}</span>
+                  ) : (
+                    <span className="font-semibold text-ink">Bekem OS</span>
+                  )}
                   <span className="mx-2 text-ink-muted">·</span>
-                  <span className={roleBadgeClass}>{ROLE_LABELS[role]}</span>
+                  <span className={roleBadgeClass}>{roleDisplayLabel(role)}</span>
                 </p>
               </div>
               <div className="flex items-center gap-3">

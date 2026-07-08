@@ -85,7 +85,7 @@ type EditForm = {
   purpose: string;
 };
 
-/** Fields through Delivery Date — Store Manager can see/edit only these. */
+/** Fields through Delivery Date — Store Incharge can see/edit only these. */
 const FIELDS_THROUGH_DELIVERY: Array<[keyof EditForm, string, string?]> = [
   ['poSlNo', 'PO S.No'],
   ['project', 'Project'],
@@ -415,7 +415,7 @@ export function StockPage() {
             {fullAccess ? (
               <>
                 Full field access. Late deliveries (after expected date) show in{' '}
-                <span className="text-red-600 font-semibold">red</span> with the Store Manager’s
+                <span className="text-red-600 font-semibold">red</span> with the Store Incharge’s
                 delay reason.
               </>
             ) : (

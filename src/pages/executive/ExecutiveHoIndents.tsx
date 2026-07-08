@@ -65,7 +65,7 @@ export function ExecutiveHoIndentsPage() {
   });
 
   return (
-    <div className="page-container max-w-3xl">
+    <div className="page-container max-w-full">
       <PageHeader
         title="HO indents"
         subtitle="Executive → Coordinator approval → RFQ generation (Head Office only)"
@@ -143,25 +143,35 @@ export function ExecutiveHoIndentsPage() {
           />
         }
       >
-        <div className="space-y-2">
-          {(indents ?? []).map((r) => (
-            <div
-              key={r.id}
-              className="data-row cursor-pointer"
-              onClick={() => r.rfqId && navigate(`/rfqs/${r.rfqId}`)}
-            >
-              <div>
-                <p className="font-semibold text-ink">{r.indentNumber}</p>
-                <p className="text-sm text-ink-secondary mt-0.5">
-                  {r.material?.name || r.items?.[0]?.material?.name} · {r.project?.code}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <StatusBadge status={r.status} />
-                <ChevronRight className="h-4 w-4 text-ink-muted" />
-              </div>
-            </div>
-          ))}
+        <div className="table-shell">
+          <table className="data-table min-w-[64rem]">
+            <thead>
+              <tr>
+                <th>Indent No</th>
+                <th>Material</th>
+                <th>Project</th>
+                <th>Purpose</th>
+                <th>Status</th>
+                <th className="w-10" />
+              </tr>
+            </thead>
+            <tbody>
+              {(indents ?? []).map((r) => (
+                <tr
+                  key={r.id}
+                  className="cursor-pointer"
+                  onClick={() => r.rfqId && navigate(`/rfqs/${r.rfqId}`)}
+                >
+                  <td className="cell-code whitespace-nowrap">{r.indentNumber}</td>
+                  <td className="cell-text">{r.material?.name || r.items?.[0]?.material?.name || '—'}</td>
+                  <td className="cell-text whitespace-nowrap">{r.project?.code || '—'}</td>
+                  <td className="cell-text">{r.purpose || '—'}</td>
+                  <td><StatusBadge status={r.status} /></td>
+                  <td className="text-right"><ChevronRight className="h-4 w-4 text-ink-muted inline-block" /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </ListQueryBoundary>
     </div>

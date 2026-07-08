@@ -4,12 +4,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import { formatCurrency } from '@afios/shared';
+import { formatCurrency, formatDate } from '@afios/shared';
 import type { VendorScorecardDto } from '@afios/shared';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { StatCard } from '@/components/ui/StatCard';
 import { Button } from '@/components/ui/Button';
-import { Input, Textarea } from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Input';
 import { ListQueryBoundary } from '@/components/ListQueryBoundary';
 
 export function VendorScorecardPage() {
@@ -61,9 +60,10 @@ export function VendorScorecardPage() {
     reviews: [],
   };
   const displayRating = metrics?.compositeRating ?? vendor?.rating ?? 0;
+  const clampScore = (v: number) => Math.max(1, Math.min(5, v));
 
   return (
-    <div className="page-container max-w-3xl">
+    <div className="page-container max-w-full">
       <button
         type="button"
         onClick={() => navigate(-1)}
@@ -95,26 +95,47 @@ export function VendorScorecardPage() {
         }
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mb-4">
-        <StatCard label="Purchase orders" value={metrics.poCount} tone="blue" />
-        <StatCard label="Total spend" value={formatCurrency(metrics.totalSpend)} tone="blue" />
-        <StatCard label="Fulfillment" value={`${metrics.onTimeDeliveryPct}%`} tone="teal" />
-        <StatCard label="Rejected POs" value={metrics.rejectedCount} tone="amber" />
+      <div className="table-shell mb-4">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th className="num">Purchase orders</th>
+              <th className="num">Total spend</th>
+              <th className="num">Fulfillment</th>
+              <th className="num">Rejected POs</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="num tabular-nums">{metrics.poCount}</td>
+              <td className="num tabular-nums whitespace-nowrap">{formatCurrency(metrics.totalSpend)}</td>
+              <td className="num tabular-nums">{metrics.onTimeDeliveryPct}%</td>
+              <td className="num tabular-nums">{metrics.rejectedCount}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       {recentOrders.length > 0 && (
         <section className="panel p-3 mb-3">
           <h2 className="text-sm font-bold text-ink mb-3">Recent approved orders</h2>
-          <div className="space-y-2">
-            {recentOrders.map((po) => (
-              <div
-                key={po.id}
-                className="flex justify-between items-center text-sm py-2 border-b border-surface-border last:border-0"
-              >
-                <span className="font-medium text-ink">{po.poNumber}</span>
-                <span className="text-ink-secondary">{formatCurrency(po.amount)}</span>
-              </div>
-            ))}
+          <div className="table-shell">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>PO No</th>
+                  <th className="num">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentOrders.map((po) => (
+                  <tr key={po.id}>
+                    <td className="cell-code whitespace-nowrap">{po.poNumber}</td>
+                    <td className="num tabular-nums whitespace-nowrap">{formatCurrency(po.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </section>
       )}
@@ -124,23 +145,41 @@ export function VendorScorecardPage() {
         <div className="grid sm:grid-cols-2 gap-2.5 mb-4">
           <div>
             <label className="text-xs font-semibold text-ink-muted mb-1 block">Delivery (1–5)</label>
-            <Input
-              type="number"
-              min={1}
-              max={5}
-              value={deliveryScore}
-              onChange={(e) => setDeliveryScore(Number(e.target.value))}
-            />
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((score) => (
+                <button
+                  key={score}
+                  type="button"
+                  onClick={() => setDeliveryScore(score)}
+                  className="p-1 rounded hover:bg-surface-muted"
+                  aria-label={`Delivery ${score} star`}
+                >
+                  <Star
+                    className={`h-5 w-5 ${score <= clampScore(deliveryScore) ? 'text-bekem-accent fill-current' : 'text-ink-muted'}`}
+                  />
+                </button>
+              ))}
+              <span className="text-xs text-ink-secondary ml-1">{clampScore(deliveryScore)}/5</span>
+            </div>
           </div>
           <div>
             <label className="text-xs font-semibold text-ink-muted mb-1 block">Quality (1–5)</label>
-            <Input
-              type="number"
-              min={1}
-              max={5}
-              value={qualityScore}
-              onChange={(e) => setQualityScore(Number(e.target.value))}
-            />
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((score) => (
+                <button
+                  key={score}
+                  type="button"
+                  onClick={() => setQualityScore(score)}
+                  className="p-1 rounded hover:bg-surface-muted"
+                  aria-label={`Quality ${score} star`}
+                >
+                  <Star
+                    className={`h-5 w-5 ${score <= clampScore(qualityScore) ? 'text-bekem-accent fill-current' : 'text-ink-muted'}`}
+                  />
+                </button>
+              ))}
+              <span className="text-xs text-ink-secondary ml-1">{clampScore(qualityScore)}/5</span>
+            </div>
           </div>
         </div>
         <Textarea
@@ -161,19 +200,29 @@ export function VendorScorecardPage() {
       {reviews.length > 0 && (
         <section className="panel p-3">
           <h2 className="text-sm font-bold text-ink mb-3">Review history</h2>
-          <div className="space-y-3">
-            {reviews.map((r) => (
-              <div key={r.id} className="rounded-xl bg-surface-muted p-3">
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="font-medium text-ink">{r.ratedByName}</span>
-                  <span className="text-ink-muted">{new Date(r.createdAt).toLocaleDateString()}</span>
-                </div>
-                <p className="text-xs text-ink-secondary">
-                  Delivery {r.deliveryScore}/5 · Quality {r.qualityScore}/5
-                </p>
-                {r.note && <p className="text-sm text-ink mt-1">{r.note}</p>}
-              </div>
-            ))}
+          <div className="table-shell">
+            <table className="data-table min-w-[56rem]">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Reviewer</th>
+                  <th className="num">Delivery</th>
+                  <th className="num">Quality</th>
+                  <th>Note</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reviews.map((r) => (
+                  <tr key={r.id}>
+                    <td className="whitespace-nowrap">{formatDate(r.createdAt)}</td>
+                    <td className="cell-text whitespace-nowrap">{r.ratedByName}</td>
+                    <td className="num tabular-nums">{r.deliveryScore}/5</td>
+                    <td className="num tabular-nums">{r.qualityScore}/5</td>
+                    <td className="cell-text">{r.note || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </section>
       )}

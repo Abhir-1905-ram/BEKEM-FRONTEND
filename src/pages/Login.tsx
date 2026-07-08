@@ -8,7 +8,7 @@ import {
   ClipboardCheck,
   Crown,
 } from 'lucide-react';
-import { api } from '@/lib/api';
+import { api, getErrorMessage } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
 import { connectSocket } from '@/lib/socket';
 import { Button } from '@/components/ui/Button';
@@ -40,12 +40,14 @@ export function LoginPage() {
   const [email, setEmail] = useState('request@bekem.com');
   const [password, setPassword] = useState(DEMO_PASSWORD);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const from = (location.state as { from?: string } | null)?.from || null;
 
   const authenticate = useCallback(
     async (loginEmail: string, options?: { role?: UserRole; password?: string }) => {
       setLoading(true);
+      setError('');
       try {
         const res = await api.post<LoginResponseDto>('/auth/login', {
           email: loginEmail,
@@ -57,6 +59,8 @@ export function LoginPage() {
           ? getRoleHomePath(options.role)
           : getRoleHomePath(res.data.user.role);
         navigate(from && !from.startsWith('/login') ? from : home, { replace: true });
+      } catch (err) {
+        setError(getErrorMessage(err));
       } finally {
         setLoading(false);
       }
@@ -130,6 +134,11 @@ export function LoginPage() {
               <Button type="submit" variant="accent" size="lg" className="w-full" disabled={loading}>
                 {loading ? 'Signing in…' : 'Sign in'}
               </Button>
+              {error && (
+                <p className="text-sm text-danger bg-danger-light border border-danger/20 rounded-lg px-3 py-2">
+                  {error}
+                </p>
+              )}
             </form>
           </div>
 

@@ -3,7 +3,6 @@ import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { formatCurrency, formatDate } from '@afios/shared';
 import type { ProcurementDecisionListItemDto } from '@afios/shared';
 import { api } from '@/lib/api';
-import { Card } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -36,7 +35,7 @@ export function ProcurementDecisionsListPage({
   });
 
   return (
-    <div className="page-container max-w-2xl">
+    <div className="page-container max-w-full">
       <PageHeader
         title={title}
         subtitle={subtitle}
@@ -61,41 +60,43 @@ export function ProcurementDecisionsListPage({
         skeletonRows={3}
         empty={<EmptyState title={emptyTitle} description={emptyDescription} />}
       >
-        <div className="space-y-2">
-          {(decisions ?? []).map((d) => (
-            <button
-              key={d.id}
-              type="button"
-              className="w-full text-left"
-              onClick={() => navigate(`${basePath}/${d.id}`)}
-            >
-              <Card className="hover:border-bekem-accent/40 transition-colors">
-                <div className="flex justify-between items-start gap-3">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-ink">{d.indentNumber}</p>
-                    <p className="text-sm text-ink-secondary mt-0.5">
-                      {d.projectCode} — {d.projectName}
-                    </p>
-                    {d.purpose && (
-                      <p className="text-xs text-ink-muted mt-1 line-clamp-2">{d.purpose}</p>
-                    )}
-                    <p className="text-xs text-ink-muted mt-1">
-                      {d.indentDate ? formatDate(d.indentDate) : '—'} ·{' '}
-                      {formatCurrency(d.estimatedValue)}
-                      {d.priority ? ` · ${d.priority} priority` : ''}
-                    </p>
-                    {d.prNumber && (
-                      <p className="text-xs text-ink-muted mt-0.5">PR {d.prNumber}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <StatusBadge status={d.status} />
-                    <ChevronRight className="h-4 w-4 text-ink-muted" />
-                  </div>
-                </div>
-              </Card>
-            </button>
-          ))}
+        <div className="table-shell">
+          <table className="data-table min-w-[72rem]">
+            <thead>
+              <tr>
+                <th>Indent No</th>
+                <th>Project</th>
+                <th>Date</th>
+                <th className="num">Value</th>
+                <th>Priority</th>
+                <th>PR</th>
+                <th>Purpose</th>
+                <th>Status</th>
+                <th className="w-10" />
+              </tr>
+            </thead>
+            <tbody>
+              {(decisions ?? []).map((d) => (
+                <tr
+                  key={d.id}
+                  className="cursor-pointer"
+                  onClick={() => navigate(`${basePath}/${d.id}`)}
+                >
+                  <td className="cell-code whitespace-nowrap">{d.indentNumber}</td>
+                  <td className="cell-text whitespace-nowrap">{d.projectCode} — {d.projectName}</td>
+                  <td className="whitespace-nowrap">{d.indentDate ? formatDate(d.indentDate) : '—'}</td>
+                  <td className="num tabular-nums whitespace-nowrap">{formatCurrency(d.estimatedValue)}</td>
+                  <td className="whitespace-nowrap">{d.priority || '—'}</td>
+                  <td className="cell-code whitespace-nowrap">{d.prNumber || '—'}</td>
+                  <td className="cell-text">{d.purpose || '—'}</td>
+                  <td><StatusBadge status={d.status} /></td>
+                  <td className="text-right">
+                    <ChevronRight className="h-4 w-4 text-ink-muted inline-block" />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </ListQueryBoundary>
     </div>

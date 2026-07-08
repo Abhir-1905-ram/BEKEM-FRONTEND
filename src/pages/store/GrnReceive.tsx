@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { ArrowLeft, Upload, FileText, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Upload, FileText, Image as ImageIcon, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import {
   ROLE_COLORS,
   UserRole,
   formatCurrency,
+  formatDate,
   type PurchaseOrderDto,
   type PoGrnReceiptLineDto,
   type ProjectGrnCounterDto,
@@ -15,9 +16,21 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { EmptyState } from '@/components/EmptyState';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import { ListQueryBoundary } from '@/components/ListQueryBoundary';
 import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 import { cn } from '@/lib/utils';
+
+interface GrnListRow {
+  id: string;
+  grnNumber: string;
+  purchaseOrderId?: string | null;
+  poNumber: string;
+  indentNumber: string;
+  vendorName: string;
+  status: string;
+  receivedAt: string | null;
+}
 
 type ReceiveType = 'PARTIAL' | 'FULL';
 type AttachmentCategory = 'INVOICE' | 'CHALLAN' | 'PHOTO';
@@ -87,6 +100,14 @@ export function GrnReceivePage() {
         '/goods-receipts/pending-purchase-orders'
       );
       return normalizeListData<PurchaseOrderDto>(res.data.data);
+    },
+  });
+
+  const { data: receipts, list: receiptsList, refetch: refetchReceipts } = useListQuery({
+    queryKey: ['grn-receipts-list'],
+    queryFn: async () => {
+      const res = await api.get<{ data: GrnListRow[] }>('/goods-receipts');
+      return normalizeListData<GrnListRow>(res.data.data);
     },
   });
 
@@ -228,6 +249,7 @@ export function GrnReceivePage() {
       }
       resetForm();
       refetch();
+      refetchReceipts();
     },
     onError: (e: Error & { response?: { data?: { message?: string } } }) => {
       toast.error(e.response?.data?.message || 'GRN failed');
@@ -257,6 +279,9 @@ export function GrnReceivePage() {
       />
 
       {!selectedPo ? (
+        <div className="space-y-6">
+        <div>
+          <h2 className="section-label mb-3">Pending material receipts</h2>
         <ListQueryBoundary
           isLoading={list.isLoading}
           isError={list.isError}
@@ -265,26 +290,90 @@ export function GrnReceivePage() {
           isEmpty={!orders?.length}
           empty={
             <EmptyState
-              title="No approved POs"
-              description="POs appear here after the Store Manager verifies physical delivery at site."
+              title="No approved POs ready for receipt"
+              description="Approved purchase orders appear here for Material Received → Submit → auto GRN."
             />
           }
         >
-          <div className="space-y-2">
-            {(orders ?? []).map((po) => (
-              <button
-                key={po.id}
-                type="button"
-                onClick={() => openPo(po)}
-                className="panel w-full p-4 text-left hover:border-bekem-accent/40 transition-colors"
-              >
-                <p className="font-semibold text-ink">PO #{po.displayPoNumber || '—'}</p>
-                <p className="text-xs text-ink-muted mt-0.5">{po.procurementRef || po.poNumber}</p>
-                <p className="text-sm text-ink-secondary">{po.vendor?.name}</p>
-              </button>
-            ))}
+          <div className="table-shell">
+            <table className="data-table min-w-[64rem]">
+              <thead>
+                <tr>
+                  <th>PO No</th>
+                  <th>Reference</th>
+                  <th>Vendor</th>
+                  <th>Project</th>
+                  <th className="w-10" />
+                </tr>
+              </thead>
+              <tbody>
+                {(orders ?? []).map((po) => (
+                  <tr key={po.id} className="cursor-pointer" onClick={() => openPo(po)}>
+                    <td className="cell-code whitespace-nowrap">PO #{po.displayPoNumber || '—'}</td>
+                    <td className="cell-text whitespace-nowrap">{po.procurementRef || po.poNumber}</td>
+                    <td className="cell-text">{po.vendor?.name || '—'}</td>
+                    <td className="cell-text whitespace-nowrap">
+                      {po.purchaseRequest?.project?.code || '—'}
+                    </td>
+                    <td className="text-right">
+                      <ChevronRight className="h-4 w-4 text-ink-muted inline-block" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </ListQueryBoundary>
+          </div>
+
+          <div>
+            <h2 className="section-label mb-3">Material receipt listing</h2>
+            <ListQueryBoundary
+              isLoading={receiptsList.isLoading}
+              isError={receiptsList.isError}
+              onRetry={receiptsList.onRetry}
+              retrying={receiptsList.retrying}
+              isEmpty={!receipts?.length}
+              empty={
+                <EmptyState
+                  title="No GRNs yet"
+                  description="Submitted material receipts appear here with Indent, PO and Vendor traceability."
+                />
+              }
+            >
+              <div className="table-shell">
+                <table className="data-table min-w-[56rem]">
+                  <thead>
+                    <tr>
+                      <th>GRN Number</th>
+                      <th>PO Number</th>
+                      <th>Indent Number</th>
+                      <th>Vendor</th>
+                      <th>Material Receipt Date</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(receipts ?? []).map((g) => (
+                      <tr key={g.id}>
+                        <td className="cell-code whitespace-nowrap">{g.grnNumber}</td>
+                        <td className="cell-code whitespace-nowrap">{g.poNumber || '—'}</td>
+                        <td className="cell-code whitespace-nowrap">{g.indentNumber || '—'}</td>
+                        <td className="cell-text">{g.vendorName || '—'}</td>
+                        <td className="whitespace-nowrap">
+                          {g.receivedAt ? formatDate(g.receivedAt) : '—'}
+                        </td>
+                        <td>
+                          <StatusBadge status={g.status} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </ListQueryBoundary>
+          </div>
+        </div>
       ) : (
         <div className="space-y-3">
           <button

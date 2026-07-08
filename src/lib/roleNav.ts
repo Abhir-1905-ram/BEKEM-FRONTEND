@@ -40,7 +40,6 @@ import {
 
 import { UserRole } from '@afios/shared';
 
-import { getRoleHomePath } from '@/lib/rolePaths';
 
 
 
@@ -62,7 +61,7 @@ export interface NavShortcut {
 
 export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
 
-  const home = getRoleHomePath(role);
+  const home = '/';
 
   const common: NavShortcut[] = [
 
@@ -84,7 +83,7 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
 
         ...common,
 
-        { id: 'new-request', label: 'Request material', href: '/request/new', icon: FilePlus },
+        { id: 'new-request', label: 'Indent raiser', href: '/request/new', icon: FilePlus },
 
         { id: 'my-requests', label: 'My indents', href: '/incidents', icon: FileText },
 
@@ -100,17 +99,19 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
 
         { id: 'add-material', label: 'Product catalog', href: '/materials/new', icon: Package },
 
-        { id: 'new-request', label: 'Request material', href: '/request/new', icon: FilePlus },
+        { id: 'new-request', label: 'Indent raiser', href: '/request/new', icon: FilePlus },
 
         { id: 'pending', label: 'Pending indents', href: '/store/requests', icon: FileText },
 
         { id: 'completed', label: 'Complete indents', href: '/store/completed', icon: CheckSquare },
 
-        { id: 'verify-delivery', label: 'Verify delivery', href: '/store/verify-delivery', icon: Package },
-
         { id: 'grn', label: 'Material receipt (GRN)', href: '/store/grn', icon: Package },
 
         { id: 'issue', label: 'Issue to site', href: '/store/issue', icon: FilePlus },
+
+        { id: 'registers', label: 'Registers', href: '/store/registers', icon: FileText },
+
+        { id: 'stock-aging', label: 'Stock aging', href: '/store/stock-aging', icon: Package },
 
         { id: 'stock', label: 'Stock Inventory', href: '/store/stock', icon: Package },
 
@@ -182,8 +183,6 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
 
         { id: 'stock', label: 'Stock Inventory', href: '/store/stock', icon: Package },
 
-        { id: 'branch-transfers', label: 'Branch transfer dashboard', href: '/executive/branch-transfers', icon: Truck },
-
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass },
 
       ];
@@ -213,6 +212,8 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
         { id: 'vendors', label: 'Vendors', href: '/admin/vendors', icon: Truck },
 
         { id: 'settings', label: 'Admin settings', href: '/admin/settings', icon: Shield },
+
+        { id: 'indent-categories', label: 'Indent categories', href: '/admin/indent-categories', icon: ClipboardCheck },
 
         { id: 'finance', label: 'Finance & Tally', href: '/coordinator/finance', icon: BarChart3 },
 
@@ -247,6 +248,8 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
         { id: 'user-analytics', label: 'User analytics', href: '/chairman/user-analytics', icon: BarChart3 },
 
         { id: 'settings', label: 'Admin settings', href: '/admin/settings', icon: Shield },
+
+        { id: 'indent-categories', label: 'Indent categories', href: '/admin/indent-categories', icon: ClipboardCheck },
 
         { id: 'finance', label: 'Finance & Tally', href: '/chairman/finance', icon: BarChart3 },
 
