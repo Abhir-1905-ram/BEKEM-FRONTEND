@@ -54,7 +54,7 @@ export function StorePendingRequestsPage() {
       >
         <MaterialIndentsTable
           requests={pendingRequests ?? []}
-          onRowClick={(id) => navigate(tab === 'pending' ? `/store/allocate/${id}` : `/requests/${id}`)}
+          onRowClick={(id) => navigate(`/store/allocate/${id}`)}
         />
       </ListQueryBoundary>
     </div>

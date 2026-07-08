@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Navigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Copy } from 'lucide-react';
 import { toast } from 'sonner';
@@ -97,6 +97,11 @@ export function RequestDetailPage() {
   }
 
   if (!request) return null;
+
+  // Store pending actions live on AllocateFlow (Allocation Request / Stock requisition).
+  if (role === UserRole.STORE_INCHARGE && request.status === 'PENDING_STORE') {
+    return <Navigate to={`/store/allocate/${request.id}`} replace />;
+  }
 
   const items = request.items?.length
     ? request.items

@@ -47,7 +47,9 @@ export function AllocateFlowPage() {
       await api.post(`/material-requests/${id}/allocate`, { decision, remark: trimmed });
     },
     onSuccess: (_, decision) => {
-      toast.success(decision === 'issue' ? 'Verified & forwarded to PM' : 'Forwarded to PM');
+      toast.success(
+        decision === 'issue' ? 'Allocation request sent to PM' : 'Forwarded to PM for stock requisition'
+      );
       setPhase('done');
       queryClient.invalidateQueries({ queryKey: ['store-pending-requests'] });
     },
@@ -150,8 +152,8 @@ export function AllocateFlowPage() {
         )}
 
         {canIssue && (
-          <div className="mb-4 rounded-xl border border-bekem-accent/20 bg-bekem-accent/5 px-3 py-2 text-sm text-ink-secondary">
-            Stock is available, but PM approval is still required before material can be issued.
+          <div className="mb-4 rounded-xl border border-success/30 bg-success-light/50 px-3 py-2 text-sm text-success-dark">
+            Stock is available. Send an allocation request to PM before material can be issued.
           </div>
         )}
 
@@ -174,8 +176,8 @@ export function AllocateFlowPage() {
           }}
           placeholder={
             canIssue
-              ? 'Store verification note (stock available — PM must approve before issue)…'
-              : 'Reason for forwarding entire indent to PM…'
+              ? 'Store verification note (stock available — allocation request to PM)…'
+              : 'Reason for stock requisition forward to PM…'
           }
         />
         {remarkError && <p className="text-xs text-danger mt-1">{remarkError}</p>}
@@ -189,7 +191,7 @@ export function AllocateFlowPage() {
           disabled={actionMutation.isPending}
           onClick={() => submit(canIssue ? 'issue' : 'forward')}
         >
-          {canIssue ? 'Verify stock & forward to PM' : 'Forward entire indent to PM'}
+          {canIssue ? 'Allocation Request to PM' : 'Forward to PM, for Stock requisition'}
         </Button>
         <Button
           variant="ghost"

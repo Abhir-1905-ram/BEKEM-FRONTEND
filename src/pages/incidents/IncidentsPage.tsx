@@ -151,7 +151,14 @@ export function IncidentsPage() {
       ) : (
         <MaterialIndentsTable
           requests={requests ?? []}
-          onRowClick={(id) => navigate(`/requests/${id}`)}
+          onRowClick={(id) => {
+            const row = requests?.find((r) => r.id === id);
+            if (role === UserRole.STORE_INCHARGE && row?.status === 'PENDING_STORE') {
+              navigate(`/store/allocate/${id}`);
+              return;
+            }
+            navigate(`/requests/${id}`);
+          }}
         />
       )}
     </div>

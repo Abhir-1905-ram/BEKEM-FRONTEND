@@ -18,7 +18,10 @@ export function getNotificationPath(
   }
 
   if (n.relatedEntityType === 'MaterialRequest') {
-    if (role === UserRole.SITE_INCHARGE || role === UserRole.STORE_INCHARGE) {
+    if (role === UserRole.STORE_INCHARGE) {
+      return `/store/allocate/${n.relatedEntityId}`;
+    }
+    if (role === UserRole.SITE_INCHARGE) {
       return `/requests/${n.relatedEntityId}`;
     }
     if (role === UserRole.PROJECT_MANAGER) {
