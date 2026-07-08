@@ -45,9 +45,20 @@ export function QuotationComparisonTable({
   className,
   maxVendors,
 }: QuotationComparisonTableProps) {
-  const materialComparisons = (comparison as QuotationComparisonDto & {
-    itemComparisons?: ItemComparison[];
-  }).itemComparisons;
+  const materialComparisons = (comparison.itemComparisons || []).map((item) => ({
+    materialId: item.materialId,
+    materialName: item.materialName,
+    quantity: item.quantity,
+    unit: item.unit,
+    minOffer: item.minOffer,
+    maxOffer: item.maxOffer,
+    vendorOffers: (item.offers || []).map((o) => ({
+      vendorId: o.vendorId,
+      vendorName: o.vendorName,
+      rate: o.rate,
+      finalCost: o.finalCost,
+    })),
+  })) as ItemComparison[];
   const vendors = maxVendors ? comparison.vendors.slice(0, maxVendors) : comparison.vendors;
   const [expanded, setExpanded] = useState<Record<string, boolean>>(() => {
     const init: Record<string, boolean> = {};
@@ -126,7 +137,15 @@ export function QuotationComparisonTable({
                             {row.label}
                           </td>
                           {vendors.map((v) => {
-                            const offer = item.vendorOffers?.find((o) => o.vendorId === v.id);
+                            const offer = item.vendorOffers?.find(
+                              (o: {
+                                vendorId: string;
+                                rate: number;
+                                gstPercent?: number;
+                                gstAmount?: number;
+                                finalCost?: number;
+                              }) => o.vendorId === v.id
+                            );
                             let value: unknown;
                             if (row.key === 'rate') value = offer?.rate ?? (v as VendorCol).rate;
                             else if (row.key === 'gstPercent')

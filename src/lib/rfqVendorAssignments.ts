@@ -3,34 +3,35 @@ import type { VendorQuotationDraft } from '@/components/VendorQuotationEditor';
 
 export function draftsFromComparison(data: RfqComparisonDto): VendorQuotationDraft[] {
   const itemIds = data.items.map((it) => it.materialId);
-  const rows = data.comparison.vendors
-    .map((v) => {
-      const selectedMaterialIds = (v.selectedMaterialIds ?? []).filter((id) =>
-        itemIds.includes(id)
-      );
-      if (!v.vendorId || !selectedMaterialIds.length) return null;
-      return {
-        vendorId: v.vendorId,
-        vendorName: v.vendorName,
-        rate: v.rate,
-        gstPercent: v.gstPercent,
-        paymentTerms: v.paymentTerms,
-        deliveryTerms: v.deliveryTerms,
-        selectedMaterialIds,
-        itemRates:
-          v.itemRates?.map((it) => ({
-            materialId: it.materialId,
-            rate: it.rate,
-            gstPercent: it.gstPercent,
-          })) ||
-          data.items.map((it) => ({
-            materialId: it.materialId,
-            rate: v.rate,
-            gstPercent: v.gstPercent,
-          })),
-      };
-    })
-    .filter((row): row is VendorQuotationDraft => row != null);
+  const rows: VendorQuotationDraft[] = [];
+
+  for (const v of data.comparison.vendors) {
+    const selectedMaterialIds = (v.selectedMaterialIds ?? []).filter((id: string) =>
+      itemIds.includes(id)
+    );
+    if (!v.vendorId || !selectedMaterialIds.length) continue;
+
+    rows.push({
+      vendorId: v.vendorId,
+      vendorName: v.vendorName || '',
+      rate: v.rate,
+      gstPercent: v.gstPercent,
+      paymentTerms: v.paymentTerms,
+      deliveryTerms: v.deliveryTerms,
+      selectedMaterialIds,
+      itemRates:
+        v.itemRates?.map((it) => ({
+          materialId: it.materialId,
+          rate: it.rate,
+          gstPercent: it.gstPercent,
+        })) ||
+        data.items.map((it) => ({
+          materialId: it.materialId,
+          rate: v.rate,
+          gstPercent: v.gstPercent,
+        })),
+    });
+  }
 
   const byVendor = new Map<string, VendorQuotationDraft>();
   for (const row of rows) {

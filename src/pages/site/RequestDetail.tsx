@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { StatusTimeline } from '@/components/StatusTimeline';
 import { Textarea } from '@/components/ui/Input';
-import { SearchSelect } from '@/components/SearchSelect';
 import { StockComparisonTable } from '@/components/StockComparisonTable';
 import { CrossProjectStockPanel } from '@/components/CrossProjectStockPanel';
 import { PmDailyCapBanner } from '@/components/PmDailyCapBanner';
@@ -29,11 +28,6 @@ export function RequestDetailPage() {
   const accent = ROLE_COLORS[UserRole.PROJECT_MANAGER].primary;
   const [pmRemark, setPmRemark] = useState('');
   const [pmRemarkError, setPmRemarkError] = useState('');
-  const [showReject, setShowReject] = useState(false);
-  const [rejectReason, setRejectReason] = useState('');
-  const [showBranchTransfer, setShowBranchTransfer] = useState(false);
-  const [fromProjectId, setFromProjectId] = useState('');
-  const [btNote, setBtNote] = useState('');
 
   const { data: request, isLoading, isError, error } = useQuery({
     queryKey: ['material-request', id],
@@ -66,74 +60,6 @@ export function RequestDetailPage() {
     },
   });
 
-  const forwardToHo = useMutation({
-    mutationFn: async (remark: string) => {
-      const res = await api.post<{ data: MaterialRequestDto; message?: string; prNumber?: string }>(
-        `/material-requests/${id}/forward-to-ho`,
-        { remark }
-      );
-      return res.data;
-    },
-    onSuccess: (data) => {
-      toast.success(data.message || `Forwarded to Head Office — PR ${data.prNumber || 'created'}`);
-      setPmRemark('');
-      queryClient.invalidateQueries({ queryKey: ['material-request', id] });
-      queryClient.invalidateQueries({ queryKey: ['pm-approvals'] });
-      queryClient.invalidateQueries({ queryKey: ['pm-dashboard'] });
-    },
-    onError: (err: Error & { response?: { data?: { message?: string } } }) => {
-      toast.error(err.response?.data?.message || 'Could not forward to Head Office');
-    },
-  });
-
-  const branchTransfer = useMutation({
-    mutationFn: async () => {
-      const items =
-        request?.items?.map((item) => ({
-          materialId: item.materialId,
-          quantity: item.quantityRequested,
-        })) ||
-        (request?.materialId
-          ? [{ materialId: request.materialId, quantity: request.quantityRequested || 1 }]
-          : []);
-      const res = await api.post<{ data: { id: string; transferNumber: string } }>(
-        '/branch-transfers',
-        {
-          fromProjectId,
-          materialRequestId: id,
-          items,
-          note: btNote.trim() || undefined,
-        }
-      );
-      return res.data.data;
-    },
-    onSuccess: (data) => {
-      toast.success(`Branch transfer ${data.transferNumber} requested — no purchase order created`);
-      setShowBranchTransfer(false);
-      setFromProjectId('');
-      setBtNote('');
-      queryClient.invalidateQueries({ queryKey: ['material-request', id] });
-      queryClient.invalidateQueries({ queryKey: ['pm-approvals'] });
-      queryClient.invalidateQueries({ queryKey: ['branch-transfers'] });
-      navigate(`/branch-transfers/${data.id}`);
-    },
-    onError: (err: Error & { response?: { data?: { message?: string } } }) => {
-      toast.error(err.response?.data?.message || 'Could not create branch transfer');
-    },
-  });
-
-  const reject = useMutation({
-    mutationFn: (reason: string) => api.post(`/material-requests/${id}/reject`, { reason }),
-    onSuccess: () => {
-      toast.success('Indent rejected');
-      setShowReject(false);
-      setRejectReason('');
-      queryClient.invalidateQueries({ queryKey: ['material-request', id] });
-      queryClient.invalidateQueries({ queryKey: ['pm-approvals'] });
-    },
-    onError: () => toast.error('Rejection failed'),
-  });
-
   const confirmReceipt = useMutation({
     mutationFn: () => api.post(`/material-requests/${id}/confirm-receipt`, {}),
     onSuccess: () => {
@@ -146,14 +72,17 @@ export function RequestDetailPage() {
     enabled:
       !!request &&
       !isLoading &&
-      !showReject &&
-      !showBranchTransfer &&
       role === UserRole.PROJECT_MANAGER &&
       request.status === 'FORWARDED_TO_PM' &&
       !request.escalatedToHo,
-    onReject: () => setShowReject(true),
+    onApprove: () => {
+      if (!pmRemark.trim()) {
+        setPmRemarkError('Remark is required');
+        return;
+      }
+      pmLocalClose.mutate(pmRemark.trim());
+    },
   });
-
   if (isLoading) {
     return (
       <div className="px-4 pt-6 space-y-3">
@@ -193,7 +122,6 @@ export function RequestDetailPage() {
       request.status
     );
   const canConfirmReceipt = role === UserRole.SITE_INCHARGE && request.status === 'ISSUED';
-  const destProjectId = request.projectId;
   const hidePricing = hideIndentPricingForRole(role, request.indentRequestType);
 
   const requirePmRemark = () => {
