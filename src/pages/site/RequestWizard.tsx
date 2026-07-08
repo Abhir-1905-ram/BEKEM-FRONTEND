@@ -288,7 +288,7 @@ export function RequestWizardPage() {
         message={`${indentNumber} sent to store. You'll be notified at each step.`}
         accentColor={accent}
         primaryAction={{ label: 'Back to home', onClick: () => navigate(homePath) }}
-        secondaryAction={{ label: 'View my incidents', onClick: () => navigate('/incidents') }}
+        secondaryAction={{ label: 'View my indents', onClick: () => navigate('/incidents') }}
       />
     );
   }
