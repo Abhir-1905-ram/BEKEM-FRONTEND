@@ -17,6 +17,7 @@ import {
   computeIndentRunningTotal,
   computeIndentLineTotal,
   hasMaterialUnitPrice,
+  isMaterialOverBelowCap,
   resolveMaterialUnitPrice,
   type IndentRequestType,
   type MaterialDto,
@@ -168,6 +169,10 @@ export function RequestWizardPage() {
       toast.error('Price not available for this item. Ask HQ to set a reference rate, or use Above ₹5,000.');
       return;
     }
+    if (indentRequestType === 'BELOW_5000' && isMaterialOverBelowCap(material)) {
+      toast.error('This item costs ₹5,000 or more. Use an Above ₹5,000 indent request.');
+      return;
+    }
     const lineUnit = (unit || material.unit || 'Nos').trim() || 'Nos';
     setLines((prev) => {
       const existing = prev.find((l) => l.material.id === material.id);
@@ -256,9 +261,21 @@ export function RequestWizardPage() {
     setLines((prev) => prev.filter((l) => l.material.id !== materialId));
   };
 
+  const isBlockedForBelowCap = (material: MaterialDto) =>
+    indentRequestType === 'BELOW_5000' &&
+    (isMaterialOverBelowCap(material) || !hasMaterialUnitPrice(material));
+
   const selectMaterial = (material: MaterialDto) => {
     const inCart = lines.find((l) => l.material.id === material.id);
     if (!inCart && !canAddMaterials) return;
+    if (!inCart && isBlockedForBelowCap(material)) {
+      if (isMaterialOverBelowCap(material)) {
+        toast.error('This item costs ₹5,000 or more. Use an Above ₹5,000 indent request.');
+      } else {
+        toast.error('Price not available for this item. Ask HQ to set a reference rate, or use Above ₹5,000.');
+      }
+      return;
+    }
     setSelectedMaterial(material);
     setPickQty(inCart?.quantity ?? 1);
     setPickUnit(inCart?.unit || material.unit || 'Nos');
@@ -433,8 +450,27 @@ export function RequestWizardPage() {
             onChange={(e) => {
               const next = e.target.value as IndentRequestType | '';
               setIndentRequestType(next);
-              if (next === 'BELOW_5000' && computeIndentRunningTotal(lines) >= INDENT_VALUE_CAP_INR) {
-                toast.message('Reduce items or quantities to stay under ₹5,000');
+              if (next === 'BELOW_5000') {
+                const blocked = lines.filter(
+                  (l) => isMaterialOverBelowCap(l.material) || !hasMaterialUnitPrice(l.material)
+                );
+                if (blocked.length) {
+                  setLines((prev) =>
+                    prev.filter(
+                      (l) =>
+                        !isMaterialOverBelowCap(l.material) && hasMaterialUnitPrice(l.material)
+                    )
+                  );
+                  toast.message('Removed items priced ₹5,000+ (or without price) from this indent');
+                } else if (computeIndentRunningTotal(lines) >= INDENT_VALUE_CAP_INR) {
+                  toast.message('Reduce items or quantities to stay under ₹5,000');
+                }
+                if (
+                  selectedMaterial &&
+                  (isMaterialOverBelowCap(selectedMaterial) || !hasMaterialUnitPrice(selectedMaterial))
+                ) {
+                  setSelectedMaterial(null);
+                }
               }
             }}
             className="w-full h-8 rounded border border-surface-border px-2 text-xs bg-white disabled:opacity-50 disabled:cursor-not-allowed"
@@ -448,7 +484,7 @@ export function RequestWizardPage() {
           </select>
           {indentRequestType === 'BELOW_5000' && (
             <p className="text-[11px] text-ink-secondary">
-              Unit prices and line totals are shown. Total must stay below ₹5,000.
+              Unit prices and line totals are shown. Items priced ₹5,000+ are disabled. Total must stay below ₹5,000.
             </p>
           )}
           {indentRequestType === 'ABOVE_5000' && (
@@ -662,12 +698,21 @@ export function RequestWizardPage() {
                     {selectedMaterial.grade ? ` · ${selectedMaterial.grade}` : ''}
                   </p>
                   {showPricing && selectedMaterial && (
-                    <p className="text-xs text-ink-muted mt-1">
-                      {hasMaterialUnitPrice(selectedMaterial)
-                        ? `Unit price: ${formatCurrency(resolveMaterialUnitPrice(selectedMaterial))}${
-                            pickUnit ? ` / ${unitPriceSuffix(pickUnit)}` : ''
-                          }`
-                        : 'Price not in master — ask HQ to set reference rate'}
+                    <p
+                      className={cn(
+                        'text-xs mt-1',
+                        isMaterialOverBelowCap(selectedMaterial) || !hasMaterialUnitPrice(selectedMaterial)
+                          ? 'text-warning'
+                          : 'text-ink-muted'
+                      )}
+                    >
+                      {isMaterialOverBelowCap(selectedMaterial)
+                        ? `Unit price ${formatCurrency(resolveMaterialUnitPrice(selectedMaterial))} is ₹5,000+. Use Above ₹5,000 indent.`
+                        : hasMaterialUnitPrice(selectedMaterial)
+                          ? `Unit price: ${formatCurrency(resolveMaterialUnitPrice(selectedMaterial))}${
+                              pickUnit ? ` / ${unitPriceSuffix(pickUnit)}` : ''
+                            }`
+                          : 'Price not in master — ask HQ to set reference rate'}
                     </p>
                   )}
                 </div>
@@ -701,7 +746,7 @@ export function RequestWizardPage() {
                     variant="accent"
                     accentColor={accent}
                     className="flex-1"
-                    disabled={!canAddMaterials}
+                    disabled={!canAddMaterials || isBlockedForBelowCap(selectedMaterial)}
                     onClick={() => addLine(selectedMaterial, pickQty, pickUnit)}
                   >
                     Add to indent
@@ -758,18 +803,28 @@ export function RequestWizardPage() {
                       {group.items.slice(0, 12).map((m) => {
                   const inCart = lines.find((l) => l.material.id === m.id);
                   const isSelected = selectedMaterial?.id === m.id;
+                  const overCap = !inCart && isBlockedForBelowCap(m);
+                  const disabled = (!inCart && !canAddMaterials) || overCap;
                   return (
                     <button
                       key={m.id}
                       type="button"
                       onClick={() => selectMaterial(m)}
-                      disabled={!inCart && !canAddMaterials}
+                      disabled={disabled}
+                      title={
+                        overCap
+                          ? isMaterialOverBelowCap(m)
+                            ? 'Unit price is ₹5,000 or more — use Above ₹5,000 indent'
+                            : 'Price not available — use Above ₹5,000 indent'
+                          : undefined
+                      }
                       className={cn(
                         'w-full text-left rounded-2xl border px-3 py-2 transition-all duration-200',
-                        !inCart && !canAddMaterials && 'opacity-50 cursor-not-allowed',
+                        disabled && 'opacity-50 cursor-not-allowed',
                         isSelected
                           ? 'border-bekem-accent bg-bekem-accent/5 shadow-sm'
-                          : 'border-surface-border bg-white hover:border-bekem-accent/40 hover:shadow-sm'
+                          : 'border-surface-border bg-white hover:border-bekem-accent/40 hover:shadow-sm',
+                        overCap && 'hover:border-surface-border hover:shadow-none'
                       )}
                     >
                       <div className="flex items-center justify-between gap-3">
@@ -783,10 +838,20 @@ export function RequestWizardPage() {
                               </>
                             )}
                           </p>
+                          {showPricing && hasMaterialUnitPrice(m) && (
+                            <p className="text-xs text-ink-muted mt-0.5 tabular-nums">
+                              {formatCurrency(resolveMaterialUnitPrice(m))} / {unitPriceSuffix(m.unit || 'Nos')}
+                              {isMaterialOverBelowCap(m) ? ' · above ₹5,000' : ''}
+                            </p>
+                          )}
                         </div>
                         {inCart ? (
                           <span className="shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                             {inCart.quantity} {m.unit}
+                          </span>
+                        ) : overCap ? (
+                          <span className="shrink-0 text-xs font-medium text-ink-muted">
+                            {isMaterialOverBelowCap(m) ? 'Above ₹5,000' : 'No price'}
                           </span>
                         ) : (
                           <span className="shrink-0 text-xs font-medium text-bekem-accent">
