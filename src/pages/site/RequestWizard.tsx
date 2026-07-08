@@ -16,6 +16,7 @@ import {
   INDENT_CAP_REACHED_MESSAGE,
   computeIndentRunningTotal,
   computeIndentLineTotal,
+  hasMaterialUnitPrice,
   resolveMaterialUnitPrice,
   type IndentRequestType,
   type MaterialDto,
@@ -161,6 +162,10 @@ export function RequestWizardPage() {
     }
     if (!indentRequestType) {
       toast.error('Select indent request type first');
+      return;
+    }
+    if (indentRequestType === 'BELOW_5000' && !hasMaterialUnitPrice(material)) {
+      toast.error('Price not available for this item. Ask HQ to set a reference rate, or use Above ₹5,000.');
       return;
     }
     const lineUnit = (unit || material.unit || 'Nos').trim() || 'Nos';
@@ -533,15 +538,26 @@ export function RequestWizardPage() {
                     </button>
                     {showPricing && (
                       <div className="col-span-full flex items-center justify-between text-xs pt-1 border-t border-dashed border-surface-border mt-1">
-                        <span className="text-ink-muted">
-                          {formatCurrency(resolveMaterialUnitPrice(line.material))}
-                          {line.unit ? ` / ${unitPriceSuffix(line.unit)}` : ''} × {line.quantity}
-                        </span>
-                        <span className="font-semibold tabular-nums text-ink">
-                          {formatCurrency(
-                            computeIndentLineTotal(line.quantity, resolveMaterialUnitPrice(line.material))
-                          )}
-                        </span>
+                        {hasMaterialUnitPrice(line.material) ? (
+                          <>
+                            <span className="text-ink-muted">
+                              {formatCurrency(resolveMaterialUnitPrice(line.material))}
+                              {line.unit ? ` / ${unitPriceSuffix(line.unit)}` : ''} × {line.quantity}
+                            </span>
+                            <span className="font-semibold tabular-nums text-ink">
+                              {formatCurrency(
+                                computeIndentLineTotal(
+                                  line.quantity,
+                                  resolveMaterialUnitPrice(line.material)
+                                )
+                              )}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-warning">
+                            Price not in master — ask HQ to set reference rate
+                          </span>
+                        )}
                       </div>
                     )}
                   </li>
@@ -647,8 +663,11 @@ export function RequestWizardPage() {
                   </p>
                   {showPricing && selectedMaterial && (
                     <p className="text-xs text-ink-muted mt-1">
-                      Unit price: {formatCurrency(resolveMaterialUnitPrice(selectedMaterial))}
-                      {pickUnit ? ` / ${unitPriceSuffix(pickUnit)}` : ''}
+                      {hasMaterialUnitPrice(selectedMaterial)
+                        ? `Unit price: ${formatCurrency(resolveMaterialUnitPrice(selectedMaterial))}${
+                            pickUnit ? ` / ${unitPriceSuffix(pickUnit)}` : ''
+                          }`
+                        : 'Price not in master — ask HQ to set reference rate'}
                     </p>
                   )}
                 </div>
