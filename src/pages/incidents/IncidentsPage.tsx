@@ -14,6 +14,8 @@ import { MaterialIndentsTable } from '@/components/MaterialIndentsTable';
 import { IndentListFilters, IndentQueueQuickButtons } from '@/components/IndentListFilters';
 import {
   filterMaterialIndents,
+  getIndentQueueFiltersForRole,
+  isIndentQueueFilterId,
   uniqueIndentCategories,
   type IndentDaysFilter,
   type IndentQueueQuickFilter,
@@ -54,9 +56,12 @@ export function IncidentsPage() {
   const rawTab = params.get('tab') || 'pending';
   const tab = rawTab === 'approved' ? 'pending' : rawTab;
   const isSite = role === UserRole.SITE_INCHARGE;
+  const queueOptions = useMemo(() => getIndentQueueFiltersForRole(role), [role]);
 
   const search = params.get('q') || '';
-  const queue = (params.get('queue') as IndentQueueQuickFilter | '') || '';
+  const rawQueue = params.get('queue') || '';
+  const queue: IndentQueueQuickFilter | '' =
+    rawQueue && isIndentQueueFilterId(rawQueue) ? rawQueue : '';
   const category = params.get('category') || '';
   const days = (params.get('days') as IndentDaysFilter) || '';
 
@@ -138,6 +143,7 @@ export function IncidentsPage() {
               </h1>
               <IndentQueueQuickButtons
                 value={queue}
+                options={queueOptions}
                 onChange={(next) => {
                   patchParams({
                     queue: next || undefined,
@@ -147,7 +153,9 @@ export function IncidentsPage() {
               />
             </div>
             <p className="text-xs text-ink-secondary mt-0.5 max-w-xl">{subtitleForRole(role)}</p>
-            <p className="text-xs text-ink-muted mt-0.5">Material indents raised from your site</p>
+            {isSite && (
+              <p className="text-xs text-ink-muted mt-0.5">Material indents raised from your site</p>
+            )}
           </div>
           {isSite && (
             <Button
@@ -198,6 +206,7 @@ export function IncidentsPage() {
           onSearchChange={setSearch}
           queue={queue}
           onQueueChange={(next) => patchParams({ queue: next || undefined })}
+          queueOptions={queueOptions}
           category={category}
           onCategoryChange={(next) => patchParams({ category: next || undefined })}
           categories={categories}

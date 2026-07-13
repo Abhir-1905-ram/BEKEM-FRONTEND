@@ -2,20 +2,29 @@ import type { MaterialRequestDto } from '@afios/shared';
 import { UserRole } from '@afios/shared';
 import { formatIndentQueueStatus } from '@/components/MaterialIndentsTable';
 
-/** Title-side quick filters for common pending queues. */
-export type IndentQueueQuickFilter = 'store' | 'pm' | 'ho';
+/** Title-side / dropdown queue filters. Labels vary by role. */
+export type IndentQueueQuickFilter = 'pm' | 'ho' | 'store' | 'coordinator' | 'chairman';
 
-export const INDENT_QUEUE_QUICK_FILTERS: Array<{
+export type IndentQueueFilterOption = {
   id: IndentQueueQuickFilter;
   label: string;
-}> = [
-  { id: 'store', label: 'Pending at Store Incharge' },
-  { id: 'pm', label: 'Pending at Project Manager' },
-  { id: 'ho', label: 'Pending at HO' },
-];
+};
 
-const STORE_STATUSES = new Set(['PENDING_STORE', 'ALLOCATED', 'MATERIAL_RECEIVED', 'CHAIRMAN_APPROVED']);
+const STORE_STATUSES = new Set([
+  'PENDING_STORE',
+  'ALLOCATED',
+  'MATERIAL_RECEIVED',
+  'CHAIRMAN_APPROVED',
+]);
 const PM_STATUSES = new Set(['FORWARDED_TO_PM', 'BRANCH_TRANSFER_REQUESTED']);
+const COORDINATOR_STATUSES = new Set([
+  'EXECUTIVE_DECISION_PO',
+  'EXECUTIVE_DECISION_BRANCH_TRANSFER',
+  'COORDINATOR_PENDING',
+  'COORDINATOR_VERIFIED',
+  'PO_CREATED',
+]);
+const CHAIRMAN_STATUSES = new Set(['CHAIRMAN_PENDING']);
 const HO_STATUSES = new Set([
   'PENDING_HO',
   'PENDING_EXECUTIVE_DECISION',
@@ -31,6 +40,44 @@ const HO_STATUSES = new Set([
   'COORDINATOR_PENDING',
   'CHAIRMAN_PENDING',
 ]);
+
+/** Role-specific quick tabs next to the Material Indents / Pending Indents title. */
+export function getIndentQueueFiltersForRole(role: UserRole): IndentQueueFilterOption[] {
+  switch (role) {
+    case UserRole.SITE_INCHARGE:
+      return [
+        { id: 'pm', label: 'Pending at PM' },
+        { id: 'ho', label: 'Pending at HO' },
+      ];
+    case UserRole.STORE_INCHARGE:
+      return [
+        { id: 'pm', label: 'Pending at Project Manager' },
+        { id: 'ho', label: 'Pending at HO' },
+      ];
+    case UserRole.PROJECT_MANAGER:
+      return [
+        { id: 'ho', label: 'Pending at HO' },
+        { id: 'store', label: 'Stock Allocation Pending at Store Incharge' },
+      ];
+    case UserRole.EXECUTIVE:
+      return [
+        { id: 'coordinator', label: 'Pending at Coordinator' },
+        { id: 'chairman', label: 'Pending at MD/Chairman' },
+        { id: 'store', label: 'Stock Allocation Pending at Store Incharge' },
+      ];
+    case UserRole.COORDINATOR:
+      return [
+        { id: 'chairman', label: 'Pending at MD/Chairman' },
+        { id: 'store', label: 'Stock Allocation Pending at Store Incharge' },
+      ];
+    default:
+      return [
+        { id: 'pm', label: 'Pending at Project Manager' },
+        { id: 'ho', label: 'Pending at HO' },
+        { id: 'store', label: 'Stock Allocation Pending at Store Incharge' },
+      ];
+  }
+}
 
 export function matchesIndentQueueQuickFilter(
   request: MaterialRequestDto,
@@ -48,7 +95,15 @@ export function matchesIndentQueueQuickFilter(
     if (pending === UserRole.PROJECT_MANAGER) return true;
     return PM_STATUSES.has(status);
   }
-  // ho
+  if (filter === 'coordinator') {
+    if (pending === UserRole.COORDINATOR) return true;
+    return COORDINATOR_STATUSES.has(status);
+  }
+  if (filter === 'chairman') {
+    if (pending === UserRole.CHAIRMAN) return true;
+    return CHAIRMAN_STATUSES.has(status);
+  }
+  // Broad Head Office bucket (Executive + Coordinator + Chairman workflows)
   if (
     pending === UserRole.EXECUTIVE ||
     pending === UserRole.COORDINATOR ||
@@ -130,4 +185,8 @@ export function uniqueIndentCategories(requests: MaterialRequestDto[]): string[]
     if (name) set.add(name);
   }
   return [...set].sort((a, b) => a.localeCompare(b));
+}
+
+export function isIndentQueueFilterId(value: string): value is IndentQueueQuickFilter {
+  return ['pm', 'ho', 'store', 'coordinator', 'chairman'].includes(value);
 }

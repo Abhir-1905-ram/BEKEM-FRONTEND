@@ -1,10 +1,10 @@
 import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { cn } from '@/lib/utils';
-import {
-  INDENT_QUEUE_QUICK_FILTERS,
-  type IndentDaysFilter,
-  type IndentQueueQuickFilter,
+import type {
+  IndentDaysFilter,
+  IndentQueueFilterOption,
+  IndentQueueQuickFilter,
 } from '@/lib/indentListFilters';
 
 type Props = {
@@ -12,6 +12,7 @@ type Props = {
   onSearchChange: (value: string) => void;
   queue: IndentQueueQuickFilter | '';
   onQueueChange: (value: IndentQueueQuickFilter | '') => void;
+  queueOptions: IndentQueueFilterOption[];
   category: string;
   onCategoryChange: (value: string) => void;
   categories: string[];
@@ -27,6 +28,7 @@ export function IndentListFilters({
   onSearchChange,
   queue,
   onQueueChange,
+  queueOptions,
   category,
   onCategoryChange,
   categories,
@@ -72,7 +74,7 @@ export function IndentListFilters({
             aria-label="Filter by pending status"
           >
             <option value="">All statuses</option>
-            {INDENT_QUEUE_QUICK_FILTERS.map((f) => (
+            {queueOptions.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.label}
               </option>
@@ -118,15 +120,19 @@ export function IndentListFilters({
 export function IndentQueueQuickButtons({
   value,
   onChange,
+  options,
   className,
 }: {
   value: IndentQueueQuickFilter | '';
   onChange: (next: IndentQueueQuickFilter | '') => void;
+  options: IndentQueueFilterOption[];
   className?: string;
 }) {
+  if (!options.length) return null;
+
   return (
     <div className={cn('flex flex-wrap gap-1.5', className)}>
-      {INDENT_QUEUE_QUICK_FILTERS.map((f) => {
+      {options.map((f) => {
         const active = value === f.id;
         return (
           <button
