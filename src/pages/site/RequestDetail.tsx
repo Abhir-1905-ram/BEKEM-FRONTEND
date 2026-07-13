@@ -248,8 +248,12 @@ export function RequestDetailPage() {
               <p className="text-sm font-semibold text-ink">PM decision</p>
               <p className="text-xs text-ink-secondary mt-1">
                 {request.indentRequestType === 'BELOW_5000'
-                  ? 'Below ₹5,000 — your approval is final. Store will purchase with approved funds and allocate (no Head Office).'
-                  : 'Store forwarded this indent because stock is short at site. Close it within PM limit after your verification.'}
+                  ? request.canFullyIssue
+                    ? 'Below ₹5,000 and stock is available — Approve to reserve stock for Store to issue (no Head Office).'
+                    : 'Below ₹5,000 — your approval is final. Store will purchase with approved funds and allocate (no Head Office).'
+                  : request.canFullyIssue || request.storeStockVerified
+                    ? 'Stock is available at site — Approve to reserve allocation so Store can issue.'
+                    : 'Stock is short at site. Close it within PM limit after your verification, or it may escalate to Head Office.'}
               </p>
 
               <div className="mt-3">
