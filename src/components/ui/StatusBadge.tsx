@@ -119,7 +119,7 @@ const STATUS_LABELS: Record<string, string> = {
   PENDING_EXECUTIVE_DECISION: 'Pending at Executive',
   EXECUTIVE_DECISION_PO: 'Pending at Coordinator',
   EXECUTIVE_DECISION_BRANCH_TRANSFER: 'Pending at Coordinator',
-  PM_APPROVED: 'Pending at Executive',
+  PM_APPROVED: 'Pending at Store Incharge',
   PURCHASE_REQUESTED: 'Pending at Executive',
   RFQ_OPEN: 'Pending at Executive',
   QUOTED: 'Pending at Executive',

@@ -18,6 +18,7 @@ import { CrossProjectStockPanel } from '@/components/CrossProjectStockPanel';
 import { PmDailyCapBanner } from '@/components/PmDailyCapBanner';
 import { useApprovalShortcuts } from '@/hooks/useApprovalShortcuts';
 import { DetailField, DetailFieldGrid } from '@/components/ui/DetailFields';
+import { formatIndentQueueStatus } from '@/components/MaterialIndentsTable';
 
 export function RequestDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -163,13 +164,17 @@ export function RequestDetailPage() {
               <Copy className="h-4 w-4" />
             </button>
           </div>
-          <StatusBadge status={request.status} className="mt-1" />
+          <StatusBadge
+            status={request.status}
+            label={formatIndentQueueStatus(request.status, request.pendingWith)}
+            className="mt-1"
+          />
         </div>
       </header>
 
-      {canPmDecide && <PmDailyCapBanner />}
+      {canPmDecide && request.indentRequestType !== 'BELOW_5000' && <PmDailyCapBanner />}
 
-      {request.escalatedToHo && (
+      {request.escalatedToHo && request.indentRequestType !== 'BELOW_5000' && (
         <div className="mb-4 rounded-xl border border-warning/30 bg-warning/5 px-3 py-2 text-sm">
           This indent was escalated to Head Office — it exceeds the PM&apos;s configurable daily
           approval limit (see Admin settings).
@@ -242,8 +247,9 @@ export function RequestDetailPage() {
             <div>
               <p className="text-sm font-semibold text-ink">PM decision</p>
               <p className="text-xs text-ink-secondary mt-1">
-                Store forwarded this indent because stock is short at site. Close it within PM limit
-                after your verification.
+                {request.indentRequestType === 'BELOW_5000'
+                  ? 'Below ₹5,000 — your approval is final. Store will purchase with approved funds and allocate (no Head Office).'
+                  : 'Store forwarded this indent because stock is short at site. Close it within PM limit after your verification.'}
               </p>
 
               <div className="mt-3">
