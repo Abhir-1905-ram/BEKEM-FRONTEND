@@ -61,6 +61,25 @@ export function RequestDetailPage() {
     },
   });
 
+  const forwardToHo = useMutation({
+    mutationFn: async (remark: string) => {
+      const res = await api.post<{ data: MaterialRequestDto; message?: string }>(
+        `/material-requests/${id}/forward-to-ho`,
+        { remark }
+      );
+      return res.data;
+    },
+    onSuccess: (data) => {
+      toast.success(data.message || 'Forwarded to HO for stock requisition');
+      setPmRemark('');
+      queryClient.invalidateQueries({ queryKey: ['material-request', id] });
+      queryClient.invalidateQueries({ queryKey: ['pm-approvals'] });
+    },
+    onError: (err: Error & { response?: { data?: { message?: string } } }) => {
+      toast.error(err.response?.data?.message || 'Could not forward to Head Office');
+    },
+  });
+
   const confirmReceipt = useMutation({
     mutationFn: () => api.post(`/material-requests/${id}/confirm-receipt`, {}),
     onSuccess: () => {
@@ -69,13 +88,19 @@ export function RequestDetailPage() {
     },
   });
 
+  const canPmDecide =
+    !!request &&
+    role === UserRole.PROJECT_MANAGER &&
+    request.status === 'FORWARDED_TO_PM' &&
+    !request.escalatedToHo;
+  const stockAvailable = Boolean(request?.canFullyIssue || request?.storeStockVerified);
+  const isBelowCap = request?.indentRequestType === 'BELOW_5000';
+  /** Above ₹5,000 + stock short → HO stock requisition (not local Approve). */
+  const showForwardToHo = Boolean(canPmDecide && !stockAvailable && !isBelowCap);
+  const showPmApprove = Boolean(canPmDecide && (stockAvailable || isBelowCap));
+
   useApprovalShortcuts({
-    enabled:
-      !!request &&
-      !isLoading &&
-      role === UserRole.PROJECT_MANAGER &&
-      request.status === 'FORWARDED_TO_PM' &&
-      !request.escalatedToHo,
+    enabled: showPmApprove && !isLoading,
     onApprove: () => {
       if (!pmRemark.trim()) {
         setPmRemarkError('Remark is required');
@@ -84,6 +109,7 @@ export function RequestDetailPage() {
       pmLocalClose.mutate(pmRemark.trim());
     },
   });
+
   if (isLoading) {
     return (
       <div className="px-4 pt-6 space-y-3">
@@ -120,8 +146,6 @@ export function RequestDetailPage() {
         ]
       : [];
 
-  const canPmDecide =
-    role === UserRole.PROJECT_MANAGER && request.status === 'FORWARDED_TO_PM' && !request.escalatedToHo;
   const canHoReview =
     [UserRole.EXECUTIVE, UserRole.COORDINATOR].includes(role) &&
     ['PENDING_HO', 'PENDING_EXECUTIVE_DECISION', 'EXECUTIVE_DECISION_PO', 'EXECUTIVE_DECISION_BRANCH_TRANSFER'].includes(
@@ -172,9 +196,9 @@ export function RequestDetailPage() {
         </div>
       </header>
 
-      {canPmDecide && request.indentRequestType !== 'BELOW_5000' && <PmDailyCapBanner />}
+      {canPmDecide && !isBelowCap && showPmApprove && <PmDailyCapBanner />}
 
-      {request.escalatedToHo && request.indentRequestType !== 'BELOW_5000' && (
+      {request.escalatedToHo && !isBelowCap && (
         <div className="mb-4 rounded-xl border border-warning/30 bg-warning/5 px-3 py-2 text-sm">
           This indent was escalated to Head Office — it exceeds the PM&apos;s configurable daily
           approval limit (see Admin settings).
@@ -247,13 +271,13 @@ export function RequestDetailPage() {
             <div>
               <p className="text-sm font-semibold text-ink">PM decision</p>
               <p className="text-xs text-ink-secondary mt-1">
-                {request.indentRequestType === 'BELOW_5000'
-                  ? request.canFullyIssue
+                {isBelowCap
+                  ? stockAvailable
                     ? 'Below ₹5,000 and stock is available — Approve to reserve stock for Store to issue (no Head Office).'
                     : 'Below ₹5,000 — your approval is final. Store will purchase with approved funds and allocate (no Head Office).'
-                  : request.canFullyIssue || request.storeStockVerified
+                  : stockAvailable
                     ? 'Stock is available at site — Approve to reserve allocation so Store can issue.'
-                    : 'Stock is short at site. Close it within PM limit after your verification, or it may escalate to Head Office.'}
+                    : 'Stock is short at site. Forward to Head Office for stock requisition / procurement.'}
               </p>
 
               <div className="mt-3">
@@ -266,24 +290,43 @@ export function RequestDetailPage() {
                     setPmRemark(e.target.value);
                     if (e.target.value.trim()) setPmRemarkError('');
                   }}
-                  placeholder="Decision rationale — visible in audit trail to all approvers…"
+                  placeholder={
+                    showForwardToHo
+                      ? 'Reason for stock requisition to Head Office…'
+                      : 'Decision rationale — visible in audit trail to all approvers…'
+                  }
                 />
                 {pmRemarkError && <p className="text-xs text-danger mt-1">{pmRemarkError}</p>}
               </div>
             </div>
 
             <div className="flex flex-col justify-end gap-2">
-              <Button
-                variant="accent"
-                accentColor={accent}
-                disabled={pmLocalClose.isPending}
-                onClick={() => {
-                  if (!requirePmRemark()) return;
-                  pmLocalClose.mutate(pmRemark.trim());
-                }}
-              >
-                Approve
-              </Button>
+              {showPmApprove && (
+                <Button
+                  variant="accent"
+                  accentColor={accent}
+                  disabled={pmLocalClose.isPending || forwardToHo.isPending}
+                  onClick={() => {
+                    if (!requirePmRemark()) return;
+                    pmLocalClose.mutate(pmRemark.trim());
+                  }}
+                >
+                  Approve
+                </Button>
+              )}
+              {showForwardToHo && (
+                <Button
+                  variant="accent"
+                  accentColor={accent}
+                  disabled={forwardToHo.isPending || pmLocalClose.isPending}
+                  onClick={() => {
+                    if (!requirePmRemark()) return;
+                    forwardToHo.mutate(pmRemark.trim());
+                  }}
+                >
+                  Forward to HO for Stock Requisition
+                </Button>
+              )}
             </div>
           </div>
         </div>

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Check, Fingerprint, X } from 'lucide-react';
+import { Check, Fingerprint, Send, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { requireBiometricConfirm } from '@/lib/biometricGate';
@@ -24,6 +24,13 @@ export function PmMobileApprovalPage() {
     enabled: Boolean(id),
   });
 
+  const stockAvailable = Boolean(request?.canFullyIssue || request?.storeStockVerified);
+  const isBelowCap = request?.indentRequestType === 'BELOW_5000';
+  const showForwardToHo =
+    request?.status === 'FORWARDED_TO_PM' && !stockAvailable && !isBelowCap;
+  const showApprove =
+    request?.status === 'FORWARDED_TO_PM' && (stockAvailable || isBelowCap);
+
   const approve = useMutation({
     mutationFn: async () => {
       const ok = await requireBiometricConfirm('Approve indent');
@@ -40,6 +47,26 @@ export function PmMobileApprovalPage() {
     onError: (e: Error & { response?: { data?: { message?: string } } }) => {
       if (e.message !== 'Biometric confirmation cancelled') {
         toast.error(e.response?.data?.message || e.message || 'Approval failed');
+      }
+    },
+  });
+
+  const forwardHo = useMutation({
+    mutationFn: async () => {
+      const ok = await requireBiometricConfirm('Forward to Head Office');
+      if (!ok) throw new Error('Biometric confirmation cancelled');
+      await api.post(`/material-requests/${id}/forward-to-ho`, {
+        remark: 'Forwarded to HO for stock requisition via mobile',
+      });
+    },
+    onSuccess: () => {
+      toast.success('Forwarded to HO for stock requisition');
+      queryClient.invalidateQueries({ queryKey: ['pm-approvals'] });
+      navigate('/pm/approvals');
+    },
+    onError: (e: Error & { response?: { data?: { message?: string } } }) => {
+      if (e.message !== 'Biometric confirmation cancelled') {
+        toast.error(e.response?.data?.message || e.message || 'Forward failed');
       }
     },
   });
@@ -74,6 +101,8 @@ export function PmMobileApprovalPage() {
           },
         ]
       : [];
+
+  const busy = approve.isPending || forwardHo.isPending || reject.isPending;
 
   return (
     <div className="min-h-[100dvh] bg-surface-muted px-4 py-6 max-w-lg mx-auto">
@@ -115,30 +144,48 @@ export function PmMobileApprovalPage() {
                   <dt className="text-ink-muted text-xs uppercase tracking-wide">Requested by</dt>
                   <dd className="font-medium">{request.requester?.name || '—'}</dd>
                 </div>
-                {request.storeStockVerified && (
+                {stockAvailable ? (
                   <div className="text-emerald-700 text-xs font-medium bg-emerald-50 rounded-lg px-3 py-2">
-                    Store verified stock is available
+                    Stock is available — Approve to allocate
                   </div>
-                )}
+                ) : showForwardToHo ? (
+                  <div className="text-amber-800 text-xs font-medium bg-amber-50 rounded-lg px-3 py-2">
+                    Stock short — forward to HO for stock requisition
+                  </div>
+                ) : null}
               </dl>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                variant="accent"
-                size="lg"
-                className="h-14"
-                disabled={approve.isPending || reject.isPending || request.status !== 'FORWARDED_TO_PM'}
-                onClick={() => approve.mutate()}
-              >
-                <Check className="h-5 w-5 mr-2" />
-                Approve
-              </Button>
+            <div className="grid grid-cols-1 gap-3">
+              {showApprove && (
+                <Button
+                  variant="accent"
+                  size="lg"
+                  className="h-14"
+                  disabled={busy}
+                  onClick={() => approve.mutate()}
+                >
+                  <Check className="h-5 w-5 mr-2" />
+                  Approve
+                </Button>
+              )}
+              {showForwardToHo && (
+                <Button
+                  variant="accent"
+                  size="lg"
+                  className="h-14"
+                  disabled={busy}
+                  onClick={() => forwardHo.mutate()}
+                >
+                  <Send className="h-5 w-5 mr-2" />
+                  Forward to HO for Stock Requisition
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 size="lg"
                 className="h-14 text-danger border-danger/30"
-                disabled={approve.isPending || reject.isPending || request.status !== 'FORWARDED_TO_PM'}
+                disabled={busy || request.status !== 'FORWARDED_TO_PM'}
                 onClick={() => reject.mutate()}
               >
                 <X className="h-5 w-5 mr-2" />
