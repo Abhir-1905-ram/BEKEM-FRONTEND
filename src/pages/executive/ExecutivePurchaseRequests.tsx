@@ -101,10 +101,22 @@ export function ExecutivePurchaseRequestsPage() {
                   <td className="cell-code whitespace-nowrap">{pr.prNumber}</td>
                   <td className="cell-text whitespace-nowrap">{pr.project?.code} — {pr.project?.name}</td>
                   <td className="cell-text whitespace-nowrap">{pr.pmName || '—'}</td>
-                  <td className="num tabular-nums whitespace-nowrap">{formatCurrency(pr.totalValue ?? pr.amountEstimate)}</td>
+                  <td className="num tabular-nums whitespace-nowrap">
+                    <div>{formatCurrency(pr.totalValue ?? pr.amountEstimate)}</div>
+                    {pr.linkedPoRef && pr.linkedPoAmount != null && pr.amountEstimate != null && Math.abs(pr.linkedPoAmount - pr.amountEstimate) > 1 && (
+                      <div className="text-[10px] text-ink-muted font-normal">
+                        PR est. {formatCurrency(pr.amountEstimate)}
+                      </div>
+                    )}
+                  </td>
                   <td className="whitespace-nowrap">{pr.requestDate ? formatDate(pr.requestDate) : '—'}</td>
                   <td className="whitespace-nowrap">{priorityLabel(pr.priority)}</td>
-                  <td><StatusBadge status={pr.status} label={prStatusLabel(pr)} /></td>
+                  <td>
+                    <StatusBadge status={pr.status} label={prStatusLabel(pr)} />
+                    {pr.linkedPoRef && (
+                      <div className="text-[10px] text-ink-muted mt-0.5">{pr.linkedPoRef}</div>
+                    )}
+                  </td>
                   <td className="cell-text">{pr.materialsSummary || pr.pmRemarks || '—'}</td>
                   <td className="text-right">
                     <ChevronRight className="h-4 w-4 text-ink-muted inline-block" />
