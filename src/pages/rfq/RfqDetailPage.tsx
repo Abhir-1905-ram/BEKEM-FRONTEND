@@ -106,37 +106,43 @@ export function RfqDetailPage() {
 
 
   const l1VendorId = useMemo(
-
-    () => pickL1VendorId(comparison?.comparison.vendors ?? []),
-
+    () => {
+      const fromComp = comparison?.comparison?.l1VendorId
+        ? String(comparison.comparison.l1VendorId)
+        : '';
+      if (fromComp) return fromComp;
+      return pickL1VendorId(
+        (comparison?.comparison.vendors ?? []).map((v) => ({
+          vendorId: String(v.vendorId),
+          finalCost: Number(v.finalCost || 0),
+        }))
+      );
+    },
     [comparison]
-
   );
 
-  const isNonL1 = Boolean(selectedVendorId && l1VendorId && selectedVendorId !== l1VendorId);
+  const isNonL1 = Boolean(
+    selectedVendorId && l1VendorId && String(selectedVendorId) !== String(l1VendorId)
+  );
 
   useEffect(() => {
     if (!selectedVendorId) {
       setVendorChoiceKind('');
       return;
     }
+    if (!l1VendorId) {
+      setVendorChoiceKind('L1');
+      return;
+    }
     setVendorChoiceKind(isNonL1 ? 'NON_L1' : 'L1');
-  }, [selectedVendorId, isNonL1]);
-
-  const choiceMatchesSelection =
-    vendorChoiceKind === 'L1'
-      ? !isNonL1
-      : vendorChoiceKind === 'NON_L1'
-        ? isNonL1
-        : false;
+  }, [selectedVendorId, isNonL1, l1VendorId]);
 
   const canFinalize =
     !!selectedVendorId &&
     !!vendorChoiceKind &&
-    choiceMatchesSelection &&
     (vendorChoiceKind === 'L1'
-      ? whyWeChoseThisVendor.trim().length > 0
-      : vendorSelectionReason.trim().length > 0);
+      ? !isNonL1 && whyWeChoseThisVendor.trim().length > 0
+      : isNonL1 && vendorSelectionReason.trim().length > 0);
 
 
 
@@ -409,46 +415,53 @@ export function RfqDetailPage() {
                 </label>
 
                 {rfq.status !== 'FINALIZED' && (
-                  <div className="md:col-span-2 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setVendorChoiceKind('L1');
-                        setVendorSelectionReason('');
-                      }}
-                      className={cn(
-                        'px-3 py-2 rounded-lg border text-sm font-semibold transition-colors',
-                        vendorChoiceKind === 'L1'
-                          ? 'border-bekem-accent bg-bekem-accent/10 text-bekem-accent'
-                          : 'border-surface-border bg-white text-ink-secondary hover:text-ink'
-                      )}
-                    >
-                      Chose L1
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setVendorChoiceKind('NON_L1');
-                        setWhyWeChoseThisVendor('');
-                      }}
-                      className={cn(
-                        'px-3 py-2 rounded-lg border text-sm font-semibold transition-colors',
-                        vendorChoiceKind === 'NON_L1'
-                          ? 'border-amber-500 bg-amber-50 text-amber-900'
-                          : 'border-surface-border bg-white text-ink-secondary hover:text-ink'
-                      )}
-                    >
-                      Chose Non-L1
-                    </button>
+                  <div className="md:col-span-2 space-y-2">
+                    <p className="text-[11px] text-ink-muted">
+                      {l1VendorId
+                        ? isNonL1
+                          ? 'Selected vendor is not L1 — Non-L1 reason is required.'
+                          : 'Selected vendor matches L1 — confirm with an L1 remark.'
+                        : 'Confirm why this vendor was selected.'}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        disabled={isNonL1}
+                        onClick={() => {
+                          setVendorChoiceKind('L1');
+                          setVendorSelectionReason('');
+                        }}
+                        className={cn(
+                          'px-3 py-2 rounded-lg border text-sm font-semibold transition-colors',
+                          vendorChoiceKind === 'L1'
+                            ? 'border-bekem-accent bg-bekem-accent/10 text-bekem-accent'
+                            : 'border-surface-border bg-white text-ink-secondary hover:text-ink',
+                          isNonL1 && 'opacity-40 cursor-not-allowed hover:text-ink-secondary'
+                        )}
+                      >
+                        Chose L1
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!!l1VendorId && !isNonL1}
+                        onClick={() => {
+                          setVendorChoiceKind('NON_L1');
+                          setWhyWeChoseThisVendor('');
+                        }}
+                        className={cn(
+                          'px-3 py-2 rounded-lg border text-sm font-semibold transition-colors',
+                          vendorChoiceKind === 'NON_L1'
+                            ? 'border-amber-500 bg-amber-50 text-amber-900'
+                            : 'border-surface-border bg-white text-ink-secondary hover:text-ink',
+                          !!l1VendorId &&
+                            !isNonL1 &&
+                            'opacity-40 cursor-not-allowed hover:text-ink-secondary'
+                        )}
+                      >
+                        Chose Non-L1
+                      </button>
+                    </div>
                   </div>
-                )}
-
-                {vendorChoiceKind && !choiceMatchesSelection && rfq.status !== 'FINALIZED' && (
-                  <p className="md:col-span-2 text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
-                    {vendorChoiceKind === 'L1'
-                      ? 'Selected vendor is not L1 — choose “Chose Non-L1” or pick the L1 vendor.'
-                      : 'Selected vendor is L1 — choose “Chose L1” or pick a non-L1 vendor.'}
-                  </p>
                 )}
 
                 {vendorChoiceKind === 'NON_L1' && (
