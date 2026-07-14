@@ -191,3 +191,18 @@ export function uniqueIndentCategories(requests: MaterialRequestDto[]): string[]
 export function isIndentQueueFilterId(value: string): value is IndentQueueQuickFilter {
   return ['pm', 'ho', 'store', 'coordinator', 'chairman'].includes(value);
 }
+
+/** Count indents matching each quick-queue chip (for badges). */
+export function countIndentQueueFilters(
+  requests: MaterialRequestDto[],
+  options: IndentQueueFilterOption[]
+): Record<IndentQueueQuickFilter, number> {
+  const counts = {} as Record<IndentQueueQuickFilter, number>;
+  for (const opt of options) {
+    counts[opt.id] = requests.reduce(
+      (n, r) => n + (matchesIndentQueueQuickFilter(r, opt.id) ? 1 : 0),
+      0
+    );
+  }
+  return counts;
+}

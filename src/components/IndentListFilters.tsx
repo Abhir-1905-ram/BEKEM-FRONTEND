@@ -23,6 +23,43 @@ type Props = {
   className?: string;
 };
 
+/** Chip colors aligned with status badge palette for each queue. */
+const QUEUE_CHIP_STYLES: Record<
+  IndentQueueQuickFilter,
+  { idle: string; active: string; badge: string; badgeActive: string }
+> = {
+  pm: {
+    idle: 'bg-review-light text-review-dark border-review/30 hover:border-review/60',
+    active: 'bg-review text-white border-review',
+    badge: 'bg-white/80 text-review-dark',
+    badgeActive: 'bg-white/25 text-white',
+  },
+  ho: {
+    idle: 'bg-warning-light text-warning-dark border-warning/30 hover:border-warning/60',
+    active: 'bg-warning text-white border-warning',
+    badge: 'bg-white/80 text-warning-dark',
+    badgeActive: 'bg-white/25 text-white',
+  },
+  store: {
+    idle: 'bg-warning-light text-warning-dark border-warning/30 hover:border-warning/60',
+    active: 'bg-warning text-white border-warning',
+    badge: 'bg-white/80 text-warning-dark',
+    badgeActive: 'bg-white/25 text-white',
+  },
+  coordinator: {
+    idle: 'bg-review-light text-review-dark border-review/30 hover:border-review/60',
+    active: 'bg-review text-white border-review',
+    badge: 'bg-white/80 text-review-dark',
+    badgeActive: 'bg-white/25 text-white',
+  },
+  chairman: {
+    idle: 'bg-bekem-accent/10 text-bekem-navy border-bekem-accent/30 hover:border-bekem-accent/50',
+    active: 'bg-bekem-navy text-white border-bekem-navy',
+    badge: 'bg-white/80 text-bekem-navy',
+    badgeActive: 'bg-white/25 text-white',
+  },
+};
+
 export function IndentListFilters({
   search,
   onSearchChange,
@@ -121,11 +158,14 @@ export function IndentQueueQuickButtons({
   value,
   onChange,
   options,
+  counts,
   className,
 }: {
   value: IndentQueueQuickFilter | '';
   onChange: (next: IndentQueueQuickFilter | '') => void;
   options: IndentQueueFilterOption[];
+  /** Pending count per queue chip — shown as a badge. */
+  counts?: Partial<Record<IndentQueueQuickFilter, number>>;
   className?: string;
 }) {
   if (!options.length) return null;
@@ -134,20 +174,36 @@ export function IndentQueueQuickButtons({
     <div className={cn('flex flex-wrap gap-1.5', className)}>
       {options.map((f) => {
         const active = value === f.id;
+        const count = counts?.[f.id] ?? 0;
+        const styles = QUEUE_CHIP_STYLES[f.id];
         return (
           <button
             key={f.id}
             type="button"
             onClick={() => onChange(active ? '' : f.id)}
             className={cn(
-              'px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition-colors whitespace-nowrap',
-              active
-                ? 'bg-bekem-navy text-white border-bekem-navy'
-                : 'bg-white text-ink-secondary border-surface-border hover:border-bekem-navy/40 hover:text-ink'
+              'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition-colors whitespace-nowrap',
+              active ? styles.active : styles.idle
             )}
             aria-pressed={active}
+            title={`${f.label}: ${count}`}
           >
+            <span
+              className={cn(
+                'h-1.5 w-1.5 rounded-full shrink-0',
+                active ? 'bg-white' : 'bg-current opacity-70'
+              )}
+              aria-hidden
+            />
             {f.label}
+            <span
+              className={cn(
+                'min-w-[1.25rem] h-5 px-1.5 rounded-full text-[10px] font-bold tabular-nums inline-flex items-center justify-center',
+                active ? styles.badgeActive : styles.badge
+              )}
+            >
+              {count}
+            </span>
           </button>
         );
       })}

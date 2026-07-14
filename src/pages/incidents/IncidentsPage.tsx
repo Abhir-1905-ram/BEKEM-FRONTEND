@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { MaterialIndentsTable } from '@/components/MaterialIndentsTable';
 import { IndentListFilters, IndentQueueQuickButtons } from '@/components/IndentListFilters';
 import {
+  countIndentQueueFilters,
   filterMaterialIndents,
   getIndentQueueFiltersForRole,
   isIndentQueueFilterId,
@@ -100,6 +101,19 @@ export function IncidentsPage() {
     enabled: !redirectPath && rawTab !== 'approved',
   });
 
+  /** Dedicated pending set so chip badges stay accurate on every tab. */
+  const { data: pendingRequests } = useQuery({
+    queryKey: ['material-requests', 'indents', 'pending', role, 'chip-counts'],
+    queryFn: async () => {
+      const res = await api.get<{ data: MaterialRequestDto[] }>('/material-requests', {
+        params: { tab: 'pending' },
+      });
+      return normalizeListData<MaterialRequestDto>(res.data.data);
+    },
+    retry: 1,
+    enabled: !redirectPath && rawTab !== 'approved',
+  });
+
   const categories = useMemo(() => uniqueIndentCategories(requests ?? []), [requests]);
   const filtered = useMemo(
     () =>
@@ -110,6 +124,11 @@ export function IncidentsPage() {
         days,
       }),
     [requests, search, queue, category, days]
+  );
+
+  const queueCounts = useMemo(
+    () => countIndentQueueFilters(pendingRequests ?? requests ?? [], queueOptions),
+    [pendingRequests, requests, queueOptions]
   );
 
   const pendingCount =
@@ -144,6 +163,7 @@ export function IncidentsPage() {
               <IndentQueueQuickButtons
                 value={queue}
                 options={queueOptions}
+                counts={queueCounts}
                 onChange={(next) => {
                   patchParams({
                     queue: next || undefined,
