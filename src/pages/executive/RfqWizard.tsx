@@ -46,6 +46,8 @@ export function RfqWizardPage() {
   const [step, setStep] = useState(0);
   const [selectedPr, setSelectedPr] = useState<PurchaseRequestDto | null>(null);
   const [selectedMr, setSelectedMr] = useState<MaterialRequestDto | null>(null);
+  /** Material IDs skipped from RFQ (stock-covered by default). */
+  const [skippedMaterialIds, setSkippedMaterialIds] = useState<Record<string, boolean>>({});
   const [rfqId, setRfqId] = useState<string | null>(null);
   const [rfqNumber, setRfqNumber] = useState('');
   const [comparison, setComparison] = useState<RfqComparisonDto | null>(null);
@@ -79,12 +81,62 @@ export function RfqWizardPage() {
     ) as string[];
   }, [selectedMr]);
 
+  const indentLines = useMemo(() => {
+    if (!selectedMr?.items?.length) return [];
+    return selectedMr.items.map((item) => {
+      const materialId = (item.materialId || item.material?.id || '') as string;
+      const requested = item.quantityRequested ?? item.requestedQty ?? 0;
+      const available = item.availableQty ?? 0;
+      const required =
+        item.requiredQty != null ? item.requiredQty : Math.max(0, requested - available);
+      return {
+        materialId,
+        name: item.material?.name || item.material?.description || 'Material',
+        unit: item.unit || item.material?.unit || 'Nos',
+        requested,
+        available,
+        required,
+        coveredByStock: required <= 0,
+      };
+    });
+  }, [selectedMr]);
+
+  // Keep stock-covered lines skipped if user never toggled them (after indent refresh)
+  useEffect(() => {
+    if (!indentLines.length) return;
+    setSkippedMaterialIds((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const line of indentLines) {
+        if (!line.materialId || !line.coveredByStock) continue;
+        if (!(line.materialId in next)) {
+          next[line.materialId] = true;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [indentLines]);
+
+  const includedMaterialIds = useMemo(
+    () => indentLines.filter((l) => l.materialId && !skippedMaterialIds[l.materialId]).map((l) => l.materialId),
+    [indentLines, skippedMaterialIds]
+  );
+
   const previewRfq = useMutation({
-    mutationFn: async (purchaseRequestId: string) => {
-      const res = await api.post<{ data: RfqComparisonDto & { suggestedVendors?: { id: string; name: string }[] } }>(
-        '/rfqs/wizard/preview',
-        { purchaseRequestId }
-      );
+    mutationFn: async ({
+      purchaseRequestId,
+      includeIds,
+    }: {
+      purchaseRequestId: string;
+      includeIds: string[];
+    }) => {
+      const res = await api.post<{
+        data: RfqComparisonDto & { suggestedVendors?: { id: string; name: string }[] };
+      }>('/rfqs/wizard/preview', {
+        purchaseRequestId,
+        includeMaterialIds: includeIds,
+      });
       return res.data.data;
     },
     onSuccess: (data) => {
@@ -132,9 +184,22 @@ export function RfqWizardPage() {
         const res = await api.get<{ data: MaterialRequestDto }>(
           `/material-requests/${pr.materialRequestId}`
         );
-        setSelectedMr(res.data.data);
+        const mr = res.data.data;
+        setSelectedMr(mr);
+        const skips: Record<string, boolean> = {};
+        for (const item of mr.items || []) {
+          const materialId = (item.materialId || item.material?.id || '') as string;
+          if (!materialId) continue;
+          const requested = item.quantityRequested ?? item.requestedQty ?? 0;
+          const available = item.availableQty ?? 0;
+          const required =
+            item.requiredQty != null ? item.requiredQty : Math.max(0, requested - available);
+          if (required <= 0) skips[materialId] = true;
+        }
+        setSkippedMaterialIds(skips);
       } else {
         setSelectedMr(null);
+        setSkippedMaterialIds({});
       }
       setStep(1);
     } finally {
@@ -149,7 +214,20 @@ export function RfqWizardPage() {
     void (async () => {
       await selectPurchaseRequest(pr);
       if (resumeRfq) {
-        previewRfq.mutate(pr.id);
+        const mr = (
+          await api.get<{ data: MaterialRequestDto }>(`/material-requests/${pr.materialRequestId}`)
+        ).data.data;
+        const includeIds = (mr.items || [])
+          .map((item) => {
+            const materialId = (item.materialId || item.material?.id || '') as string;
+            const requested = item.quantityRequested ?? item.requestedQty ?? 0;
+            const available = item.availableQty ?? 0;
+            const required =
+              item.requiredQty != null ? item.requiredQty : Math.max(0, requested - available);
+            return required > 0 ? materialId : null;
+          })
+          .filter(Boolean) as string[];
+        previewRfq.mutate({ purchaseRequestId: pr.id, includeIds });
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -246,24 +324,74 @@ export function RfqWizardPage() {
                 requestingProjectId={selectedPr.projectId || selectedMr?.projectId}
                 className="mb-3"
               />
-              {selectedMr?.items?.length ? (
+              <p className="text-xs text-ink-secondary mb-2">
+                Skip materials already covered by stock. Only included lines go into vendor RFQs
+                (shortfall qty). You can Include a skipped line if you still want to procure it.
+              </p>
+              {indentLines.length ? (
                 <div className="panel overflow-x-auto mb-3">
-                  <table className="data-table min-w-[480px]">
+                  <table className="data-table min-w-[560px]">
                     <thead>
                       <tr>
                         <th>Material</th>
-                        <th className="text-right">Qty</th>
-                        <th>Unit</th>
+                        <th className="num">Requested</th>
+                        <th className="num">Available</th>
+                        <th className="num">Shortfall</th>
+                        <th>Status</th>
+                        <th className="w-24" />
                       </tr>
                     </thead>
                     <tbody>
-                      {selectedMr.items.map((item, idx) => (
-                        <tr key={idx}>
-                          <td>{item.material?.name || item.material?.description || '—'}</td>
-                          <td className="text-right tabular-nums">{item.quantityRequested}</td>
-                          <td>{item.unit || item.material?.unit || '—'}</td>
-                        </tr>
-                      ))}
+                      {indentLines.map((line) => {
+                        const skipped = !!skippedMaterialIds[line.materialId];
+                        return (
+                          <tr
+                            key={line.materialId}
+                            className={cn(skipped && 'opacity-60')}
+                          >
+                            <td className="cell-text">
+                              {line.name}
+                              {skipped && (
+                                <span className="block text-[10px] text-amber-700 font-medium">
+                                  Skipped
+                                  {line.coveredByStock ? ' — covered by stock' : ''}
+                                </span>
+                              )}
+                            </td>
+                            <td className="num tabular-nums">
+                              {line.requested} {line.unit}
+                            </td>
+                            <td className="num tabular-nums">{line.available}</td>
+                            <td className="num tabular-nums font-semibold">
+                              {line.required > 0 ? line.required : '—'}
+                            </td>
+                            <td className="text-xs">
+                              {line.coveredByStock ? (
+                                <span className="text-emerald-700">In stock</span>
+                              ) : (
+                                <span className="text-amber-800">Needs RFQ</span>
+                              )}
+                            </td>
+                            <td>
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                onClick={() =>
+                                  setSkippedMaterialIds((prev) => {
+                                    const next = { ...prev };
+                                    if (next[line.materialId]) delete next[line.materialId];
+                                    else next[line.materialId] = true;
+                                    return next;
+                                  })
+                                }
+                              >
+                                {skipped ? 'Include' : 'Skip'}
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -279,12 +407,21 @@ export function RfqWizardPage() {
                   />
                 </div>
               </div>
+              <p className="text-[11px] text-ink-muted mb-2">
+                {includedMaterialIds.length} material
+                {includedMaterialIds.length === 1 ? '' : 's'} included in RFQ
+              </p>
               <Button
                 variant="accent"
                 accentColor={accent}
                 size="lg"
-                disabled={previewRfq.isPending}
-                onClick={() => previewRfq.mutate(selectedPr.id)}
+                disabled={previewRfq.isPending || includedMaterialIds.length === 0}
+                onClick={() =>
+                  previewRfq.mutate({
+                    purchaseRequestId: selectedPr.id,
+                    includeIds: includedMaterialIds,
+                  })
+                }
               >
                 {previewRfq.isPending ? 'Creating RFQ…' : 'Continue'}
               </Button>
