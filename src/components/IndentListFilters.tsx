@@ -46,8 +46,14 @@ const QUEUE_CHIP_STYLES: Record<
     badge: 'bg-white/80 text-warning-dark',
     badgeActive: 'bg-white/25 text-white',
   },
+  executive: {
+    idle: 'bg-success-light text-success-dark border-success/30 hover:border-success/60',
+    active: 'bg-success text-white border-success',
+    badge: 'bg-white/80 text-success-dark',
+    badgeActive: 'bg-white/25 text-white',
+  },
   coordinator: {
-    idle: 'bg-review-light text-review-dark border-review/30 hover:border-review/60',
+    idle: 'bg-review-light text-review-dark border-review/40 hover:border-review/70',
     active: 'bg-review text-white border-review',
     badge: 'bg-white/80 text-review-dark',
     badgeActive: 'bg-white/25 text-white',

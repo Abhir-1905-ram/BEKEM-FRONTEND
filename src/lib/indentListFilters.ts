@@ -3,7 +3,13 @@ import { UserRole } from '@afios/shared';
 import { formatIndentQueueStatus } from '@/components/MaterialIndentsTable';
 
 /** Title-side / dropdown queue filters. Labels vary by role. */
-export type IndentQueueQuickFilter = 'pm' | 'ho' | 'store' | 'coordinator' | 'chairman';
+export type IndentQueueQuickFilter =
+  | 'pm'
+  | 'ho'
+  | 'store'
+  | 'coordinator'
+  | 'chairman'
+  | 'executive';
 
 export type IndentQueueFilterOption = {
   id: IndentQueueQuickFilter;
@@ -26,29 +32,33 @@ const COORDINATOR_STATUSES = new Set([
   'PO_CREATED',
 ]);
 const CHAIRMAN_STATUSES = new Set(['CHAIRMAN_PENDING']);
-const HO_STATUSES = new Set([
+/** Executive desk only — not Coordinator / Chairman. */
+const EXECUTIVE_STATUSES = new Set([
   'PENDING_HO',
   'PENDING_EXECUTIVE_DECISION',
-  'EXECUTIVE_DECISION_PO',
-  'EXECUTIVE_DECISION_BRANCH_TRANSFER',
-  'PM_APPROVED',
   'PURCHASE_REQUESTED',
   'RFQ_OPEN',
   'QUOTED',
   'VENDOR_SELECTED',
-  'PO_CREATED',
-  'COORDINATOR_VERIFIED',
-  'COORDINATOR_PENDING',
-  'CHAIRMAN_PENDING',
+]);
+/** Broad HO bucket for Store / PM role chips (Exec + Coord + Chairman). */
+const HO_STATUSES = new Set([
+  ...EXECUTIVE_STATUSES,
+  ...COORDINATOR_STATUSES,
+  ...CHAIRMAN_STATUSES,
 ]);
 
 /** Role-specific quick tabs next to the Material Indents / Pending Indents title. */
 export function getIndentQueueFiltersForRole(role: UserRole): IndentQueueFilterOption[] {
   switch (role) {
     case UserRole.SITE_INCHARGE:
+      // One chip per distinct pending color Site tracks on their indents
       return [
+        { id: 'store', label: 'Pending at Store Incharge' },
         { id: 'pm', label: 'Pending at PM' },
-        { id: 'ho', label: 'Pending at HO' },
+        { id: 'executive', label: 'Pending at Executive' },
+        { id: 'coordinator', label: 'Pending at Coordinator' },
+        { id: 'chairman', label: 'Pending at MD/Chairman' },
       ];
     case UserRole.STORE_INCHARGE:
       return [
@@ -90,6 +100,15 @@ export function matchesIndentQueueQuickFilter(
 
   if (filter === 'store') {
     if (pending === UserRole.STORE_INCHARGE) return true;
+    // Don't treat HO roles as store even if status is in STORE_STATUSES
+    if (
+      pending === UserRole.PROJECT_MANAGER ||
+      pending === UserRole.EXECUTIVE ||
+      pending === UserRole.COORDINATOR ||
+      pending === UserRole.CHAIRMAN
+    ) {
+      return false;
+    }
     return STORE_STATUSES.has(status);
   }
   if (filter === 'pm') {
@@ -103,6 +122,18 @@ export function matchesIndentQueueQuickFilter(
   if (filter === 'chairman') {
     if (pending === UserRole.CHAIRMAN) return true;
     return CHAIRMAN_STATUSES.has(status);
+  }
+  if (filter === 'executive') {
+    if (pending === UserRole.EXECUTIVE) return true;
+    if (
+      pending === UserRole.COORDINATOR ||
+      pending === UserRole.CHAIRMAN ||
+      pending === UserRole.STORE_INCHARGE ||
+      pending === UserRole.PROJECT_MANAGER
+    ) {
+      return false;
+    }
+    return EXECUTIVE_STATUSES.has(status);
   }
   // Broad Head Office bucket (Executive + Coordinator + Chairman workflows)
   if (
@@ -189,15 +220,15 @@ export function uniqueIndentCategories(requests: MaterialRequestDto[]): string[]
 }
 
 export function isIndentQueueFilterId(value: string): value is IndentQueueQuickFilter {
-  return ['pm', 'ho', 'store', 'coordinator', 'chairman'].includes(value);
+  return ['pm', 'ho', 'store', 'coordinator', 'chairman', 'executive'].includes(value);
 }
 
 /** Count indents matching each quick-queue chip (for badges). */
 export function countIndentQueueFilters(
   requests: MaterialRequestDto[],
   options: IndentQueueFilterOption[]
-): Record<IndentQueueQuickFilter, number> {
-  const counts = {} as Record<IndentQueueQuickFilter, number>;
+): Partial<Record<IndentQueueQuickFilter, number>> {
+  const counts: Partial<Record<IndentQueueQuickFilter, number>> = {};
   for (const opt of options) {
     counts[opt.id] = requests.reduce(
       (n, r) => n + (matchesIndentQueueQuickFilter(r, opt.id) ? 1 : 0),
