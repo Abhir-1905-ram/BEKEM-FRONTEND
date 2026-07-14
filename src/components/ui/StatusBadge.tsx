@@ -124,7 +124,7 @@ const STATUS_LABELS: Record<string, string> = {
   RFQ_OPEN: 'Pending at Executive',
   QUOTED: 'Pending at Executive',
   VENDOR_SELECTED: 'Pending at Executive',
-  PO_CREATED: 'Pending at Coordinator',
+  PO_CREATED: 'PO created',
   COORDINATOR_VERIFIED: 'Pending at Chairman',
   CHAIRMAN_APPROVED: 'Pending at Store',
   REJECTED: 'Rejected',

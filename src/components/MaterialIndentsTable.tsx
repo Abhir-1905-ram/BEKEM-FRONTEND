@@ -18,7 +18,8 @@ const STATUS_NEXT_ROLE: Record<string, UserRole | null> = {
   RFQ_OPEN: UserRole.EXECUTIVE,
   QUOTED: UserRole.EXECUTIVE,
   VENDOR_SELECTED: UserRole.EXECUTIVE,
-  PO_CREATED: UserRole.COORDINATOR,
+  // Desk comes from linked PO via `pendingWith` — do not assume Coordinator.
+  PO_CREATED: null,
   COORDINATOR_VERIFIED: UserRole.CHAIRMAN,
   COORDINATOR_PENDING: UserRole.COORDINATOR,
   CHAIRMAN_PENDING: UserRole.CHAIRMAN,

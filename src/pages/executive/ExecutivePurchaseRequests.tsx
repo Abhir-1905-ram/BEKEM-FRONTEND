@@ -1,6 +1,6 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
-import { formatCurrency, formatDate } from '@afios/shared';
+import { formatCurrency, formatDate, ROLE_LABELS, type UserRole } from '@afios/shared';
 import type { PurchaseRequestDto } from '@afios/shared';
 import { api } from '@/lib/api';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -14,6 +14,13 @@ function priorityLabel(priority?: string) {
   if (priority === 'HIGH') return 'High';
   if (priority === 'MEDIUM') return 'Medium';
   return 'Normal';
+}
+
+function prStatusLabel(pr: PurchaseRequestDto) {
+  if (pr.pendingWith && pr.pendingWith in ROLE_LABELS) {
+    return `Pending at ${ROLE_LABELS[pr.pendingWith as UserRole]}`;
+  }
+  return undefined;
 }
 
 export function ExecutivePurchaseRequestsPage() {
@@ -97,7 +104,7 @@ export function ExecutivePurchaseRequestsPage() {
                   <td className="num tabular-nums whitespace-nowrap">{formatCurrency(pr.totalValue ?? pr.amountEstimate)}</td>
                   <td className="whitespace-nowrap">{pr.requestDate ? formatDate(pr.requestDate) : '—'}</td>
                   <td className="whitespace-nowrap">{priorityLabel(pr.priority)}</td>
-                  <td><StatusBadge status={pr.status} /></td>
+                  <td><StatusBadge status={pr.status} label={prStatusLabel(pr)} /></td>
                   <td className="cell-text">{pr.materialsSummary || pr.pmRemarks || '—'}</td>
                   <td className="text-right">
                     <ChevronRight className="h-4 w-4 text-ink-muted inline-block" />

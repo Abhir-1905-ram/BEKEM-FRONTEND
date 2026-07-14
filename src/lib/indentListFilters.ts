@@ -28,8 +28,7 @@ const COORDINATOR_STATUSES = new Set([
   'EXECUTIVE_DECISION_PO',
   'EXECUTIVE_DECISION_BRANCH_TRANSFER',
   'COORDINATOR_PENDING',
-  'COORDINATOR_VERIFIED',
-  'PO_CREATED',
+  'PENDING_REVIEW',
 ]);
 const CHAIRMAN_STATUSES = new Set(['CHAIRMAN_PENDING']);
 /** Executive desk only — not Coordinator / Chairman. */
@@ -93,19 +92,18 @@ export function matchesIndentQueueQuickFilter(
     }
     return STORE_STATUSES.has(status);
   }
-  if (filter === 'pm') {
-    if (pending === UserRole.PROJECT_MANAGER) return true;
-    return PM_STATUSES.has(status);
-  }
   if (filter === 'coordinator') {
-    if (pending === UserRole.COORDINATOR) return true;
+    if (pending) return pending === UserRole.COORDINATOR;
     return COORDINATOR_STATUSES.has(status);
   }
   if (filter === 'chairman') {
-    if (pending === UserRole.CHAIRMAN) return true;
+    if (pending) return pending === UserRole.CHAIRMAN;
     return CHAIRMAN_STATUSES.has(status);
   }
-  if (filter === 'executive') {
+  if (filter === 'pm') {
+    if (pending) return pending === UserRole.PROJECT_MANAGER;
+    return PM_STATUSES.has(status);
+  }  if (filter === 'executive') {
     if (pending === UserRole.EXECUTIVE) return true;
     if (
       pending === UserRole.COORDINATOR ||

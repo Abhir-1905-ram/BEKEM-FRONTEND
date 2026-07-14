@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ClipboardCheck, HardHat } from 'lucide-react';
+import { ClipboardCheck, HardHat, FileText } from 'lucide-react';
 import { getGreeting } from '@afios/shared';
-import type { PurchaseOrderDto, WorkOrderDto } from '@afios/shared';
+import type { PurchaseOrderDto, WorkOrderDto, MaterialRequestDto } from '@afios/shared';
 import { api } from '@/lib/api';
 import { EmptyState } from '@/components/EmptyState';
 import { ListQueryBoundary } from '@/components/ListQueryBoundary';
@@ -53,17 +53,37 @@ export function CoordinatorHomePage() {
     },
   });
 
-  const queue = queueResult?.items;
-  const pending = queueResult?.count ?? queue?.length ?? 0;
+  const { data: procurementQueue } = useQuery({
+    queryKey: ['procurement-decisions', 'coordinator'],
+    queryFn: async () => {
+      const res = await api.get<{ data: unknown[] }>('/procurement-decisions');
+      return Array.isArray(res.data.data) ? res.data.data : [];
+    },
+  });
+
+  const { data: coordinatorIndents } = useQuery({
+    queryKey: ['material-requests', 'coordinator-pending-chip'],
+    queryFn: async () => {
+      const res = await api.get<{ data: MaterialRequestDto[] }>('/material-requests', {
+        params: { tab: 'pending' },
+      });
+      return normalizeListData<MaterialRequestDto>(res.data.data);
+    },
+  });
+
+  const pending = queueResult?.count ?? queueResult?.items?.length ?? 0;
   const woPending = woQueue?.length ?? 0;
-  const totalPending = pending + woPending;
+  const decisionPending = procurementQueue?.length ?? 0;
+  const indentsNeedingCoord =
+    coordinatorIndents?.filter((r) => r.pendingWith === 'COORDINATOR').length ?? 0;
+  const totalPending = pending + woPending + decisionPending;
 
   return (
     <div className="page-container">
       <PageHeader
         eyebrow={getGreeting()}
         title="Today's approvals"
-        subtitle="Final approval for purchase orders and work orders"
+        subtitle="POs, procurement decisions, and work orders awaiting Coordinator"
       />
 
       <TodayPanel actions={today ?? []} loading={todayLoading} />
@@ -83,32 +103,54 @@ export function CoordinatorHomePage() {
         skeletonRows={2}
         empty={<></>}
       >
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 section-gap">
-        <ActionCard
-          title="Pending PO approval"
-          count={pending}
-          subtitle={pending > 0 ? 'Awaiting your final approval' : 'Queue clear'}
-          icon={ClipboardCheck}
-          tone="primary"
-          onClick={() => navigate('/coordinator/verify-pos')}
-        />
-        <ActionCard
-          title="Pending work orders"
-          count={woPending}
-          subtitle={woPending > 0 ? 'WO verification required' : 'Queue clear'}
-          icon={HardHat}
-          tone="info"
-          onClick={() => navigate('/coordinator/verify-wos')}
-        />
-      </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 section-gap">
+          <ActionCard
+            title="Pending PO approval"
+            count={pending}
+            subtitle={pending > 0 ? 'Awaiting your PO verification' : 'Queue clear'}
+            icon={ClipboardCheck}
+            tone="primary"
+            onClick={() => navigate('/coordinator/verify-pos')}
+          />
+          <ActionCard
+            title="Procurement decisions"
+            count={decisionPending}
+            subtitle={
+              decisionPending > 0
+                ? 'Executive PO / branch transfer recommendations'
+                : 'No decisions waiting'
+            }
+            icon={FileText}
+            tone="warning"
+            onClick={() => navigate('/coordinator/procurement-decisions')}
+          />
+          <ActionCard
+            title="Pending work orders"
+            count={woPending}
+            subtitle={woPending > 0 ? 'WO verification required' : 'Queue clear'}
+            icon={HardHat}
+            tone="info"
+            onClick={() => navigate('/coordinator/verify-wos')}
+          />
+          {indentsNeedingCoord > 0 && (
+            <ActionCard
+              title="Indents at Coordinator"
+              count={indentsNeedingCoord}
+              subtitle="Shown as Pending at Coordinator on Executive desk"
+              icon={FileText}
+              tone="neutral"
+              onClick={() => navigate('/coordinator/material-indents?tab=pending&queue=coordinator')}
+            />
+          )}
+        </div>
 
-      {totalPending === 0 && (
-        <EmptyState
-          celebrate
-          title="All quiet"
-          description="No POs or work orders need verification right now."
-        />
-      )}
+        {totalPending === 0 && indentsNeedingCoord === 0 && (
+          <EmptyState
+            celebrate
+            title="All quiet"
+            description="No POs, decisions, or work orders need verification right now."
+          />
+        )}
       </ListQueryBoundary>
     </div>
   );

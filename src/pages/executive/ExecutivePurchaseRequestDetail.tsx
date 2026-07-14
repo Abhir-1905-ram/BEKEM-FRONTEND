@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatCurrency, formatDate, ROLE_COLORS, UserRole } from '@afios/shared';
+import { formatCurrency, formatDate, ROLE_COLORS, ROLE_LABELS, UserRole } from '@afios/shared';
 import type { PurchaseRequestDto } from '@afios/shared';
 import { api } from '@/lib/api';
 import { Card } from '@/components/ui/Card';
@@ -18,6 +18,13 @@ function priorityLabel(priority?: string) {
   if (priority === 'HIGH') return 'High';
   if (priority === 'MEDIUM') return 'Medium';
   return 'Normal';
+}
+
+function prStatusLabel(pr: PurchaseRequestDto) {
+  if (pr.pendingWith && pr.pendingWith in ROLE_LABELS) {
+    return `Pending at ${ROLE_LABELS[pr.pendingWith as UserRole]}`;
+  }
+  return undefined;
 }
 
 export function ExecutivePurchaseRequestDetailPage() {
@@ -90,7 +97,7 @@ export function ExecutivePurchaseRequestDetailPage() {
           <h1 className="font-semibold text-ink truncate">{pr?.prNumber || 'Purchase request'}</h1>
           {pr && (
             <div className="flex flex-wrap items-center gap-2 mt-1">
-              <StatusBadge status={pr.status} />
+              <StatusBadge status={pr.status} label={prStatusLabel(pr)} />
               {pr.priority && (
                 <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-amber-50 text-amber-800">
                   {priorityLabel(pr.priority)}
