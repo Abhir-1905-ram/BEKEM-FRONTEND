@@ -134,6 +134,8 @@ export function POWizardPage() {
   const [purchaseHistory, setPurchaseHistory] = useState<MaterialPurchaseHistoryDto[]>([]);
   const [whyWeChoseThisVendor, setWhyWeChoseThisVendor] = useState('');
   const [vendorSelectionReason, setVendorSelectionReason] = useState('');
+  /** Explicit: Chose L1 vs Chose Non-L1 — only matching remark is shown. */
+  const [vendorChoiceKind, setVendorChoiceKind] = useState<'L1' | 'NON_L1' | ''>('');
   const [success, setSuccess] = useState(false);
   const [createdPoCount, setCreatedPoCount] = useState(0);
   const [selectingPr, setSelectingPr] = useState(false);
@@ -233,12 +235,16 @@ export function POWizardPage() {
         expectedDeliveryDate: expectedDeliveryDate || undefined,
         referenceNote:
           referenceNote || (selectedMr?.indentNumber ? `Indent ${selectedMr.indentNumber}` : ''),
-        whyWeChoseThisVendor,
-        vendorSelectionReasons: Object.fromEntries(
-          assignedVendorIds
-            .filter((vid) => vid !== l1VendorId)
-            .map((vid) => [vid, vendorSelectionReason])
-        ),
+        whyWeChoseThisVendor:
+          vendorChoiceKind === 'NON_L1' ? vendorSelectionReason.trim() : whyWeChoseThisVendor.trim(),
+        vendorSelectionReasons:
+          vendorChoiceKind === 'NON_L1'
+            ? Object.fromEntries(
+                assignedVendorIds
+                  .filter((vid) => vid !== l1VendorId)
+                  .map((vid) => [vid, vendorSelectionReason.trim()])
+              )
+            : {},
         orders,
       });
       return res.data;
@@ -623,9 +629,28 @@ export function POWizardPage() {
 
   const hasNonL1Vendor = assignedVendorIds.some((vid) => l1VendorId && vid !== l1VendorId);
 
+  // Suggest choice from assigned vendors; user can still flip (with match check on submit).
+  useEffect(() => {
+    if (!assignedVendorIds.length) {
+      setVendorChoiceKind('');
+      return;
+    }
+    setVendorChoiceKind(hasNonL1Vendor ? 'NON_L1' : 'L1');
+  }, [hasNonL1Vendor, assignedVendorIds.length]);
+
+  const choiceMatchesSelection =
+    vendorChoiceKind === 'L1'
+      ? !hasNonL1Vendor
+      : vendorChoiceKind === 'NON_L1'
+        ? hasNonL1Vendor
+        : false;
+
   const canSubmitPo =
-    whyWeChoseThisVendor.trim().length > 0 &&
-    (!hasNonL1Vendor || vendorSelectionReason.trim().length > 0);
+    !!vendorChoiceKind &&
+    choiceMatchesSelection &&
+    (vendorChoiceKind === 'L1'
+      ? whyWeChoseThisVendor.trim().length > 0
+      : vendorSelectionReason.trim().length > 0);
 
   return (
     <div className="min-h-screen flex flex-col w-full max-w-lg lg:max-w-6xl mx-auto bg-[#F8FAFC]">
@@ -1301,19 +1326,74 @@ export function POWizardPage() {
                 })}
               </div>
               <Card className="mt-4 space-y-3">
-                <Textarea
-                  value={whyWeChoseThisVendor}
-                  onChange={(e) => setWhyWeChoseThisVendor(e.target.value)}
-                  rows={3}
-                  placeholder="Why we chose this vendor (required)"
-                />
-                {hasNonL1Vendor && (
-                  <Textarea
-                    value={vendorSelectionReason}
-                    onChange={(e) => setVendorSelectionReason(e.target.value)}
-                    rows={2}
-                    placeholder="Reason for selection — non-L1 vendor (required)"
-                  />
+                <p className="text-xs font-semibold text-ink">Vendor selection</p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVendorChoiceKind('L1');
+                      setVendorSelectionReason('');
+                    }}
+                    className={cn(
+                      'px-3 py-2 rounded-lg border text-sm font-semibold transition-colors',
+                      vendorChoiceKind === 'L1'
+                        ? 'border-bekem-accent bg-bekem-accent/10 text-bekem-accent'
+                        : 'border-surface-border bg-white text-ink-secondary hover:text-ink'
+                    )}
+                  >
+                    Chose L1
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVendorChoiceKind('NON_L1');
+                      setWhyWeChoseThisVendor('');
+                    }}
+                    className={cn(
+                      'px-3 py-2 rounded-lg border text-sm font-semibold transition-colors',
+                      vendorChoiceKind === 'NON_L1'
+                        ? 'border-amber-500 bg-amber-50 text-amber-900'
+                        : 'border-surface-border bg-white text-ink-secondary hover:text-ink'
+                    )}
+                  >
+                    Chose Non-L1
+                  </button>
+                </div>
+
+                {vendorChoiceKind && !choiceMatchesSelection && (
+                  <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                    {vendorChoiceKind === 'L1'
+                      ? 'Assigned vendor is not the L1 (lowest) quote — choose “Chose Non-L1” or change the vendor.'
+                      : 'Assigned vendor is L1 — choose “Chose L1” or change the vendor.'}
+                  </p>
+                )}
+
+                {vendorChoiceKind === 'L1' && (
+                  <div>
+                    <p className="text-[11px] font-medium text-ink-muted mb-1">
+                      Why we chose this L1 vendor (required)
+                    </p>
+                    <Textarea
+                      value={whyWeChoseThisVendor}
+                      onChange={(e) => setWhyWeChoseThisVendor(e.target.value)}
+                      rows={3}
+                      placeholder="e.g. Lowest quote and acceptable delivery timeline"
+                    />
+                  </div>
+                )}
+
+                {vendorChoiceKind === 'NON_L1' && (
+                  <div>
+                    <p className="text-[11px] font-medium text-ink-muted mb-1">
+                      Reason for selecting Non-L1 vendor (required)
+                    </p>
+                    <Textarea
+                      value={vendorSelectionReason}
+                      onChange={(e) => setVendorSelectionReason(e.target.value)}
+                      rows={3}
+                      placeholder="e.g. Better delivery commitment / preferred brand / site urgency"
+                    />
+                  </div>
                 )}
               </Card>
               <div className="flex flex-col sm:flex-row gap-2 mt-4">

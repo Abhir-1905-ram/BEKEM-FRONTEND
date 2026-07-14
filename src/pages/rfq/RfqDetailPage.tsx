@@ -27,7 +27,7 @@ import { VendorQuotationEditor, type VendorQuotationDraft } from '@/components/V
 import { downloadExport } from '@/lib/downloadExport';
 
 import { pickL1VendorId } from '@/lib/quotationTotals';
-
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 
@@ -44,10 +44,8 @@ export function RfqDetailPage() {
   const [selectedVendorId, setSelectedVendorId] = useState('');
 
   const [whyWeChoseThisVendor, setWhyWeChoseThisVendor] = useState('');
-
   const [vendorSelectionReason, setVendorSelectionReason] = useState('');
-
-
+  const [vendorChoiceKind, setVendorChoiceKind] = useState<'L1' | 'NON_L1' | ''>('');
 
   const { data: rfq, ...query } = useQuery({
 
@@ -115,12 +113,30 @@ export function RfqDetailPage() {
 
   );
 
-  const isNonL1 = selectedVendorId && l1VendorId && selectedVendorId !== l1VendorId;
+  const isNonL1 = Boolean(selectedVendorId && l1VendorId && selectedVendorId !== l1VendorId);
+
+  useEffect(() => {
+    if (!selectedVendorId) {
+      setVendorChoiceKind('');
+      return;
+    }
+    setVendorChoiceKind(isNonL1 ? 'NON_L1' : 'L1');
+  }, [selectedVendorId, isNonL1]);
+
+  const choiceMatchesSelection =
+    vendorChoiceKind === 'L1'
+      ? !isNonL1
+      : vendorChoiceKind === 'NON_L1'
+        ? isNonL1
+        : false;
 
   const canFinalize =
     !!selectedVendorId &&
-    whyWeChoseThisVendor.trim().length > 0 &&
-    (!isNonL1 || vendorSelectionReason.trim().length > 0);
+    !!vendorChoiceKind &&
+    choiceMatchesSelection &&
+    (vendorChoiceKind === 'L1'
+      ? whyWeChoseThisVendor.trim().length > 0
+      : vendorSelectionReason.trim().length > 0);
 
 
 
@@ -155,13 +171,11 @@ export function RfqDetailPage() {
     mutationFn: async () => {
 
       await api.post(`/rfqs/${id}/finalize`, {
-
         selectedVendorId,
-
-        whyWeChoseThisVendor,
-
-        vendorSelectionReason: isNonL1 ? vendorSelectionReason : undefined,
-
+        whyWeChoseThisVendor:
+          vendorChoiceKind === 'NON_L1' ? vendorSelectionReason.trim() : whyWeChoseThisVendor.trim(),
+        vendorSelectionReason:
+          vendorChoiceKind === 'NON_L1' ? vendorSelectionReason.trim() : undefined,
       });
 
     },
@@ -375,85 +389,99 @@ export function RfqDetailPage() {
 
 
             <div className="panel p-3">
-
               <h2 className="section-label mb-2">Vendor selection</h2>
-
               <div className="grid md:grid-cols-2 gap-3">
-
                 <label className="block text-sm md:col-span-2">
-
                   <span className="text-xs text-ink-secondary">Selected vendor</span>
-
                   <select
-
                     value={selectedVendorId}
-
                     onChange={(e) => setSelectedVendorId(e.target.value)}
-
                     className="mt-1 w-full rounded-lg border border-surface-border px-2 py-1.5 text-sm h-8"
-
                     disabled={rfq.status === 'FINALIZED'}
-
                   >
-
                     <option value="">Choose vendor</option>
-
                     {onlyAssignedDrafts(drafts).map((v) => (
                       <option key={v.vendorId} value={v.vendorId}>
                         {v.vendorName || v.vendorId}
                       </option>
                     ))}
-
                   </select>
-
                 </label>
 
-                {isNonL1 && (
-
-                  <div>
-
-                    <p className="text-[11px] font-medium text-ink-muted mb-1">Reason for selection (non-L1)</p>
-
-                    <Textarea
-
-                      value={vendorSelectionReason}
-
-                      onChange={(e) => setVendorSelectionReason(e.target.value)}
-
-                      rows={2}
-
-                      className="min-h-[56px]"
-
-                      disabled={rfq.status === 'FINALIZED'}
-
-                      placeholder="Reason for selection (non-L1)"
-
-                    />
-
+                {rfq.status !== 'FINALIZED' && (
+                  <div className="md:col-span-2 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVendorChoiceKind('L1');
+                        setVendorSelectionReason('');
+                      }}
+                      className={cn(
+                        'px-3 py-2 rounded-lg border text-sm font-semibold transition-colors',
+                        vendorChoiceKind === 'L1'
+                          ? 'border-bekem-accent bg-bekem-accent/10 text-bekem-accent'
+                          : 'border-surface-border bg-white text-ink-secondary hover:text-ink'
+                      )}
+                    >
+                      Chose L1
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVendorChoiceKind('NON_L1');
+                        setWhyWeChoseThisVendor('');
+                      }}
+                      className={cn(
+                        'px-3 py-2 rounded-lg border text-sm font-semibold transition-colors',
+                        vendorChoiceKind === 'NON_L1'
+                          ? 'border-amber-500 bg-amber-50 text-amber-900'
+                          : 'border-surface-border bg-white text-ink-secondary hover:text-ink'
+                      )}
+                    >
+                      Chose Non-L1
+                    </button>
                   </div>
-
                 )}
 
-                <div className={isNonL1 ? '' : 'md:col-span-2'}>
+                {vendorChoiceKind && !choiceMatchesSelection && rfq.status !== 'FINALIZED' && (
+                  <p className="md:col-span-2 text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                    {vendorChoiceKind === 'L1'
+                      ? 'Selected vendor is not L1 — choose “Chose Non-L1” or pick the L1 vendor.'
+                      : 'Selected vendor is L1 — choose “Chose L1” or pick a non-L1 vendor.'}
+                  </p>
+                )}
 
-                  <p className="text-[11px] font-medium text-ink-muted mb-1">Why we chose this vendor</p>
+                {vendorChoiceKind === 'NON_L1' && (
+                  <div className="md:col-span-2">
+                    <p className="text-[11px] font-medium text-ink-muted mb-1">
+                      Reason for selecting Non-L1 vendor (required)
+                    </p>
+                    <Textarea
+                      value={vendorSelectionReason}
+                      onChange={(e) => setVendorSelectionReason(e.target.value)}
+                      rows={2}
+                      className="min-h-[56px]"
+                      disabled={rfq.status === 'FINALIZED'}
+                      placeholder="e.g. Better delivery / preferred brand / site urgency"
+                    />
+                  </div>
+                )}
 
-                  <Textarea
-
-                    value={whyWeChoseThisVendor}
-
-                    onChange={(e) => setWhyWeChoseThisVendor(e.target.value)}
-
-                    rows={2}
-
-                    className="min-h-[56px]"
-
-                    disabled={rfq.status === 'FINALIZED'}
-
-                  />
-
-                </div>
-
+                {vendorChoiceKind === 'L1' && (
+                  <div className="md:col-span-2">
+                    <p className="text-[11px] font-medium text-ink-muted mb-1">
+                      Why we chose this L1 vendor (required)
+                    </p>
+                    <Textarea
+                      value={whyWeChoseThisVendor}
+                      onChange={(e) => setWhyWeChoseThisVendor(e.target.value)}
+                      rows={2}
+                      className="min-h-[56px]"
+                      disabled={rfq.status === 'FINALIZED'}
+                      placeholder="e.g. Lowest quote and acceptable delivery"
+                    />
+                  </div>
+                )}
               </div>
 
               {rfq.status !== 'FINALIZED' && (
