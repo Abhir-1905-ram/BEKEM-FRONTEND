@@ -83,8 +83,10 @@ export function RequestDetailPage() {
   const confirmReceipt = useMutation({
     mutationFn: () => api.post(`/material-requests/${id}/confirm-receipt`, {}),
     onSuccess: () => {
-      toast.success('Receipt confirmed — request completed');
+      toast.success('Stock verified — request completed');
       queryClient.invalidateQueries({ queryKey: ['material-request', id] });
+      queryClient.invalidateQueries({ queryKey: ['material-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-today'] });
     },
   });
 
@@ -363,7 +365,7 @@ export function RequestDetailPage() {
             disabled={confirmReceipt.isPending}
             onClick={() => confirmReceipt.mutate()}
           >
-            Confirm material received
+            Collect & verify stock
           </Button>
         </div>
       )}
