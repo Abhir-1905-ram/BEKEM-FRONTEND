@@ -87,6 +87,10 @@ export function RequestDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['material-request', id] });
       queryClient.invalidateQueries({ queryKey: ['material-requests'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-today'] });
+      navigate('/incidents?tab=completed');
+    },
+    onError: (err: Error & { response?: { data?: { message?: string }; status?: number } }) => {
+      toast.error(err.response?.data?.message || 'Could not confirm material receipt');
     },
   });
 
