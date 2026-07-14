@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { MaterialRequestDto } from '@afios/shared';
@@ -11,6 +12,7 @@ import { WorkflowStatusTabs, type WorkflowStatusTab } from '@/components/Workflo
 import { MaterialIndentsTable } from '@/components/MaterialIndentsTable';
 import { IndentListFilters, IndentQueueQuickButtons } from '@/components/IndentListFilters';
 import {
+  countIndentQueueFilters,
   filterMaterialIndents,
   getIndentQueueFiltersForRole,
   isIndentQueueFilterId,
@@ -56,6 +58,16 @@ export function StorePendingRequestsPage() {
     },
   });
 
+  const { data: pendingForCounts } = useQuery({
+    queryKey: ['store-pending-requests', 'pending', 'chip-counts'],
+    queryFn: async () => {
+      const res = await api.get<{ data: MaterialRequestDto[] }>('/material-requests', {
+        params: { tab: 'pending' },
+      });
+      return normalizeListData<MaterialRequestDto>(res.data.data);
+    },
+  });
+
   const categories = useMemo(
     () => uniqueIndentCategories(pendingRequests ?? []),
     [pendingRequests]
@@ -69,6 +81,10 @@ export function StorePendingRequestsPage() {
         days,
       }),
     [pendingRequests, search, queue, category, days]
+  );
+  const queueCounts = useMemo(
+    () => countIndentQueueFilters(pendingForCounts ?? pendingRequests ?? [], queueOptions),
+    [pendingForCounts, pendingRequests, queueOptions]
   );
 
   const setSearch = (value: string) => {
@@ -93,6 +109,7 @@ export function StorePendingRequestsPage() {
               <IndentQueueQuickButtons
                 value={queue}
                 options={queueOptions}
+                counts={queueCounts}
                 onChange={(next) => {
                   patchParams({
                     queue: next || undefined,
