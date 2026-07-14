@@ -37,8 +37,13 @@ export function formatIndentQueueStatus(status: string, pendingWith?: string): s
     return getStatusLabel(status);
   }
 
-  if (['MATERIAL_RECEIVED', 'ISSUED'].includes(status) && !pendingWith) {
-    return getStatusLabel(status);
+  // Always show next action role for post-approval handoff statuses
+  // (do not treat as completed before Indent Raiser confirm-receipt).
+  if (status === 'ISSUED') {
+    return `Pending at ${ROLE_LABELS[UserRole.SITE_INCHARGE]}`;
+  }
+  if (status === 'MATERIAL_RECEIVED') {
+    return `Pending at ${ROLE_LABELS[UserRole.STORE_INCHARGE]}`;
   }
 
   const roleKey =

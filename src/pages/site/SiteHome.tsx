@@ -35,20 +35,11 @@ export function SiteHomePage() {
   });
 
   const pending =
-    requests?.filter((r) =>
-      ![
-        'MATERIAL_RECEIVED',
-        'ISSUED',
-        'COMPLETED',
-        'CLOSED',
-        'REJECTED',
-        'CANCELLED',
-      ].includes(r.status)
-    ).length || 0;
+    requests?.filter((r) => !['COMPLETED', 'CLOSED', 'REJECTED', 'CANCELLED'].includes(r.status))
+      .length || 0;
   const rejected = requests?.filter((r) => r.status === 'REJECTED').length || 0;
   const completed =
-    requests?.filter((r) => ['MATERIAL_RECEIVED', 'ISSUED', 'COMPLETED', 'CLOSED'].includes(r.status))
-      .length || 0;
+    requests?.filter((r) => ['COMPLETED', 'CLOSED'].includes(r.status)).length || 0;
   const unread = notifications?.filter((n) => !n.isRead).length || 0;
   const recent = requests?.slice(0, 5) || [];
 
