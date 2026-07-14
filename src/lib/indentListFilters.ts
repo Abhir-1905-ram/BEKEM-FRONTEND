@@ -48,45 +48,27 @@ const HO_STATUSES = new Set([
   ...CHAIRMAN_STATUSES,
 ]);
 
+/** Shared pending-queue chips — one per status color, with counts on every role. */
+const ALL_PENDING_QUEUE_CHIPS: IndentQueueFilterOption[] = [
+  { id: 'store', label: 'Pending at Store Incharge' },
+  { id: 'pm', label: 'Pending at PM' },
+  { id: 'executive', label: 'Pending at Executive' },
+  { id: 'coordinator', label: 'Pending at Coordinator' },
+  { id: 'chairman', label: 'Pending at MD/Chairman' },
+];
+
 /** Role-specific quick tabs next to the Material Indents / Pending Indents title. */
 export function getIndentQueueFiltersForRole(role: UserRole): IndentQueueFilterOption[] {
   switch (role) {
     case UserRole.SITE_INCHARGE:
-      // One chip per distinct pending color Site tracks on their indents
-      return [
-        { id: 'store', label: 'Pending at Store Incharge' },
-        { id: 'pm', label: 'Pending at PM' },
-        { id: 'executive', label: 'Pending at Executive' },
-        { id: 'coordinator', label: 'Pending at Coordinator' },
-        { id: 'chairman', label: 'Pending at MD/Chairman' },
-      ];
     case UserRole.STORE_INCHARGE:
-      return [
-        { id: 'pm', label: 'Pending at Project Manager' },
-        { id: 'ho', label: 'Pending at HO' },
-      ];
     case UserRole.PROJECT_MANAGER:
-      return [
-        { id: 'ho', label: 'Pending at HO' },
-        { id: 'store', label: 'Stock Allocation Pending at Store Incharge' },
-      ];
     case UserRole.EXECUTIVE:
-      return [
-        { id: 'coordinator', label: 'Pending at Coordinator' },
-        { id: 'chairman', label: 'Pending at MD/Chairman' },
-        { id: 'store', label: 'Stock Allocation Pending at Store Incharge' },
-      ];
     case UserRole.COORDINATOR:
-      return [
-        { id: 'chairman', label: 'Pending at MD/Chairman' },
-        { id: 'store', label: 'Stock Allocation Pending at Store Incharge' },
-      ];
+    case UserRole.CHAIRMAN:
+      return ALL_PENDING_QUEUE_CHIPS;
     default:
-      return [
-        { id: 'pm', label: 'Pending at Project Manager' },
-        { id: 'ho', label: 'Pending at HO' },
-        { id: 'store', label: 'Stock Allocation Pending at Store Incharge' },
-      ];
+      return ALL_PENDING_QUEUE_CHIPS;
   }
 }
 
