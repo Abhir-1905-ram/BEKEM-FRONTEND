@@ -12,6 +12,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Textarea } from '@/components/ui/Input';
 import { ListQueryBoundary } from '@/components/ListQueryBoundary';
 import { DetailField, DetailFieldGrid } from '@/components/ui/DetailFields';
+import { StatusTimeline } from '@/components/StatusTimeline';
 
 function priorityLabel(priority?: string) {
   if (priority === 'HIGH') return 'High';
@@ -242,7 +243,7 @@ export function ExecutivePurchaseRequestDetailPage() {
             {!canDecide &&
               pr.executiveRecommendation === 'PURCHASE_ORDER' &&
               pr.status === 'OPEN' && (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 mb-3">
                   <Button
                     variant="accent"
                     accentColor={accent}
@@ -260,6 +261,22 @@ export function ExecutivePurchaseRequestDetailPage() {
                   </Button>
                 </div>
               )}
+
+            <h2 className="section-label mb-3">Status history</h2>
+            <Card className="mb-3">
+              <StatusTimeline entityType="PurchaseRequest" entityId={pr.id} />
+            </Card>
+            {(pr.materialRequestId || pr.materialRequest?.id) && (
+              <>
+                <h2 className="section-label mb-3">Indent status history</h2>
+                <Card className="mb-3">
+                  <StatusTimeline
+                    entityType="MaterialRequest"
+                    entityId={(pr.materialRequestId || pr.materialRequest?.id)!}
+                  />
+                </Card>
+              </>
+            )}
           </>
         )}
       </ListQueryBoundary>

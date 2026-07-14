@@ -89,13 +89,7 @@ export function ExecutivePurchaseRequestsPage() {
                 <tr
                   key={pr.id}
                   className="cursor-pointer"
-                  onClick={() => {
-                    if (pr.executiveRecommendation === 'PURCHASE_ORDER') {
-                      navigate(`/executive/rfq/new?purchaseRequestId=${pr.id}`);
-                    } else {
-                      navigate(`/executive/purchase-requests/${pr.id}`);
-                    }
-                  }}
+                  onClick={() => navigate(`/executive/purchase-requests/${pr.id}`)}
                 >
                   <td className="cell-code whitespace-nowrap">{pr.prNumber}</td>
                   <td className="cell-text whitespace-nowrap">{pr.project?.code} — {pr.project?.name}</td>
