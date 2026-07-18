@@ -10,74 +10,69 @@ interface QuotationComparisonTableProps {
   maxVendors?: number;
 }
 
-type VendorCol = QuotationComparisonDto['vendors'][0];
-
-type ItemComparison = {
-  materialId: string;
-  materialName: string;
-  quantity: number;
-  unit: string;
-  vendorOffers?: Array<{
-    vendorId: string;
-    vendorName: string;
-    rate: number;
-    gstPercent?: number;
-    gstAmount?: number;
-    finalCost?: number;
-    isL1?: boolean;
-  }>;
-  minOffer?: { vendorName: string; rate: number } | null;
-  maxOffer?: { vendorName: string; rate: number } | null;
+type ItemOffer = {
+  vendorId: string;
+  vendorName: string;
+  rate: number;
+  gstPercent?: number;
+  gstAmount?: number;
+  finalCost?: number;
+  isL1?: boolean;
 };
 
-function formatCell(value: unknown, format?: string) {
-  if (value == null || value === '') return '—';
-  if (format === 'currency') return formatCurrency(Number(value));
-  if (format === 'percent') return `${value}%`;
-  return String(value);
-}
-
 /**
- * Req 59 — expandable per-item comparison with vendors as columns (Rate / GST / Final Cost).
+ * Req 59 — expandable per-item comparison.
+ * Each product only lists vendors that quoted THAT product (not all RFQ vendors).
  */
 export function QuotationComparisonTable({
   comparison,
   className,
   maxVendors,
 }: QuotationComparisonTableProps) {
-  const materialComparisons = (comparison.itemComparisons || []).map((item) => ({
-    materialId: item.materialId,
-    materialName: item.materialName,
-    quantity: item.quantity,
-    unit: item.unit,
-    minOffer: item.minOffer,
-    maxOffer: item.maxOffer,
-    vendorOffers: (item.offers || []).map((o) => ({
-      vendorId: o.vendorId,
-      vendorName: o.vendorName,
-      rate: o.rate,
-      finalCost: o.finalCost,
-    })),
-  })) as ItemComparison[];
-  const vendors = maxVendors ? comparison.vendors.slice(0, maxVendors) : comparison.vendors;
+  const materialComparisons = (comparison.itemComparisons || []).map((item) => {
+    let offers = (item.offers || [])
+      .filter((o) => o.rate != null && Number(o.rate) > 0)
+      .map((o) => ({
+        vendorId: o.vendorId,
+        vendorName: o.vendorName,
+        rate: Number(o.rate),
+        finalCost: o.finalCost != null ? Number(o.finalCost) : undefined,
+      })) as ItemOffer[];
+    offers.sort((a, b) => (a.finalCost ?? a.rate) - (b.finalCost ?? b.rate));
+    if (maxVendors && maxVendors > 0) offers = offers.slice(0, maxVendors);
+    if (offers.length) {
+      const best = offers[0];
+      offers = offers.map((o) => ({
+        ...o,
+        isL1: o.vendorId === best.vendorId,
+      }));
+    }
+    return {
+      materialId: item.materialId,
+      materialName: item.materialName,
+      quantity: item.quantity,
+      unit: item.unit,
+      minOffer: item.minOffer,
+      maxOffer: item.maxOffer,
+      offers,
+    };
+  });
+
   const [expanded, setExpanded] = useState<Record<string, boolean>>(() => {
     const init: Record<string, boolean> = {};
-    (materialComparisons || []).forEach((item, i) => {
+    materialComparisons.forEach((item, i) => {
       init[item.materialId || String(i)] = i === 0;
     });
     return init;
   });
 
-  if (!vendors.length) {
-    return <p className="text-sm text-ink-muted">No vendor quotations yet.</p>;
-  }
-
-  if (materialComparisons?.length) {
+  if (materialComparisons.length) {
     return (
       <div className={cn('space-y-2', className)}>
         {materialComparisons.map((item, idx) => {
           const key = item.materialId || String(idx);
           const open = !!expanded[key];
+          const vendors = item.offers;
           return (
             <div key={key} className="panel overflow-hidden">
               <button
@@ -96,82 +91,74 @@ export function QuotationComparisonTable({
                     Qty {item.quantity} {item.unit}
                     {item.minOffer
                       ? ` · Best: ${item.minOffer.vendorName} (${formatCurrency(item.minOffer.rate)})`
-                      : ''}
+                      : vendors.length
+                        ? ` · ${vendors.length} vendor quote${vendors.length > 1 ? 's' : ''}`
+                        : ' · No vendor quotes for this item'}
                   </p>
                 </div>
               </button>
               {open && (
                 <div className="procurement-landscape-scroll border-t border-surface-border">
-                  <table className="data-table min-w-[640px]">
-                    <thead>
-                      <tr>
-                        <th className="w-28">Metric</th>
-                        {vendors.map((v, i) => (
-                          <th
-                            key={v.id}
-                            className={cn('min-w-[110px]', v.isL1 && 'bg-emerald-50 text-emerald-800')}
-                          >
-                            <span className="block">Vendor {i + 1}</span>
-                            <span className="block font-normal text-[10px] truncate max-w-[130px]">
-                              {v.vendorName}
-                            </span>
-                            {v.isL1 && (
-                              <span className="inline-block mt-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-600">
-                                L1
+                  {!vendors.length ? (
+                    <p className="px-3 py-3 text-sm text-ink-muted">
+                      No vendors quoted this product — only vendors selected for this item appear here.
+                    </p>
+                  ) : (
+                    <table className="data-table min-w-[640px]">
+                      <thead>
+                        <tr>
+                          <th className="w-28">Metric</th>
+                          {vendors.map((v, i) => (
+                            <th
+                              key={v.vendorId}
+                              className={cn(
+                                'min-w-[110px]',
+                                v.isL1 && 'bg-emerald-50 text-emerald-800'
+                              )}
+                            >
+                              <span className="block">Vendor {i + 1}</span>
+                              <span className="block font-normal text-[10px] truncate max-w-[130px]">
+                                {v.vendorName}
                               </span>
-                            )}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(
-                        [
-                          { key: 'rate', label: 'Rate', format: 'currency' as const },
-                          { key: 'gstPercent', label: 'GST %', format: 'percent' as const },
-                          { key: 'finalCost', label: 'Final Cost', format: 'currency' as const },
-                        ] as const
-                      ).map((row) => (
-                        <tr key={row.key}>
-                          <td className="font-medium text-ink-secondary whitespace-nowrap">
-                            {row.label}
-                          </td>
-                          {vendors.map((v) => {
-                            const offer = item.vendorOffers?.find(
-                              (o: {
-                                vendorId: string;
-                                rate: number;
-                                gstPercent?: number;
-                                gstAmount?: number;
-                                finalCost?: number;
-                              }) => o.vendorId === v.id
-                            );
-                            let value: unknown;
-                            if (row.key === 'rate') value = offer?.rate ?? (v as VendorCol).rate;
-                            else if (row.key === 'gstPercent')
-                              value = offer?.gstPercent ?? (v as VendorCol).gstPercent;
-                            else
-                              value =
-                                offer?.finalCost ??
-                                offer?.gstAmount ??
-                                (v as VendorCol).finalCost ??
-                                (v as VendorCol).gstAmount;
-                            return (
-                              <td
-                                key={v.id}
-                                className={cn(
-                                  v.isL1 && 'bg-emerald-50/60',
-                                  row.format === 'currency' && 'tabular-nums font-semibold'
-                                )}
-                              >
-                                {formatCell(value, row.format)}
-                              </td>
-                            );
-                          })}
+                              {v.isL1 && (
+                                <span className="inline-block mt-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-600">
+                                  L1
+                                </span>
+                              )}
+                            </th>
+                          ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {(
+                          [
+                            { key: 'rate', label: 'Rate', format: 'currency' as const },
+                            { key: 'finalCost', label: 'Final Cost', format: 'currency' as const },
+                          ] as const
+                        ).map((row) => (
+                          <tr key={row.key}>
+                            <td className="font-medium text-ink-secondary whitespace-nowrap">
+                              {row.label}
+                            </td>
+                            {vendors.map((v) => {
+                              const value = row.key === 'rate' ? v.rate : v.finalCost ?? v.rate;
+                              return (
+                                <td
+                                  key={v.vendorId}
+                                  className={cn(
+                                    v.isL1 && 'bg-emerald-50/60',
+                                    'tabular-nums font-semibold'
+                                  )}
+                                >
+                                  {value == null ? '—' : formatCurrency(Number(value))}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               )}
             </div>
@@ -182,6 +169,13 @@ export function QuotationComparisonTable({
   }
 
   // Fallback: header-level vendor comparison when itemComparisons are unavailable
+  const vendors = maxVendors
+    ? comparison.vendors.slice(0, maxVendors)
+    : comparison.vendors;
+  if (!vendors.length) {
+    return <p className="text-sm text-ink-muted">No vendor quotations yet.</p>;
+  }
+
   return (
     <div className={cn('space-y-3', className)}>
       <div className="procurement-landscape-scroll -mx-1">
@@ -225,7 +219,13 @@ export function QuotationComparisonTable({
                       row.format === 'currency' && 'tabular-nums font-semibold'
                     )}
                   >
-                    {formatCell(v[row.key], row.format)}
+                    {v[row.key] == null || v[row.key] === ''
+                      ? '—'
+                      : row.format === 'currency'
+                        ? formatCurrency(Number(v[row.key]))
+                        : row.format === 'percent'
+                          ? `${v[row.key]}%`
+                          : String(v[row.key])}
                   </td>
                 ))}
               </tr>

@@ -52,8 +52,8 @@ export function PoProductCompareStep({
   return (
     <div className="space-y-3">
       <p className="text-xs text-ink-secondary">
-        Compare quoted costs per product. Suggested vendor is the lowest total — select any vendor
-        to proceed.
+        Compare quoted costs per product. Only vendors with rates for that product appear here —
+        pick one vendor per product (separate POs when vendors differ).
       </p>
       {activeLineIndexes.map((lineIndex) => {
         const row = lineItems[lineIndex];
