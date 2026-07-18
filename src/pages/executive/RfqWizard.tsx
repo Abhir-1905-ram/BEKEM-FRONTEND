@@ -63,7 +63,7 @@ export function RfqWizardPage() {
     queryKey: ['purchase-requests', 'ready-for-rfq'],
     queryFn: async () => {
       const res = await api.get<{ data: PurchaseRequestDto[] }>('/purchase-requests', {
-        params: { readyForPo: 'true' },
+        params: { readyForRfq: 'true' },
       });
       return res.data.data;
     },
@@ -267,8 +267,8 @@ export function RfqWizardPage() {
           {step === 0 && (
             <motion.div key="s0" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}>
               <p className="text-xs text-ink-muted mb-3">
-                RFQ is separate from PO — invite at least 3 vendors, then share the RFQ and create PO
-                when quotes are received.
+                Share the RFQ with vendors first. Create PO only after quotations come in and you
+                finalize the RFQ.
               </p>
               {prLoading ? (
                 <div className="space-y-2">
@@ -472,7 +472,8 @@ export function RfqWizardPage() {
               />
 
               <p className="text-xs text-ink-secondary">
-                Share each vendor&apos;s RFQ above. Vendor selection happens later when creating the PO.
+                Share each vendor&apos;s RFQ above. When vendors reply with quotations, open RFQ
+                detail to record quotes, compare, and finalize — then Create PO.
               </p>
 
               <div className="flex flex-wrap gap-2">
@@ -485,18 +486,6 @@ export function RfqWizardPage() {
                 </Button>
                 <Button variant="secondary" onClick={() => navigate('/executive/rfq/inbox')}>
                   Back to RFQ inbox
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() =>
-                    navigate(
-                      selectedPr
-                        ? `/executive/po/new?purchaseRequestId=${selectedPr.id}`
-                        : '/executive/po/new'
-                    )
-                  }
-                >
-                  Create PO
                 </Button>
               </div>
             </motion.div>

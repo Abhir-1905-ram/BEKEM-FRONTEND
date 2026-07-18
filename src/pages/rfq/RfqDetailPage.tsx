@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -36,6 +36,7 @@ import { draftsFromComparison, onlyAssignedDrafts } from '@/lib/rfqVendorAssignm
 
 export function RfqDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
 
   const queryClient = useQueryClient();
 
@@ -326,9 +327,31 @@ export function RfqDetailPage() {
 
             {rfq.status === 'FINALIZED' && (
 
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800 flex flex-wrap items-center justify-between gap-2">
 
-                RFQ finalized — proceed to Create PO when ready.
+                <span>RFQ finalized — Create PO from the selected vendor quote.</span>
+
+                {rfq.purchaseRequestId && (
+
+                  <Button
+
+                    variant="primary"
+
+                    size="sm"
+
+                    onClick={() =>
+
+                      navigate(`/executive/po/new?purchaseRequestId=${rfq.purchaseRequestId}`)
+
+                    }
+
+                  >
+
+                    Create PO
+
+                  </Button>
+
+                )}
 
               </div>
 

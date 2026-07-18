@@ -32,7 +32,7 @@ export function ExecutiveRfqListPage() {
     queryKey: ['purchase-requests', 'ready-for-rfq'],
     queryFn: async () => {
       const res = await api.get<{ data: PurchaseRequestDto[] }>('/purchase-requests', {
-        params: { readyForPo: 'true' },
+        params: { readyForRfq: 'true' },
       });
       return res.data.data ?? [];
     },
@@ -66,7 +66,7 @@ export function ExecutiveRfqListPage() {
     <div className="page-container max-w-full">
       <PageHeader
         title="Request for quotation (RFQ)"
-        subtitle="Pick a purchase request, invite vendors, compare quotes — then create PO"
+        subtitle="Share RFQ → wait for vendor quotes → finalize → then Create PO"
         action={
           <Button variant="primary" onClick={() => navigate('/executive/rfq/new')}>
             <Plus className="h-4 w-4" />
@@ -85,7 +85,7 @@ export function ExecutiveRfqListPage() {
             {openCount === 1 ? '' : 's'}
           </p>
           <p className="text-xs text-ink-muted">
-            Standard flow: Procurement decision → RFQ (3 vendors) → Compare → PO
+            Standard flow: Decision → RFQ share → Vendor quotes → Finalize → Create PO
           </p>
         </div>
       </div>
@@ -129,7 +129,6 @@ export function ExecutiveRfqListPage() {
                   <tbody>
                 {readyPurchaseRequests.map((pr) => {
                   const rfq = rfqByPrId.get(pr.id);
-                  const isFinalized = rfq?.status === 'FINALIZED';
                   const isOpen = rfq?.status === 'OPEN';
 
                   return (
@@ -141,25 +140,15 @@ export function ExecutiveRfqListPage() {
                       <td className="cell-code whitespace-nowrap">{rfq?.rfqNumber || '—'}</td>
                       <td>{rfq ? <StatusBadge status={rfq.status} /> : '—'}</td>
                       <td>
-                          {isFinalized ? (
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() =>
-                                navigate(`/executive/po/new?purchaseRequestId=${pr.id}`)
-                              }
-                            >
-                              Create PO
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="primary"
-                              size="sm"
-                              onClick={() => startRfq(pr.id, isOpen)}
-                            >
-                              {isOpen ? 'Continue RFQ' : 'Create RFQ'}
-                            </Button>
-                          )}
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() =>
+                            isOpen ? navigate(`/rfqs/${rfq!.id}`) : startRfq(pr.id, false)
+                          }
+                        >
+                          {isOpen ? 'Await quotes' : 'Create RFQ'}
+                        </Button>
                       </td>
                     </tr>
                   );
@@ -190,24 +179,31 @@ export function ExecutiveRfqListPage() {
                   <tr
                     key={rfq.id}
                     className="cursor-pointer"
-                    onClick={() => {
-                      if (rfq.purchaseRequestId && rfq.status === 'OPEN') {
-                        startRfq(rfq.purchaseRequestId, true);
-                        return;
-                      }
-                      if (rfq.purchaseRequestId && rfq.status === 'FINALIZED') {
-                        navigate(`/executive/po/new?purchaseRequestId=${rfq.purchaseRequestId}`);
-                        return;
-                      }
-                      navigate(`/rfqs/${rfq.id}`);
-                    }}
+                    onClick={() => navigate(`/rfqs/${rfq.id}`)}
                   >
                     <td className="cell-code whitespace-nowrap">{rfq.rfqNumber}</td>
                     <td className="cell-text whitespace-nowrap">{rfq.indentNumber || 'Purchase request'}</td>
                     <td className="whitespace-nowrap">{formatDate(rfq.createdAt)}</td>
                     <td className="whitespace-nowrap">{rfq.dueDate ? formatDate(rfq.dueDate) : '—'}</td>
                     <td><StatusBadge status={rfq.status} /></td>
-                    <td className="text-right"><ChevronRight className="h-4 w-4 text-ink-muted inline-block" /></td>
+                    <td className="text-right">
+                      {rfq.status === 'FINALIZED' && rfq.purchaseRequestId ? (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(
+                              `/executive/po/new?purchaseRequestId=${rfq.purchaseRequestId}`
+                            );
+                          }}
+                        >
+                          Create PO
+                        </Button>
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-ink-muted inline-block" />
+                      )}
+                    </td>
                   </tr>
                 ))}
                   </tbody>

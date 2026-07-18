@@ -695,8 +695,8 @@ export function POWizardPage() {
                 />
               ) : !hasReadyItems ? (
                 <EmptyState
-                  title="No requests ready"
-                  description="Mark requests as Proceed with Purchase Order in Procurement Decisions — they will appear here for PO creation."
+                  title="No requests ready for PO"
+                  description="Finalize an RFQ after vendor quotations are received — those purchase requests then appear here for Create PO."
                 />
               ) : (
                 <div className="space-y-2">

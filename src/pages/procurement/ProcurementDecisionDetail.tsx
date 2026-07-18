@@ -522,14 +522,6 @@ export function ProcurementDecisionDetailPage({ listPath }: ProcurementDecisionD
                     >
                       Create RFQ
                     </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() =>
-                        navigate(`/executive/po/new?purchaseRequestId=${decision.purchaseRequestId}`)
-                      }
-                    >
-                      Skip to Create PO
-                    </Button>
                   </div>
                 )}
 

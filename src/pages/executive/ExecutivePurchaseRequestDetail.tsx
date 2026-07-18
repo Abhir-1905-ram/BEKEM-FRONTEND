@@ -259,13 +259,6 @@ export function ExecutivePurchaseRequestDetailPage() {
                   >
                     Create RFQ
                   </Button>
-                  <Button
-                    variant="secondary"
-                    size="lg"
-                    onClick={() => navigate(`/executive/po/new?purchaseRequestId=${pr.id}`)}
-                  >
-                    Skip to Create PO
-                  </Button>
                 </div>
               )}
 
