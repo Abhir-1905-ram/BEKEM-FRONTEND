@@ -106,9 +106,6 @@ const PMPurchaseRequestsPage = lazy(() =>
 const PmMaterialLookupPage = lazy(() =>
   import('@/pages/pm/PmMaterialLookup').then((m) => ({ default: m.PmMaterialLookupPage }))
 );
-const ExecutiveHoIndentsPage = lazy(() =>
-  import('@/pages/executive/ExecutiveHoIndents').then((m) => ({ default: m.ExecutiveHoIndentsPage }))
-);
 const CoordinatorHoIndentsPage = lazy(() =>
   import('@/pages/coordinator/CoordinatorHoIndents').then((m) => ({ default: m.CoordinatorHoIndentsPage }))
 );
@@ -611,11 +608,7 @@ export default function App() {
 
               <Route
                 path="/executive/ho-indents"
-                element={
-                  <RoleGuard roles={[UserRole.EXECUTIVE]}>
-                    <ExecutiveHoIndentsPage />
-                  </RoleGuard>
-                }
+                element={<Navigate to="/coordinator/ho-indents" replace />}
               />
 
               <Route
