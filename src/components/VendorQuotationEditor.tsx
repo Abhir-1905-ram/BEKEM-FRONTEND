@@ -325,127 +325,131 @@ export function VendorQuotationEditor({
         </div>
       )}
 
-      <div className="procurement-landscape-scroll panel overflow-hidden">
+      <div className="panel overflow-hidden">
         <div className="px-2.5 py-2 border-b border-surface-border bg-surface-muted/30">
           <p className="text-xs font-semibold text-ink-muted">Assigned vendor quotations</p>
           <p className="text-[11px] text-ink-secondary">
             {assignedQuotations.length
-              ? `${assignedQuotations.length} vendor RFQ(s) as columns — each includes only their assigned products`
+              ? `${assignedQuotations.length} vendor RFQ(s) as columns — each includes only their assigned products — scroll sideways if needed`
               : 'Assign vendors to products above — they will appear here as columns'}
           </p>
         </div>
         {assignedQuotations.length ? (
-          <table className="data-table min-w-max">
-            <thead>
-              <tr className="bg-surface-muted/40">
-                <th className="sticky left-0 z-[1] bg-slate-100 min-w-[120px]">Metric</th>
-                {assignedQuotations.map((row, index) => (
-                  <th key={row.vendorId} className="min-w-[160px]">
-                    <span className="block">Vendor {index + 1}</span>
-                    <span className="block font-normal text-[10px] truncate max-w-[180px] normal-case tracking-normal">
-                      {row.vendorName || row.vendorId}
-                    </span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="sticky left-0 z-[1] bg-white font-medium text-ink-secondary whitespace-nowrap">
-                  Products
-                </td>
-                {assignedQuotations.map((row) => (
-                  <td key={row.vendorId} className="text-[11px] text-ink-secondary align-top">
-                    {assignedProductsLabel(row)}
+          <div className="procurement-landscape-scroll">
+            <table className="data-table min-w-max">
+              <thead>
+                <tr className="bg-surface-muted/40">
+                  <th className="sticky left-0 z-[1] bg-slate-100 min-w-[120px]">Metric</th>
+                  {assignedQuotations.map((row, index) => (
+                    <th key={row.vendorId} className="min-w-[160px]">
+                      <span className="block">Vendor {index + 1}</span>
+                      <span className="block font-normal text-[10px] truncate max-w-[180px] normal-case tracking-normal">
+                        {row.vendorName || row.vendorId}
+                      </span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="sticky left-0 z-[1] bg-white font-medium text-ink-secondary whitespace-nowrap">
+                    Products
                   </td>
-                ))}
-              </tr>
-              <tr>
-                <td className="sticky left-0 z-[1] bg-white font-medium text-ink-secondary whitespace-nowrap">
-                  Payment Terms
-                </td>
-                {assignedQuotations.map((row) => (
-                  <td key={row.vendorId}>
-                    <Input
-                      className="input-compact"
-                      value={row.paymentTerms}
-                      onChange={(e) => updateVendor(row.vendorId, { paymentTerms: e.target.value })}
-                      placeholder="e.g. Net 30"
-                    />
+                  {assignedQuotations.map((row) => (
+                    <td key={row.vendorId} className="text-[11px] text-ink-secondary align-top">
+                      {assignedProductsLabel(row)}
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="sticky left-0 z-[1] bg-white font-medium text-ink-secondary whitespace-nowrap">
+                    Payment Terms
                   </td>
-                ))}
-              </tr>
-              <tr>
-                <td className="sticky left-0 z-[1] bg-white font-medium text-ink-secondary whitespace-nowrap">
-                  Transportation
-                </td>
-                {assignedQuotations.map((row) => (
-                  <td key={row.vendorId}>
-                    <Input
-                      className="input-compact"
-                      value={row.transportation || ''}
-                      onChange={(e) => updateVendor(row.vendorId, { transportation: e.target.value })}
-                      placeholder="e.g. Extra / Included"
-                    />
+                  {assignedQuotations.map((row) => (
+                    <td key={row.vendorId}>
+                      <Input
+                        className="input-compact"
+                        value={row.paymentTerms}
+                        onChange={(e) => updateVendor(row.vendorId, { paymentTerms: e.target.value })}
+                        placeholder="e.g. Net 30"
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="sticky left-0 z-[1] bg-white font-medium text-ink-secondary whitespace-nowrap">
+                    Transportation
                   </td>
-                ))}
-              </tr>
-              <tr>
-                <td className="sticky left-0 z-[1] bg-white font-medium text-ink-secondary whitespace-nowrap">
-                  Delivery Time
-                </td>
-                {assignedQuotations.map((row) => (
-                  <td key={row.vendorId}>
-                    <Input
-                      className="input-compact"
-                      value={row.deliveryTime || row.deliveryTerms || ''}
-                      onChange={(e) =>
-                        updateVendor(row.vendorId, {
-                          deliveryTime: e.target.value,
-                          deliveryTerms: e.target.value,
-                        })
-                      }
-                      placeholder="e.g. 7–10 days"
-                    />
+                  {assignedQuotations.map((row) => (
+                    <td key={row.vendorId}>
+                      <Input
+                        className="input-compact"
+                        value={row.transportation || ''}
+                        onChange={(e) =>
+                          updateVendor(row.vendorId, { transportation: e.target.value })
+                        }
+                        placeholder="e.g. Extra / Included"
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="sticky left-0 z-[1] bg-white font-medium text-ink-secondary whitespace-nowrap">
+                    Delivery Time
                   </td>
-                ))}
-              </tr>
-              <tr>
-                <td className="sticky left-0 z-[1] bg-white font-medium text-ink-secondary whitespace-nowrap">
-                  Make
-                </td>
-                {assignedQuotations.map((row) => (
-                  <td key={row.vendorId}>
-                    <Input
-                      className="input-compact"
-                      value={row.make || ''}
-                      onChange={(e) => updateVendor(row.vendorId, { make: e.target.value })}
-                      placeholder="Brand / make"
-                    />
+                  {assignedQuotations.map((row) => (
+                    <td key={row.vendorId}>
+                      <Input
+                        className="input-compact"
+                        value={row.deliveryTime || row.deliveryTerms || ''}
+                        onChange={(e) =>
+                          updateVendor(row.vendorId, {
+                            deliveryTime: e.target.value,
+                            deliveryTerms: e.target.value,
+                          })
+                        }
+                        placeholder="e.g. 7–10 days"
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="sticky left-0 z-[1] bg-white font-medium text-ink-secondary whitespace-nowrap">
+                    Make
                   </td>
-                ))}
-              </tr>
-              <tr>
-                <td className="sticky left-0 z-[1] bg-white font-medium text-ink-secondary whitespace-nowrap">
-                  Actions
-                </td>
-                {assignedQuotations.map((row) => (
-                  <td key={row.vendorId} className="text-center">
-                    <button
-                      type="button"
-                      onClick={() => removeVendor(row.vendorId)}
-                      className="inline-flex items-center gap-0.5 text-[10px] font-medium text-danger hover:text-danger/80 px-1.5 py-1 rounded border border-danger/30 hover:bg-danger/5"
-                      aria-label="Remove vendor"
-                      title="Remove from all products"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                      Remove
-                    </button>
+                  {assignedQuotations.map((row) => (
+                    <td key={row.vendorId}>
+                      <Input
+                        className="input-compact"
+                        value={row.make || ''}
+                        onChange={(e) => updateVendor(row.vendorId, { make: e.target.value })}
+                        placeholder="Brand / make"
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="sticky left-0 z-[1] bg-white font-medium text-ink-secondary whitespace-nowrap">
+                    Actions
                   </td>
-                ))}
-              </tr>
-            </tbody>
-          </table>
+                  {assignedQuotations.map((row) => (
+                    <td key={row.vendorId} className="text-center">
+                      <button
+                        type="button"
+                        onClick={() => removeVendor(row.vendorId)}
+                        className="inline-flex items-center gap-0.5 text-[10px] font-medium text-danger hover:text-danger/80 px-1.5 py-1 rounded border border-danger/30 hover:bg-danger/5"
+                        aria-label="Remove vendor"
+                        title="Remove from all products"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        Remove
+                      </button>
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
         ) : (
           <p className="text-center text-sm text-ink-muted py-6 px-3">
             No vendors assigned yet. Expand a product above and check vendors to assign.
