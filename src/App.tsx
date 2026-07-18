@@ -97,9 +97,6 @@ const PmMobileApprovalPage = lazy(() =>
 const PmMobilePoApprovalPage = lazy(() =>
   import('@/pages/pm/PmMobilePoApproval').then((m) => ({ default: m.PmMobilePoApprovalPage }))
 );
-const PMPOApprovalsPage = lazy(() =>
-  import('@/pages/pm/PMPOApprovals').then((m) => ({ default: m.PMPOApprovalsPage }))
-);
 const PMPurchaseRequestsPage = lazy(() =>
   import('@/pages/pm/PMPurchaseRequests').then((m) => ({ default: m.PMPurchaseRequestsPage }))
 );
@@ -411,7 +408,7 @@ export default function App() {
                   <RoleGuard roles={[UserRole.COORDINATOR]}>
                     <ProcurementRequestsBrowsePage
                       subtitle="All procurement requests — approve linked POs from Verify POs"
-                      detailPath={(pr) => `/coordinator/purchase-orders`}
+                      detailPath={() => `/coordinator/purchase-orders`}
                     />
                   </RoleGuard>
                 }
@@ -480,7 +477,7 @@ export default function App() {
                   <RoleGuard roles={[UserRole.CHAIRMAN]}>
                     <ProcurementRequestsBrowsePage
                       subtitle="All procurement requests — approve linked POs from Approve POs"
-                      detailPath={(pr) => `/chairman/purchase-orders`}
+                      detailPath={() => `/chairman/purchase-orders`}
                     />
                   </RoleGuard>
                 }

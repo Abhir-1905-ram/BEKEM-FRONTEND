@@ -87,29 +87,35 @@ function CommercialTermRows({
   getVendorId: (v: { vendorId?: string; id?: string }) => string;
   isL1: (v: { vendorId?: string; id?: string }) => boolean;
 }) {
-  const rows = [
-    { key: 'paymentTerms', label: 'Payment Terms' },
-    { key: 'transportation', label: 'Transportation' },
-    { key: 'deliveryTime', label: 'Delivery Time' },
-    { key: 'make', label: 'Make' },
-  ] as const;
+  const rows: Array<{
+    label: string;
+    getValue: (v: {
+      paymentTerms?: string;
+      transportation?: string;
+      deliveryTime?: string;
+      deliveryTerms?: string;
+      make?: string;
+    }) => string;
+  }> = [
+    { label: 'Payment Terms', getValue: (v) => v.paymentTerms || '' },
+    { label: 'Transportation', getValue: (v) => v.transportation || '' },
+    { label: 'Delivery Time', getValue: (v) => v.deliveryTime || v.deliveryTerms || '' },
+    { label: 'Make', getValue: (v) => v.make || '' },
+  ];
 
   return (
     <>
       {rows.map((row) => (
-        <tr key={row.key}>
+        <tr key={row.label}>
           <td className="font-medium text-ink-secondary whitespace-nowrap">{row.label}</td>
           {vendors.map((v) => {
-            const value =
-              row.key === 'deliveryTime'
-                ? v.deliveryTime || v.deliveryTerms || ''
-                : (v[row.key] as string | undefined) || '';
+            const value = row.getValue(v).trim();
             return (
               <td
                 key={getVendorId(v)}
                 className={cn(isL1(v) && 'bg-emerald-50/60', 'text-[11px] align-top')}
               >
-                {value.trim() ? value : '—'}
+                {value || '—'}
               </td>
             );
           })}
@@ -303,23 +309,29 @@ export function QuotationComparisonTable({
             ).map((row) => (
               <tr key={row.key}>
                 <td className="font-medium text-ink-secondary whitespace-nowrap">{row.label}</td>
-                {vendors.map((v) => (
-                  <td
-                    key={v.id}
-                    className={cn(
-                      v.isL1 && 'bg-emerald-50/60',
-                      row.format === 'currency' && 'tabular-nums font-semibold'
-                    )}
-                  >
-                    {v[row.key] == null || v[row.key] === ''
-                      ? '—'
-                      : row.format === 'currency'
-                        ? formatCurrency(Number(v[row.key]))
+                {vendors.map((v) => {
+                  const raw = v[row.key];
+                  let display = '—';
+                  if (raw != null && !(typeof raw === 'string' && raw === '')) {
+                    display =
+                      row.format === 'currency'
+                        ? formatCurrency(Number(raw))
                         : row.format === 'percent'
-                          ? `${v[row.key]}%`
-                          : String(v[row.key])}
-                  </td>
-                ))}
+                          ? `${raw}%`
+                          : String(raw);
+                  }
+                  return (
+                    <td
+                      key={v.id}
+                      className={cn(
+                        v.isL1 && 'bg-emerald-50/60',
+                        row.format === 'currency' && 'tabular-nums font-semibold'
+                      )}
+                    >
+                      {display}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
             <CommercialTermRows
