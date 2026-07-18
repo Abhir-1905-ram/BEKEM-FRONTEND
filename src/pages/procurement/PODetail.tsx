@@ -10,6 +10,7 @@ import {
   formatCurrency,
   type PurchaseOrderDto,
   type QuotationDto,
+  type QuotationComparisonDto,
 } from '@afios/shared';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -20,6 +21,7 @@ import { OverrideRemarkModal } from '@/components/OverrideRemarkModal';
 import { Textarea } from '@/components/ui/Input';
 import { PoEditForm } from '@/components/PoEditForm';
 import { SuccessScreen } from '@/components/SuccessScreen';
+import { QuotationComparisonTable } from '@/components/QuotationComparisonTable';
 import { forbiddenQueryOptions, isForbiddenError, useRedirectOnForbidden } from '@/lib/forbiddenRedirect';
 import { getRoleHomePath } from '@/lib/rolePaths';
 import { downloadExport } from '@/lib/downloadExport';
@@ -67,9 +69,15 @@ export function PODetailPage() {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['purchase-order', id],
     queryFn: async () => {
-      const res = await api.get<{ data: PurchaseOrderDto; quotations: QuotationDto[] }>(
-        `/purchase-orders/${id}`
-      );
+      const res = await api.get<{
+        data: PurchaseOrderDto;
+        quotations: QuotationDto[];
+        comparison?: QuotationComparisonDto | null;
+        rfqId?: string | null;
+        whyWeChoseThisVendor?: string;
+        vendorSelectionReason?: string;
+        selectedVendorId?: string | null;
+      }>(`/purchase-orders/${id}`);
       return res.data;
     },
     enabled: !!id,
@@ -438,19 +446,57 @@ export function PODetailPage() {
         </div>
       )}
 
-      {data.quotations?.length > 0 && (
+      {(data.comparison?.itemComparisons?.length || data.comparison?.vendors?.length || data.quotations?.length) ? (
         <div className="mb-3">
-          <h2 className="font-semibold text-sm mb-2">Quotation comparison</h2>
-          <div className="space-y-2">
-            {(data.quotations ?? []).map((q) => (
-              <Card key={q.id} className="py-2 flex justify-between">
-                <span className="text-sm">{q.vendor?.name}</span>
-                <span className="font-medium text-sm">{formatCurrency(q.amount)}</span>
-              </Card>
-            ))}
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <h2 className="font-semibold text-sm">Vendor quotations by item</h2>
+            {data.rfqId && (
+              <button
+                type="button"
+                className="text-xs font-medium text-bekem-accent hover:underline"
+                onClick={() => navigate(`/rfqs/${data.rfqId}`)}
+              >
+                Open RFQ
+              </button>
+            )}
           </div>
+          <p className="text-xs text-ink-secondary mb-2">
+            For each PO line, vendors who quoted that item and their rates. L1 = lowest quote; On PO =
+            vendor on this purchase order.
+          </p>
+          {(data.whyWeChoseThisVendor || data.vendorSelectionReason) && (
+            <Card className="py-2 mb-2 space-y-1">
+              {data.whyWeChoseThisVendor && (
+                <p className="text-xs text-ink-secondary">
+                  <span className="font-semibold text-ink">Why this vendor: </span>
+                  {data.whyWeChoseThisVendor}
+                </p>
+              )}
+              {data.vendorSelectionReason && (
+                <p className="text-xs text-ink-secondary">
+                  <span className="font-semibold text-ink">Non-L1 reason: </span>
+                  {data.vendorSelectionReason}
+                </p>
+              )}
+            </Card>
+          )}
+          {data.comparison ? (
+            <QuotationComparisonTable
+              comparison={data.comparison}
+              selectedVendorId={data.selectedVendorId || po.vendorId}
+            />
+          ) : (
+            <div className="space-y-2">
+              {(data.quotations ?? []).map((q) => (
+                <Card key={q.id} className="py-2 flex justify-between">
+                  <span className="text-sm">{q.vendor?.name}</span>
+                  <span className="font-medium text-sm">{formatCurrency(q.amount)}</span>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      ) : null}
 
       <h2 className="font-semibold text-sm mb-3">PO tracking</h2>
       <PoTrackingTimeline poId={po.id} className="mb-3" />

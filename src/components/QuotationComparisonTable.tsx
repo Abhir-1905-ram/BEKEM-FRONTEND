@@ -8,6 +8,8 @@ interface QuotationComparisonTableProps {
   comparison: QuotationComparisonDto;
   className?: string;
   maxVendors?: number;
+  /** Highlight the vendor chosen on the PO / RFQ finalize */
+  selectedVendorId?: string | null;
 }
 
 type ItemOffer = {
@@ -28,6 +30,7 @@ export function QuotationComparisonTable({
   comparison,
   className,
   maxVendors,
+  selectedVendorId,
 }: QuotationComparisonTableProps) {
   const materialComparisons = (comparison.itemComparisons || []).map((item) => {
     let offers = (item.offers || [])
@@ -125,6 +128,11 @@ export function QuotationComparisonTable({
                                   L1
                                 </span>
                               )}
+                              {selectedVendorId && v.vendorId === selectedVendorId && (
+                                <span className="inline-block mt-0.5 ml-1 text-[9px] font-bold uppercase tracking-wide text-bekem-accent">
+                                  On PO
+                                </span>
+                              )}
                             </th>
                           ))}
                         </tr>
@@ -195,6 +203,11 @@ export function QuotationComparisonTable({
                   {v.isL1 && (
                     <span className="inline-block mt-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-600">
                       L1
+                    </span>
+                  )}
+                  {selectedVendorId && v.vendorId === selectedVendorId && (
+                    <span className="inline-block mt-0.5 ml-1 text-[9px] font-bold uppercase tracking-wide text-bekem-accent">
+                      On PO
                     </span>
                   )}
                 </th>
