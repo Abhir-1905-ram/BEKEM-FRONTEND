@@ -236,15 +236,18 @@ export function POWizardPage() {
         referenceNote:
           referenceNote || (selectedMr?.indentNumber ? `Indent ${selectedMr.indentNumber}` : ''),
         whyWeChoseThisVendor:
-          vendorChoiceKind === 'NON_L1' ? vendorSelectionReason.trim() : whyWeChoseThisVendor.trim(),
-        vendorSelectionReasons:
           vendorChoiceKind === 'NON_L1'
-            ? Object.fromEntries(
-                assignedVendorIds
-                  .filter((vid) => String(vid) !== String(l1VendorId || ''))
-                  .map((vid) => [vid, vendorSelectionReason.trim()])
-              )
-            : {},
+            ? vendorSelectionReason.trim() || whyWeChoseThisVendor.trim()
+            : whyWeChoseThisVendor.trim() || vendorSelectionReason.trim(),
+        vendorSelectionReasons: Object.fromEntries(
+          assignedVendorIds
+            .filter((vid) => String(vid) !== String(l1VendorId || ''))
+            .map((vid) => [
+              vid,
+              vendorSelectionReason.trim() || whyWeChoseThisVendor.trim(),
+            ])
+            .filter(([, reason]) => !!reason)
+        ),
         orders,
       });
       return res.data;
@@ -643,24 +646,24 @@ export function POWizardPage() {
     l1VendorId && assignedVendorIds.some((vid) => String(vid) !== String(l1VendorId))
   );
 
-  // Keep choice locked to the assigned vendor desk — clicking the wrong kind must not stick.
+  // Suggest default once; user can freely switch L1 / Non-L1 and enter a remark.
   useEffect(() => {
     if (!assignedVendorIds.length) {
       setVendorChoiceKind('');
       return;
     }
-    if (!l1VendorId) {
-      setVendorChoiceKind('L1');
-      return;
-    }
-    setVendorChoiceKind(assignedIsNonL1 ? 'NON_L1' : 'L1');
+    setVendorChoiceKind((prev) => {
+      if (prev) return prev;
+      if (!l1VendorId) return 'L1';
+      return assignedIsNonL1 ? 'NON_L1' : 'L1';
+    });
   }, [assignedIsNonL1, assignedVendorIds.length, l1VendorId]);
 
   const canSubmitPo =
     !!vendorChoiceKind &&
     (vendorChoiceKind === 'L1'
-      ? !assignedIsNonL1 && whyWeChoseThisVendor.trim().length > 0
-      : assignedIsNonL1 && vendorSelectionReason.trim().length > 0);
+      ? whyWeChoseThisVendor.trim().length > 0
+      : vendorSelectionReason.trim().length > 0);
 
   return (
     <div className="min-h-screen flex flex-col w-full max-w-lg lg:max-w-6xl mx-auto bg-[#F8FAFC]">
@@ -1338,16 +1341,16 @@ export function POWizardPage() {
               <Card className="mt-4 space-y-3">
                 <p className="text-xs font-semibold text-ink">Vendor selection</p>
                 <p className="text-[11px] text-ink-muted">
-                  {l1VendorId
-                    ? assignedIsNonL1
-                      ? 'Assigned vendor is not L1 (lowest quote) — Non-L1 reason is required.'
-                      : 'Assigned vendor matches L1 (lowest quote) — confirm with an L1 remark.'
-                    : 'Confirm why this vendor was selected.'}
+                  Choose L1 or Non-L1, then enter the remark.
+                  {l1VendorId && assignedIsNonL1
+                    ? ' Assigned vendor is Non-L1 — a Non-L1 reason is still required to submit.'
+                    : l1VendorId && !assignedIsNonL1
+                      ? ' Assigned vendor matches L1.'
+                      : ''}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    disabled={assignedIsNonL1}
                     onClick={() => {
                       setVendorChoiceKind('L1');
                       setVendorSelectionReason('');
@@ -1356,15 +1359,13 @@ export function POWizardPage() {
                       'px-3 py-2 rounded-lg border text-sm font-semibold transition-colors',
                       vendorChoiceKind === 'L1'
                         ? 'border-bekem-accent bg-bekem-accent/10 text-bekem-accent'
-                        : 'border-surface-border bg-white text-ink-secondary hover:text-ink',
-                      assignedIsNonL1 && 'opacity-40 cursor-not-allowed hover:text-ink-secondary'
+                        : 'border-surface-border bg-white text-ink-secondary hover:text-ink'
                     )}
                   >
                     Chose L1
                   </button>
                   <button
                     type="button"
-                    disabled={!!l1VendorId && !assignedIsNonL1}
                     onClick={() => {
                       setVendorChoiceKind('NON_L1');
                       setWhyWeChoseThisVendor('');
@@ -1373,10 +1374,7 @@ export function POWizardPage() {
                       'px-3 py-2 rounded-lg border text-sm font-semibold transition-colors',
                       vendorChoiceKind === 'NON_L1'
                         ? 'border-amber-500 bg-amber-50 text-amber-900'
-                        : 'border-surface-border bg-white text-ink-secondary hover:text-ink',
-                      !!l1VendorId &&
-                        !assignedIsNonL1 &&
-                        'opacity-40 cursor-not-allowed hover:text-ink-secondary'
+                        : 'border-surface-border bg-white text-ink-secondary hover:text-ink'
                     )}
                   >
                     Chose Non-L1

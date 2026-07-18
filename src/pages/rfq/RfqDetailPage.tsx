@@ -126,24 +126,25 @@ export function RfqDetailPage() {
     selectedVendorId && l1VendorId && String(selectedVendorId) !== String(l1VendorId)
   );
 
+  // Suggest a default when vendor changes, but never lock — user can pick either and add a remark.
   useEffect(() => {
     if (!selectedVendorId) {
       setVendorChoiceKind('');
       return;
     }
-    if (!l1VendorId) {
-      setVendorChoiceKind('L1');
-      return;
-    }
-    setVendorChoiceKind(isNonL1 ? 'NON_L1' : 'L1');
+    setVendorChoiceKind((prev) => {
+      if (prev) return prev;
+      if (!l1VendorId) return 'L1';
+      return isNonL1 ? 'NON_L1' : 'L1';
+    });
   }, [selectedVendorId, isNonL1, l1VendorId]);
 
   const canFinalize =
     !!selectedVendorId &&
     !!vendorChoiceKind &&
     (vendorChoiceKind === 'L1'
-      ? !isNonL1 && whyWeChoseThisVendor.trim().length > 0
-      : isNonL1 && vendorSelectionReason.trim().length > 0);
+      ? whyWeChoseThisVendor.trim().length > 0
+      : vendorSelectionReason.trim().length > 0);
 
 
 
@@ -180,9 +181,14 @@ export function RfqDetailPage() {
       await api.post(`/rfqs/${id}/finalize`, {
         selectedVendorId,
         whyWeChoseThisVendor:
-          vendorChoiceKind === 'NON_L1' ? vendorSelectionReason.trim() : whyWeChoseThisVendor.trim(),
-        vendorSelectionReason:
-          vendorChoiceKind === 'NON_L1' ? vendorSelectionReason.trim() : undefined,
+          vendorChoiceKind === 'NON_L1'
+            ? vendorSelectionReason.trim() || whyWeChoseThisVendor.trim()
+            : whyWeChoseThisVendor.trim(),
+        vendorSelectionReason: isNonL1
+          ? vendorSelectionReason.trim() || whyWeChoseThisVendor.trim()
+          : vendorChoiceKind === 'NON_L1'
+            ? vendorSelectionReason.trim()
+            : undefined,
       });
 
     },
@@ -440,16 +446,16 @@ export function RfqDetailPage() {
                 {rfq.status !== 'FINALIZED' && (
                   <div className="md:col-span-2 space-y-2">
                     <p className="text-[11px] text-ink-muted">
-                      {l1VendorId
-                        ? isNonL1
-                          ? 'Selected vendor is not L1 — Non-L1 reason is required.'
-                          : 'Selected vendor matches L1 — confirm with an L1 remark.'
-                        : 'Confirm why this vendor was selected.'}
+                      Choose L1 or Non-L1, then enter the remark. Lowest quote is L1
+                      {l1VendorId && isNonL1
+                        ? ' — selected vendor is currently Non-L1, so a Non-L1 reason is still required on finalize.'
+                        : l1VendorId && !isNonL1
+                          ? ' — selected vendor matches L1.'
+                          : '.'}
                     </p>
                     <div className="flex flex-wrap gap-2">
                       <button
                         type="button"
-                        disabled={isNonL1}
                         onClick={() => {
                           setVendorChoiceKind('L1');
                           setVendorSelectionReason('');
@@ -458,15 +464,13 @@ export function RfqDetailPage() {
                           'px-3 py-2 rounded-lg border text-sm font-semibold transition-colors',
                           vendorChoiceKind === 'L1'
                             ? 'border-bekem-accent bg-bekem-accent/10 text-bekem-accent'
-                            : 'border-surface-border bg-white text-ink-secondary hover:text-ink',
-                          isNonL1 && 'opacity-40 cursor-not-allowed hover:text-ink-secondary'
+                            : 'border-surface-border bg-white text-ink-secondary hover:text-ink'
                         )}
                       >
                         Chose L1
                       </button>
                       <button
                         type="button"
-                        disabled={!!l1VendorId && !isNonL1}
                         onClick={() => {
                           setVendorChoiceKind('NON_L1');
                           setWhyWeChoseThisVendor('');
@@ -475,10 +479,7 @@ export function RfqDetailPage() {
                           'px-3 py-2 rounded-lg border text-sm font-semibold transition-colors',
                           vendorChoiceKind === 'NON_L1'
                             ? 'border-amber-500 bg-amber-50 text-amber-900'
-                            : 'border-surface-border bg-white text-ink-secondary hover:text-ink',
-                          !!l1VendorId &&
-                            !isNonL1 &&
-                            'opacity-40 cursor-not-allowed hover:text-ink-secondary'
+                            : 'border-surface-border bg-white text-ink-secondary hover:text-ink'
                         )}
                       >
                         Chose Non-L1
