@@ -12,13 +12,11 @@ import { PmDailyCapBanner } from '@/components/PmDailyCapBanner';
 import { TodayPanel } from '@/components/layout/TodayPanel';
 import { ListQueryBoundary } from '@/components/ListQueryBoundary';
 import { useTodayActions } from '@/hooks/useTodayActions';
-import { useApprovalLimits, fmtInrLimit } from '@/hooks/useApprovalLimits';
 
 export function PMHomePage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user)!;
   const { data: today, isLoading: todayLoading } = useTodayActions();
-  const { data: limits } = useApprovalLimits();
 
   const {
     data: dashboard,
@@ -34,17 +32,17 @@ export function PMHomePage() {
     },
   });
 
-  const { data: poQueue } = useQuery({
-    queryKey: ['wo-queue-pm', 'po-count'],
+  const { data: poBrowse } = useQuery({
+    queryKey: ['purchase-orders-browse', 'pm-home-count'],
     queryFn: async () => {
-      const res = await api.get<{ data: unknown[] }>('/purchase-orders', { params: { queue: 'pm' } });
+      const res = await api.get<{ data: unknown[] }>('/purchase-orders');
       return res.data.data ?? [];
     },
   });
 
   const approvalCount = dashboard?.approveQueue.length ?? 0;
   const purchaseCount = dashboard?.purchaseRequests.length ?? 0;
-  const poApprovalCount = poQueue?.length ?? 0;
+  const poCount = poBrowse?.length ?? 0;
   const pendingCount = dashboard?.pendingRequests.length ?? 0;
   const unread = dashboard?.notifications.filter((n) => !n.isRead).length ?? 0;
 
@@ -114,12 +112,12 @@ export function PMHomePage() {
           onClick={() => navigate('/pm/approvals')}
         />
         <ActionCard
-          title={`Approve POs (under ${limits ? fmtInrLimit(limits.poPmMaxInr) : 'PM limit'})`}
-          count={poApprovalCount}
-          subtitle="Low-value purchase orders"
+          title="Purchase orders"
+          count={poCount}
+          subtitle="View only — approval is Coordinator / Chairman"
           icon={ShoppingCart}
           tone="info"
-          onClick={() => navigate('/pm/approve-pos')}
+          onClick={() => navigate('/pm/purchase-orders')}
         />
         <ActionCard
           title="Purchase requests"

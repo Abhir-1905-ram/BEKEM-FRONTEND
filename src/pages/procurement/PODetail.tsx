@@ -209,8 +209,8 @@ export function PODetailPage() {
     onApprove: () => {
       if (!data) return;
       const po = data.data;
-      if (role === UserRole.PROJECT_MANAGER && po.status === 'PM_PENDING') {
-        pmApprove.mutate();
+      if (role === UserRole.COORDINATOR && po.status === 'PM_PENDING') {
+        verify.mutate({ action: 'APPROVE' });
       } else if (
         role === UserRole.COORDINATOR &&
         (po.status === 'PENDING_REVIEW' || po.status === 'COORDINATOR_PENDING')
@@ -275,7 +275,9 @@ export function PODetailPage() {
   const needsChairmanBand = po.amount > 10000;
   const isCoordinator =
     role === UserRole.COORDINATOR &&
-    (po.status === 'PENDING_REVIEW' || po.status === 'COORDINATOR_PENDING');
+    (po.status === 'PENDING_REVIEW' ||
+      po.status === 'COORDINATOR_PENDING' ||
+      po.status === 'PM_PENDING');
   const isCoordinatorApproved = role === UserRole.COORDINATOR && po.status === 'APPROVED';
   const canEditPo =
     (role === UserRole.COORDINATOR &&
@@ -290,7 +292,7 @@ export function PODetailPage() {
     role === UserRole.COORDINATOR &&
     needsChairmanBand &&
     ['PENDING_REVIEW', 'COORDINATOR_PENDING', 'CHAIRMAN_PENDING'].includes(po.status);
-  const isPmApprover = role === UserRole.PROJECT_MANAGER && po.status === 'PM_PENDING';
+  const isPmApprover = false;
   const canFinalApprove =
     (po.status === 'PENDING_APPROVAL' || po.status === 'CHAIRMAN_PENDING') &&
     (role === UserRole.CHAIRMAN || delegationStatus?.canActAsChairman);

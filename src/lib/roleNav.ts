@@ -107,6 +107,8 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
 
         { id: 'grn', label: 'Material receipt (GRN)', href: '/store/grn', icon: Package },
 
+        { id: 'purchase-orders', label: 'Purchase orders', href: '/store/purchase-orders', icon: ShoppingCart },
+
         { id: 'issue', label: 'Issue to site', href: '/store/issue', icon: FilePlus },
 
         { id: 'registers', label: 'Registers', href: '/store/registers', icon: FileText },
@@ -133,7 +135,7 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
 
         { id: 'approvals', label: 'Indent approvals', href: '/pm/approvals', icon: CheckSquare },
 
-        { id: 'po-approvals', label: 'Approve POs (PM band)', href: '/pm/approve-pos', icon: ShoppingCart },
+        { id: 'purchase-orders', label: 'Purchase orders', href: '/pm/purchase-orders', icon: ShoppingCart },
 
         { id: 'incidents', label: 'Material indents', href: '/pm/material-indents', icon: FileText },
 
@@ -169,6 +171,8 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
 
         { id: 'purchase-requests', label: 'Pending purchase requests', href: '/executive/purchase-requests', icon: FilePlus },
 
+        { id: 'purchase-orders', label: 'Purchase orders', href: '/executive/purchase-orders', icon: ShoppingCart },
+
         { id: 'create-po', label: 'Create PO', href: '/executive/po/new', icon: ShoppingCart },
 
         { id: 'create-wo', label: 'Generate WO', href: '/executive/wo/new', icon: HardHat },
@@ -194,6 +198,8 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
         ...common,
 
         { id: 'verify-po', label: 'Verify POs', href: '/coordinator/verify-pos', icon: Shield },
+
+        { id: 'purchase-orders', label: 'Purchase orders', href: '/coordinator/purchase-orders', icon: ShoppingCart },
 
         { id: 'procurement-decisions', label: 'Procurement Decisions', href: '/coordinator/procurement-decisions', icon: ClipboardCheck },
 
@@ -236,6 +242,8 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
         ...common,
 
         { id: 'approvals', label: 'Approve POs', href: '/chairman/approve-pos', icon: CheckSquare },
+
+        { id: 'purchase-orders', label: 'Purchase orders', href: '/chairman/purchase-orders', icon: ShoppingCart },
 
         { id: 'grn-approvals', label: 'GRN on hold', href: '/chairman/grn-approvals', icon: Package },
 

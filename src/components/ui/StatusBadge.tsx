@@ -159,7 +159,7 @@ const STATUS_LABELS: Record<string, string> = {
   TRANSFERRED: 'Transferred',
   RAISE_PO_INSTEAD: 'Raise PO instead',
   EXECUTIVE_PENDING: 'Pending at Executive',
-  PM_PENDING: 'Pending at PM',
+  PM_PENDING: 'Pending at Coordinator',
 };
 
 interface StatusBadgeProps {

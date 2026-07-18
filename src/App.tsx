@@ -195,6 +195,11 @@ const ProcurementDecisionDetailPage = lazy(() =>
     default: m.ProcurementDecisionDetailPage,
   }))
 );
+const PurchaseOrdersBrowsePage = lazy(() =>
+  import('@/pages/shared/PurchaseOrdersBrowsePage').then((m) => ({
+    default: m.PurchaseOrdersBrowsePage,
+  }))
+);
 
 import { RoleGuard } from '@/components/RoleGuard';
 
@@ -387,6 +392,18 @@ export default function App() {
               />
 
               <Route
+                path="/coordinator/purchase-orders"
+                element={
+                  <RoleGuard roles={[UserRole.COORDINATOR]}>
+                    <PurchaseOrdersBrowsePage
+                      subtitle="All purchase orders — verify pending ones from Verify POs"
+                      detailPath={(id) => `/coordinator/po/${id}`}
+                    />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
                 path="/coordinator/grn"
                 element={
                   <RoleGuard roles={[UserRole.COORDINATOR]}>
@@ -427,6 +444,18 @@ export default function App() {
                 element={
                   <RoleGuard roles={[UserRole.CHAIRMAN]}>
                     <ChairmanApprovePOsPage />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/chairman/purchase-orders"
+                element={
+                  <RoleGuard roles={[UserRole.CHAIRMAN]}>
+                    <PurchaseOrdersBrowsePage
+                      subtitle="All purchase orders — approve pending ones from Approve POs"
+                      detailPath={(id) => `/chairman/po/${id}`}
+                    />
                   </RoleGuard>
                 }
               />
@@ -840,6 +869,18 @@ export default function App() {
               />
 
               <Route
+                path="/store/purchase-orders"
+                element={
+                  <RoleGuard roles={[UserRole.STORE_INCHARGE]}>
+                    <PurchaseOrdersBrowsePage
+                      subtitle="Purchase orders for your projects (view only)"
+                      detailPath={(id) => `/purchase-orders/${id}`}
+                    />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
 
                 path="/store/issue"
 
@@ -938,19 +979,20 @@ export default function App() {
               />
 
               <Route
-
                 path="/pm/approve-pos"
+                element={<Navigate to="/pm/purchase-orders" replace />}
+              />
 
+              <Route
+                path="/pm/purchase-orders"
                 element={
-
                   <RoleGuard roles={[UserRole.PROJECT_MANAGER]}>
-
-                    <PMPOApprovalsPage />
-
+                    <PurchaseOrdersBrowsePage
+                      subtitle="Purchase orders for your projects (view only — approval is Coordinator / Chairman)"
+                      detailPath={(id) => `/pm/po/${id}`}
+                    />
                   </RoleGuard>
-
                 }
-
               />
 
               <Route
@@ -1150,7 +1192,7 @@ export default function App() {
 
                 element={
 
-                  <RoleGuard roles={[UserRole.EXECUTIVE]}>
+                  <RoleGuard roles={[UserRole.EXECUTIVE]} capability="CREATE_PO">
 
                     <POWizardPage />
 
@@ -1158,6 +1200,18 @@ export default function App() {
 
                 }
 
+              />
+
+              <Route
+                path="/executive/purchase-orders"
+                element={
+                  <RoleGuard roles={[UserRole.EXECUTIVE]}>
+                    <PurchaseOrdersBrowsePage
+                      subtitle="All purchase orders — create new POs from Create PO"
+                      detailPath={(id) => `/purchase-orders/${id}`}
+                    />
+                  </RoleGuard>
+                }
               />
 
               <Route
