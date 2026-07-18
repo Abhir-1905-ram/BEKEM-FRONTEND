@@ -200,6 +200,11 @@ const PurchaseOrdersBrowsePage = lazy(() =>
     default: m.PurchaseOrdersBrowsePage,
   }))
 );
+const ProcurementRequestsBrowsePage = lazy(() =>
+  import('@/pages/shared/ProcurementRequestsBrowsePage').then((m) => ({
+    default: m.ProcurementRequestsBrowsePage,
+  }))
+);
 
 import { RoleGuard } from '@/components/RoleGuard';
 
@@ -404,6 +409,18 @@ export default function App() {
               />
 
               <Route
+                path="/coordinator/procurement-requests"
+                element={
+                  <RoleGuard roles={[UserRole.COORDINATOR]}>
+                    <ProcurementRequestsBrowsePage
+                      subtitle="All procurement requests — approve linked POs from Verify POs"
+                      detailPath={(pr) => `/coordinator/purchase-orders`}
+                    />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
                 path="/coordinator/grn"
                 element={
                   <RoleGuard roles={[UserRole.COORDINATOR]}>
@@ -455,6 +472,18 @@ export default function App() {
                     <PurchaseOrdersBrowsePage
                       subtitle="All purchase orders — approve pending ones from Approve POs"
                       detailPath={(id) => `/chairman/po/${id}`}
+                    />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/chairman/procurement-requests"
+                element={
+                  <RoleGuard roles={[UserRole.CHAIRMAN]}>
+                    <ProcurementRequestsBrowsePage
+                      subtitle="All procurement requests — approve linked POs from Approve POs"
+                      detailPath={(pr) => `/chairman/purchase-orders`}
                     />
                   </RoleGuard>
                 }
@@ -873,8 +902,24 @@ export default function App() {
                 element={
                   <RoleGuard roles={[UserRole.STORE_INCHARGE]}>
                     <PurchaseOrdersBrowsePage
-                      subtitle="Purchase orders for your projects (view only)"
+                      subtitle="POs from procurement requests you raised (view only)"
                       detailPath={(id) => `/purchase-orders/${id}`}
+                    />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/store/procurement-requests"
+                element={
+                  <RoleGuard roles={[UserRole.STORE_INCHARGE]}>
+                    <ProcurementRequestsBrowsePage
+                      subtitle="Only procurement requests you raised — view only"
+                      mineOnly
+                      detailPath={(pr) => {
+                        const mid = pr.materialRequest?.id || (typeof pr.materialRequestId === 'string' ? pr.materialRequestId : undefined);
+                        return mid ? `/requests/${mid}` : '/store/procurement-requests';
+                      }}
                     />
                   </RoleGuard>
                 }
@@ -988,11 +1033,32 @@ export default function App() {
                 element={
                   <RoleGuard roles={[UserRole.PROJECT_MANAGER]}>
                     <PurchaseOrdersBrowsePage
-                      subtitle="Purchase orders for your projects (view only — approval is Coordinator / Chairman)"
+                      subtitle="POs from procurement requests you raised (view only)"
                       detailPath={(id) => `/pm/po/${id}`}
                     />
                   </RoleGuard>
                 }
+              />
+
+              <Route
+                path="/pm/procurement-requests"
+                element={
+                  <RoleGuard roles={[UserRole.PROJECT_MANAGER]}>
+                    <ProcurementRequestsBrowsePage
+                      subtitle="Only procurement requests you raised — view only"
+                      mineOnly
+                      detailPath={(pr) => {
+                        const mid = pr.materialRequest?.id || (typeof pr.materialRequestId === 'string' ? pr.materialRequestId : undefined);
+                        return mid ? `/requests/${mid}` : '/pm/procurement-requests';
+                      }}
+                    />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/pm/purchase-requests"
+                element={<Navigate to="/pm/procurement-requests" replace />}
               />
 
               <Route

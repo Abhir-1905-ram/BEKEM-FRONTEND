@@ -112,20 +112,20 @@ export function PMHomePage() {
           onClick={() => navigate('/pm/approvals')}
         />
         <ActionCard
-          title="Purchase orders"
+          title="Procurement requests"
           count={poCount}
-          subtitle="View only — approval is Coordinator / Chairman"
+          subtitle="Requests you raised — view only"
           icon={ShoppingCart}
           tone="info"
-          onClick={() => navigate('/pm/purchase-orders')}
+          onClick={() => navigate('/pm/procurement-requests')}
         />
         <ActionCard
-          title="Purchase requests"
+          title="Purchase orders"
           count={purchaseCount}
-          subtitle="With executive for PO"
+          subtitle="POs from your raised requests"
           icon={FileText}
           tone="success"
-          onClick={() => navigate('/pm/purchase-requests')}
+          onClick={() => navigate('/pm/purchase-orders')}
         />
         <ActionCard
           title="Notifications"
