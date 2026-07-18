@@ -114,28 +114,32 @@ export function RfqVendorShareList({ rfqId, rfqNumber, vendors, items }: RfqVend
   return (
     <div className="space-y-2">
       <p className="text-xs text-ink-secondary">
-        Each vendor receives an RFQ with only their assigned products.
+        Vendors as columns — each receives an RFQ with only their assigned products.
       </p>
       <div className="procurement-landscape-scroll panel overflow-hidden">
-        <table className="data-table min-w-[720px]">
+        <table className="data-table min-w-max">
           <thead>
             <tr className="bg-surface-muted/40">
-              <th className="w-8">#</th>
-              <th className="min-w-[160px]">Vendor</th>
-              <th>Products in RFQ</th>
-              <th className="min-w-[200px]">Share</th>
+              <th className="sticky left-0 z-[1] bg-slate-100 min-w-[100px]">Metric</th>
+              {vendors.map((vendor, index) => (
+                <th key={vendor.vendorId} className="min-w-[160px]">
+                  <span className="block">Vendor {index + 1}</span>
+                  <span className="block font-normal text-[10px] truncate max-w-[180px] normal-case tracking-normal">
+                    {vendor.vendorName || vendor.vendorId}
+                  </span>
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {vendors.map((vendor, index) => {
-              const products = productNamesForVendor(vendor, items);
-              return (
-                <tr key={vendor.vendorId}>
-                  <td className="text-ink-muted font-medium">{index + 1}</td>
-                  <td className="font-medium text-sm whitespace-nowrap">
-                    {vendor.vendorName || vendor.vendorId}
-                  </td>
-                  <td className="text-[11px] text-ink-secondary">
+            <tr>
+              <td className="sticky left-0 z-[1] bg-white font-medium text-ink-secondary whitespace-nowrap">
+                Products in RFQ
+              </td>
+              {vendors.map((vendor) => {
+                const products = productNamesForVendor(vendor, items);
+                return (
+                  <td key={vendor.vendorId} className="text-[11px] text-ink-secondary align-top">
                     {products.length ? (
                       <ul className="list-disc pl-4 space-y-0.5">
                         {products.map((name) => (
@@ -146,40 +150,47 @@ export function RfqVendorShareList({ rfqId, rfqNumber, vendors, items }: RfqVend
                       '—'
                     )}
                   </td>
-                  <td>
-                    <div className="flex flex-wrap gap-1">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => downloadVendorPdf(vendor)}
-                      >
-                        <Download className="h-3.5 w-3.5 mr-1" />
-                        PDF
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => emailVendor(vendor)}
-                      >
-                        <Mail className="h-3.5 w-3.5 mr-1" />
-                        Email
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => whatsappVendor(vendor)}
-                      >
-                        <MessageCircle className="h-3.5 w-3.5 mr-1" />
-                        WhatsApp
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+                );
+              })}
+            </tr>
+            <tr>
+              <td className="sticky left-0 z-[1] bg-white font-medium text-ink-secondary whitespace-nowrap">
+                Share
+              </td>
+              {vendors.map((vendor) => (
+                <td key={vendor.vendorId}>
+                  <div className="flex flex-wrap gap-1">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => void downloadVendorPdf(vendor)}
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      PDF
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => void emailVendor(vendor)}
+                    >
+                      <Mail className="h-3.5 w-3.5" />
+                      Email
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => void whatsappVendor(vendor)}
+                    >
+                      <MessageCircle className="h-3.5 w-3.5" />
+                      WhatsApp
+                    </Button>
+                  </div>
+                </td>
+              ))}
+            </tr>
           </tbody>
         </table>
       </div>

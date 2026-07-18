@@ -184,7 +184,7 @@ export function VendorQuotationEditor({
           <div>
             <p className="text-xs font-semibold text-ink-muted">Product-wise vendor assignment</p>
             <p className="text-[11px] text-ink-secondary mt-0.5">
-              Assign vendors per product below. They appear in the quotation table only after assignment.
+              Vendors are shown as columns. Tick Assign under each vendor for this product.
             </p>
           </div>
           {items.map((item) => {
@@ -250,54 +250,66 @@ export function VendorQuotationEditor({
                         />
                       </div>
                       <p className="text-[10px] text-ink-muted mt-1.5">
-                        {filteredVendors.length} vendor{filteredVendors.length === 1 ? '' : 's'}
+                        {filteredVendors.length} vendor{filteredVendors.length === 1 ? '' : 's'} as
+                        columns — scroll sideways if needed
                       </p>
                     </div>
-                    <div className="procurement-landscape-scroll max-h-64">
-                      <table className="data-table min-w-[480px]">
-                        <thead>
-                          <tr>
-                            <th className="w-10">Assign</th>
-                            <th>Vendor</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredVendors.length ? (
-                            filteredVendors.map((vendor) => {
-                              const row = quotations.find((q) => q.vendorId === vendor.id) ?? null;
-                              const isSelected = row?.selectedMaterialIds?.includes(item.materialId) ?? false;
-                              return (
-                                <tr key={`${item.materialId}-${vendor.id}`}>
-                                  <td>
+                    <div className="procurement-landscape-scroll max-h-80">
+                      {filteredVendors.length ? (
+                        <table className="data-table min-w-max">
+                          <thead>
+                            <tr>
+                              <th className="sticky left-0 z-[1] bg-slate-100 min-w-[88px]">Metric</th>
+                              {filteredVendors.map((vendor, i) => (
+                                <th key={vendor.id} className="min-w-[120px]">
+                                  <span className="block">Vendor {i + 1}</span>
+                                  <span className="block font-normal text-[10px] truncate max-w-[140px] normal-case tracking-normal">
+                                    {vendor.name}
+                                  </span>
+                                  {(vendor.code || vendor.gstNumber) && (
+                                    <span className="block font-normal text-[9px] text-ink-muted truncate max-w-[140px] normal-case tracking-normal">
+                                      {[vendor.code, vendor.gstNumber].filter(Boolean).join(' · ')}
+                                    </span>
+                                  )}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td className="sticky left-0 z-[1] bg-white font-medium text-ink-secondary whitespace-nowrap">
+                                Assign
+                              </td>
+                              {filteredVendors.map((vendor) => {
+                                const row = quotations.find((q) => q.vendorId === vendor.id) ?? null;
+                                const isSelected =
+                                  row?.selectedMaterialIds?.includes(item.materialId) ?? false;
+                                return (
+                                  <td key={vendor.id} className="text-center">
                                     <input
                                       type="checkbox"
+                                      className="h-4 w-4"
                                       checked={isSelected}
                                       onChange={(e) =>
-                                        toggleProductVendor(item.materialId, vendor.id, e.target.checked)
+                                        toggleProductVendor(
+                                          item.materialId,
+                                          vendor.id,
+                                          e.target.checked
+                                        )
                                       }
                                       aria-label={`Assign ${item.name} to ${vendor.name}`}
                                     />
                                   </td>
-                                  <td className="cell-text whitespace-nowrap">
-                                    <span className="block">{vendor.name}</span>
-                                    {(vendor.code || vendor.gstNumber) && (
-                                      <span className="block text-[10px] text-ink-muted">
-                                        {[vendor.code, vendor.gstNumber].filter(Boolean).join(' · ')}
-                                      </span>
-                                    )}
-                                  </td>
-                                </tr>
-                              );
-                            })
-                          ) : (
-                            <tr>
-                              <td colSpan={2} className="text-center text-sm text-ink-muted py-3">
-                                No vendors match your search.
-                              </td>
+                                );
+                              })}
                             </tr>
-                          )}
-                        </tbody>
-                      </table>
+                          </tbody>
+                        </table>
+                      ) : (
+                        <p className="px-3 py-4 text-center text-sm text-ink-muted">
+                          No vendors match your search.
+                        </p>
+                      )}
                     </div>
                   </>
                 )}
@@ -312,43 +324,70 @@ export function VendorQuotationEditor({
           <p className="text-xs font-semibold text-ink-muted">Assigned vendor quotations</p>
           <p className="text-[11px] text-ink-secondary">
             {assignedQuotations.length
-              ? `${assignedQuotations.length} vendor RFQ(s) — each includes only their assigned products`
-              : 'Assign vendors to products above — they will appear here'}
+              ? `${assignedQuotations.length} vendor RFQ(s) as columns — each includes only their assigned products`
+              : 'Assign vendors to products above — they will appear here as columns'}
           </p>
         </div>
-        <table className="data-table min-w-[640px]">
-          <thead>
-            <tr className="bg-surface-muted/40">
-              <th className="w-8">#</th>
-              <th className="min-w-[180px]">Vendor</th>
-              <th>Products</th>
-              <th className="min-w-[160px]">Payment terms</th>
-              <th className="min-w-[140px]">Delivery terms</th>
-              <th className="w-20" />
-            </tr>
-          </thead>
-          <tbody>
-            {assignedQuotations.length ? (
-              assignedQuotations.map((row, index) => (
-                <tr key={row.vendorId}>
-                  <td className="text-ink-muted font-medium">{index + 1}</td>
-                  <td className="font-medium text-sm whitespace-nowrap">{row.vendorName || row.vendorId}</td>
-                  <td className="text-[11px] text-ink-secondary max-w-[160px]">{assignedProductsLabel(row)}</td>
-                  <td>
+        {assignedQuotations.length ? (
+          <table className="data-table min-w-max">
+            <thead>
+              <tr className="bg-surface-muted/40">
+                <th className="sticky left-0 z-[1] bg-slate-100 min-w-[120px]">Metric</th>
+                {assignedQuotations.map((row, index) => (
+                  <th key={row.vendorId} className="min-w-[160px]">
+                    <span className="block">Vendor {index + 1}</span>
+                    <span className="block font-normal text-[10px] truncate max-w-[180px] normal-case tracking-normal">
+                      {row.vendorName || row.vendorId}
+                    </span>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="sticky left-0 z-[1] bg-white font-medium text-ink-secondary whitespace-nowrap">
+                  Products
+                </td>
+                {assignedQuotations.map((row) => (
+                  <td key={row.vendorId} className="text-[11px] text-ink-secondary align-top">
+                    {assignedProductsLabel(row)}
+                  </td>
+                ))}
+              </tr>
+              <tr>
+                <td className="sticky left-0 z-[1] bg-white font-medium text-ink-secondary whitespace-nowrap">
+                  Payment terms
+                </td>
+                {assignedQuotations.map((row) => (
+                  <td key={row.vendorId}>
                     <Input
                       className="input-compact"
                       value={row.paymentTerms}
                       onChange={(e) => updateVendor(row.vendorId, { paymentTerms: e.target.value })}
                     />
                   </td>
-                  <td>
+                ))}
+              </tr>
+              <tr>
+                <td className="sticky left-0 z-[1] bg-white font-medium text-ink-secondary whitespace-nowrap">
+                  Delivery terms
+                </td>
+                {assignedQuotations.map((row) => (
+                  <td key={row.vendorId}>
                     <Input
                       className="input-compact"
                       value={row.deliveryTerms}
                       onChange={(e) => updateVendor(row.vendorId, { deliveryTerms: e.target.value })}
                     />
                   </td>
-                  <td>
+                ))}
+              </tr>
+              <tr>
+                <td className="sticky left-0 z-[1] bg-white font-medium text-ink-secondary whitespace-nowrap">
+                  Actions
+                </td>
+                {assignedQuotations.map((row) => (
+                  <td key={row.vendorId} className="text-center">
                     <button
                       type="button"
                       onClick={() => removeVendor(row.vendorId)}
@@ -360,17 +399,15 @@ export function VendorQuotationEditor({
                       Remove
                     </button>
                   </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={6} className="text-center text-sm text-ink-muted py-6">
-                  No vendors assigned yet. Expand a product above and check vendors to assign.
-                </td>
+                ))}
               </tr>
-            )}
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        ) : (
+          <p className="text-center text-sm text-ink-muted py-6 px-3">
+            No vendors assigned yet. Expand a product above and check vendors to assign.
+          </p>
+        )}
       </div>
     </div>
   );
