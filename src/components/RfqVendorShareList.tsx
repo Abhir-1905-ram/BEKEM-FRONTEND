@@ -114,11 +114,12 @@ export function RfqVendorShareList({ rfqId, rfqNumber, vendors, items }: RfqVend
   return (
     <div className="space-y-2">
       <p className="text-xs text-ink-secondary">
-        Vendors as columns — each receives an RFQ with only their assigned products.
+        Vendors as columns — each receives an RFQ with only their assigned products — scroll
+        sideways if needed.
       </p>
-      <div className="panel overflow-hidden">
+      <div className="panel">
         <div className="procurement-landscape-scroll">
-          <table className="data-table min-w-max">
+          <table className="data-table">
             <thead>
               <tr className="bg-surface-muted/40">
                 <th className="sticky left-0 z-[1] bg-slate-100 min-w-[100px]">Metric</th>

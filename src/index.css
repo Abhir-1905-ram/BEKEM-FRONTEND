@@ -187,8 +187,15 @@
     @apply overflow-x-auto border border-surface-border bg-white;
   }
 
+  /* Bound width so wide vendor-as-column tables scroll sideways instead of clipping. */
   .procurement-landscape-scroll {
-    @apply overflow-x-auto;
+    @apply w-full min-w-0 max-w-full overflow-x-auto;
+  }
+
+  .procurement-landscape-scroll > .data-table,
+  .procurement-landscape-scroll > table {
+    width: max-content;
+    min-width: 100%;
   }
 
   .enterprise-chip {

@@ -262,7 +262,7 @@ export function VendorQuotationEditor({
                     </div>
                     <div className="procurement-landscape-scroll max-h-80">
                       {filteredVendors.length ? (
-                        <table className="data-table min-w-max">
+                        <table className="data-table">
                           <thead>
                             <tr>
                               <th className="sticky left-0 z-[1] bg-slate-100 min-w-[88px]">Metric</th>
@@ -325,7 +325,7 @@ export function VendorQuotationEditor({
         </div>
       )}
 
-      <div className="panel overflow-hidden">
+      <div className="panel">
         <div className="px-2.5 py-2 border-b border-surface-border bg-surface-muted/30">
           <p className="text-xs font-semibold text-ink-muted">Assigned vendor quotations</p>
           <p className="text-[11px] text-ink-secondary">
@@ -336,7 +336,7 @@ export function VendorQuotationEditor({
         </div>
         {assignedQuotations.length ? (
           <div className="procurement-landscape-scroll">
-            <table className="data-table min-w-max">
+            <table className="data-table">
               <thead>
                 <tr className="bg-surface-muted/40">
                   <th className="sticky left-0 z-[1] bg-slate-100 min-w-[120px]">Metric</th>
