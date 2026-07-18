@@ -194,7 +194,7 @@ export function StockAgingPage() {
 
                       <div className="min-w-0 flex-1 grid grid-cols-1 sm:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,0.7fr))] gap-2 sm:gap-4 items-center">
                         <div className="min-w-0">
-                          <p className="font-mono text-xs font-semibold text-ink truncate">
+                          <p className="text-xs font-semibold text-ink truncate">
                             {group.itemCode}
                           </p>
                           <p className="text-sm text-ink-secondary truncate">

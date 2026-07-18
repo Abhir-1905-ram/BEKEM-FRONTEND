@@ -94,7 +94,7 @@
   .data-table,
   .excel-grid,
   .procurement-landscape-table {
-    @apply w-full border-collapse text-xs tabular-nums;
+    @apply w-full border-collapse text-xs tabular-nums font-sans;
   }
 
   .data-table th,
@@ -103,7 +103,7 @@
   .excel-grid td,
   .procurement-landscape-table th,
   .procurement-landscape-table td {
-    @apply border border-surface-border px-2 align-middle;
+    @apply border border-surface-border px-2 align-middle font-sans;
   }
 
   /* Compact density (default) */
@@ -170,7 +170,17 @@
 
   .data-table .cell-code,
   .excel-grid .cell-code {
-    @apply font-mono font-semibold text-ink whitespace-nowrap;
+    @apply font-sans font-semibold text-ink whitespace-nowrap;
+  }
+
+  /* Keep one typeface in tables even if a cell uses font-mono / <code> */
+  .data-table .font-mono,
+  .excel-grid .font-mono,
+  .procurement-landscape-table .font-mono,
+  .data-table code,
+  .excel-grid code,
+  .procurement-landscape-table code {
+    font-family: inherit !important;
   }
 
   .table-shell {

@@ -75,7 +75,7 @@ export function CategoryReportPage() {
                 <tbody>
                   {group.materials.map((m) => (
                     <tr key={m.id}>
-                      <td className="font-mono text-xs">{m.code}</td>
+                      <td className="text-xs">{m.code}</td>
                       <td>{m.name}</td>
                       <td>{m.unit}</td>
                     </tr>

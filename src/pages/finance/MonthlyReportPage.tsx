@@ -139,7 +139,7 @@ export function MonthlyReportPage() {
                     <tbody>
                       {data.poBills.map((b) => (
                         <tr key={b.id}>
-                          <td className="font-mono text-xs">{b.billNumber}</td>
+                          <td className="text-xs">{b.billNumber}</td>
                           <td>{b.vendorName}</td>
                           <td>{b.projectCode}</td>
                           <td className="text-right tabular-nums">{formatCurrency(b.invoiceValue)}</td>

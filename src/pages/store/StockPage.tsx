@@ -536,7 +536,7 @@ export function StockPage() {
                     <td className="px-2 py-1.5 border-r border-slate-100 font-medium">{r.project}</td>
                     <td className="px-2 py-1.5 border-r border-slate-100">{r.indentNo || '—'}</td>
                     <td className="px-2 py-1.5 border-r border-slate-100">{r.supplier}</td>
-                    <td className="px-2 py-1.5 border-r border-slate-100 font-mono text-[10px]">
+                    <td className="px-2 py-1.5 border-r border-slate-100 text-[10px]">
                       {r.poNo}
                     </td>
                     <td className="px-2 py-1.5 border-r border-slate-100 whitespace-nowrap">
