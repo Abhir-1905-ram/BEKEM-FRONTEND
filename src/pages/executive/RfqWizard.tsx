@@ -267,8 +267,8 @@ export function RfqWizardPage() {
           {step === 0 && (
             <motion.div key="s0" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}>
               <p className="text-xs text-ink-muted mb-3">
-                Share the RFQ with vendors first. Create PO only after quotations come in and you
-                finalize the RFQ.
+                Share the RFQ with vendors first. Create PO only after they reply — mark RFQs
+                Obtained on RFQ detail, then Proceed with PO Creation.
               </p>
               {prLoading ? (
                 <div className="space-y-2">
@@ -472,8 +472,8 @@ export function RfqWizardPage() {
               />
 
               <p className="text-xs text-ink-secondary">
-                Share each vendor&apos;s RFQ above. When vendors reply with quotations, open RFQ
-                detail to record quotes, compare, and finalize — then Create PO.
+                Share each vendor&apos;s RFQ above. When vendors reply, open RFQ detail, mark RFQs
+                Obtained, then Proceed with PO Creation — vendor / L1 choice is on Create PO.
               </p>
 
               <div className="flex flex-wrap gap-2">

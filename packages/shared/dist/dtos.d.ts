@@ -1076,6 +1076,8 @@ export interface RfqDetailDto {
     selectedVendorId?: string;
     vendorSelectionReason?: string;
     whyWeChoseThisVendor?: string;
+    /** Set when executive marks RFQs Obtained (ready for Create PO). */
+    quotesObtainedAt?: string | null;
     vendors: Array<{
         id: string;
         name: string;
