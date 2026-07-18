@@ -16,6 +16,7 @@ function lineItems(items: IndentLineItemDto[]) {
   return items.map((item) => {
     const requestedQty = item.requestedQty ?? item.quantityRequested ?? 0;
     const availableQty = item.availableQty ?? 0;
+    const allocatedQty = item.quantityAllocated ?? 0;
     const unitPrice = item.unitPrice ?? null;
     const lineTotal =
       item.lineTotal ??
@@ -25,7 +26,7 @@ function lineItems(items: IndentLineItemDto[]) {
       name: item.material?.name || 'Material',
       unit: item.unit || item.material?.unit || '',
       requestedQty,
-      availableQty,
+      allocatedQty,
       requiredQty: computeRequiredQty(requestedQty, availableQty),
       unitPrice,
       lineTotal,
@@ -76,8 +77,7 @@ export function StockComparisonTable({
             <tr>
               <th>Item</th>
               <th className="num w-20">Requested</th>
-              <th className="num w-20">Available</th>
-              <th className="num w-20">Required</th>
+              <th className="num w-20">Allocated</th>
               {hasPricing && (
                 <>
                   <th className="num w-24">Unit price</th>
@@ -87,40 +87,29 @@ export function StockComparisonTable({
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => {
-              const sufficient = row.requiredQty === 0;
-              return (
-                <tr key={row.id}>
-                  <td className="cell-text" title={row.name}>
-                    {row.name}
-                    {row.unit && !hasPricing ? ` (${row.unit})` : ''}
-                  </td>
-                  <td className="num">{formatQuantity(row.requestedQty, row.unit)}</td>
-                  <td className="num">{row.availableQty}</td>
-                  <td
-                    className={cn(
-                      'num font-semibold',
-                      sufficient ? 'text-success' : 'text-warning-dark'
-                    )}
-                  >
-                    {row.requiredQty}
-                  </td>
-                  {hasPricing && (
-                    <>
-                      <td className="num text-ink-secondary">
-                        {formatCurrency(row.unitPrice ?? 0)}
-                      </td>
-                      <td className="num font-medium">{formatCurrency(row.lineTotal ?? 0)}</td>
-                    </>
-                  )}
-                </tr>
-              );
-            })}
+            {rows.map((row) => (
+              <tr key={row.id}>
+                <td className="cell-text" title={row.name}>
+                  {row.name}
+                  {row.unit && !hasPricing ? ` (${row.unit})` : ''}
+                </td>
+                <td className="num">{formatQuantity(row.requestedQty, row.unit)}</td>
+                <td className="num">{formatQuantity(row.allocatedQty, row.unit)}</td>
+                {hasPricing && (
+                  <>
+                    <td className="num text-ink-secondary">
+                      {formatCurrency(row.unitPrice ?? 0)}
+                    </td>
+                    <td className="num font-medium">{formatCurrency(row.lineTotal ?? 0)}</td>
+                  </>
+                )}
+              </tr>
+            ))}
           </tbody>
           {hasPricing && computedTotal != null && (
             <tfoot>
               <tr className="bg-slate-100 font-semibold">
-                <td colSpan={hasPricing ? 5 : 4} className="text-right">
+                <td colSpan={4} className="text-right">
                   Total estimated value
                 </td>
                 <td className="num font-bold">{formatCurrency(computedTotal)}</td>
