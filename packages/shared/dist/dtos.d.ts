@@ -627,6 +627,9 @@ export interface PurchaseRequestDto {
     /** Live PO desk role when PR is at PO_CREATED (Coordinator / PM / Chairman). */
     pendingWith?: string | null;
     linkedPoId?: string | null;
+    /** Active linked PO amount — drives approval routing (may be much lower than amountEstimate). */
+    linkedPoAmount?: number | null;
+    linkedPoRef?: string | null;
     executiveRecommendation?: 'PURCHASE_ORDER' | 'BRANCH_TRANSFER' | null;
     executiveRecommendationRemark?: string;
     executiveRecommendedAt?: string | null;
@@ -650,6 +653,9 @@ export interface QuotationDto {
     amount: number;
     paymentTerms?: string;
     deliveryTerms?: string;
+    transportation?: string;
+    deliveryTime?: string;
+    make?: string;
     terms: string;
     isL1?: boolean;
     submittedAt: string;
@@ -666,6 +672,9 @@ export interface QuotationComparisonVendorDto {
     finalCost: number;
     paymentTerms: string;
     deliveryTerms: string;
+    transportation?: string;
+    deliveryTime?: string;
+    make?: string;
     itemRates?: Array<{
         materialId: string;
         materialName: string;

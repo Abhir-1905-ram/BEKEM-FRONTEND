@@ -17,7 +17,10 @@ export function draftsFromComparison(data: RfqComparisonDto): VendorQuotationDra
       rate: v.rate,
       gstPercent: v.gstPercent,
       paymentTerms: v.paymentTerms,
-      deliveryTerms: v.deliveryTerms,
+      deliveryTerms: v.deliveryTerms || v.deliveryTime || '',
+      transportation: v.transportation || '',
+      deliveryTime: v.deliveryTime || v.deliveryTerms || '',
+      make: v.make || '',
       selectedMaterialIds,
       itemRates:
         v.itemRates?.map((it) => ({

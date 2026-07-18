@@ -15,6 +15,9 @@ export interface VendorQuotationDraft {
   gstPercent: number;
   paymentTerms: string;
   deliveryTerms: string;
+  transportation?: string;
+  deliveryTime?: string;
+  make?: string;
   selectedMaterialIds?: string[];
   itemRates?: Array<{
     materialId: string;
@@ -116,6 +119,9 @@ export function VendorQuotationEditor({
       gstPercent: DEFAULT_GST_PERCENT,
       paymentTerms: '100% payment within 30 days from the date of supply',
       deliveryTerms: 'Delivery as per project schedule',
+      transportation: '',
+      deliveryTime: '',
+      make: '',
       selectedMaterialIds: [],
       itemRates: items.map((it) => ({
         materialId: it.materialId,
@@ -356,7 +362,7 @@ export function VendorQuotationEditor({
               </tr>
               <tr>
                 <td className="sticky left-0 z-[1] bg-white font-medium text-ink-secondary whitespace-nowrap">
-                  Payment terms
+                  Payment Terms
                 </td>
                 {assignedQuotations.map((row) => (
                   <td key={row.vendorId}>
@@ -364,20 +370,57 @@ export function VendorQuotationEditor({
                       className="input-compact"
                       value={row.paymentTerms}
                       onChange={(e) => updateVendor(row.vendorId, { paymentTerms: e.target.value })}
+                      placeholder="e.g. Net 30"
                     />
                   </td>
                 ))}
               </tr>
               <tr>
                 <td className="sticky left-0 z-[1] bg-white font-medium text-ink-secondary whitespace-nowrap">
-                  Delivery terms
+                  Transportation
                 </td>
                 {assignedQuotations.map((row) => (
                   <td key={row.vendorId}>
                     <Input
                       className="input-compact"
-                      value={row.deliveryTerms}
-                      onChange={(e) => updateVendor(row.vendorId, { deliveryTerms: e.target.value })}
+                      value={row.transportation || ''}
+                      onChange={(e) => updateVendor(row.vendorId, { transportation: e.target.value })}
+                      placeholder="e.g. Extra / Included"
+                    />
+                  </td>
+                ))}
+              </tr>
+              <tr>
+                <td className="sticky left-0 z-[1] bg-white font-medium text-ink-secondary whitespace-nowrap">
+                  Delivery Time
+                </td>
+                {assignedQuotations.map((row) => (
+                  <td key={row.vendorId}>
+                    <Input
+                      className="input-compact"
+                      value={row.deliveryTime || row.deliveryTerms || ''}
+                      onChange={(e) =>
+                        updateVendor(row.vendorId, {
+                          deliveryTime: e.target.value,
+                          deliveryTerms: e.target.value,
+                        })
+                      }
+                      placeholder="e.g. 7–10 days"
+                    />
+                  </td>
+                ))}
+              </tr>
+              <tr>
+                <td className="sticky left-0 z-[1] bg-white font-medium text-ink-secondary whitespace-nowrap">
+                  Make
+                </td>
+                {assignedQuotations.map((row) => (
+                  <td key={row.vendorId}>
+                    <Input
+                      className="input-compact"
+                      value={row.make || ''}
+                      onChange={(e) => updateVendor(row.vendorId, { make: e.target.value })}
+                      placeholder="Brand / make"
                     />
                   </td>
                 ))}

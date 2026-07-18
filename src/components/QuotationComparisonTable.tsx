@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { formatCurrency } from '@afios/shared';
-import type { QuotationComparisonDto } from '@afios/shared';
+import type { QuotationComparisonDto, QuotationComparisonVendorDto } from '@afios/shared';
 import { cn } from '@/lib/utils';
 
 interface QuotationComparisonTableProps {
@@ -20,7 +20,104 @@ type ItemOffer = {
   gstAmount?: number;
   finalCost?: number;
   isL1?: boolean;
+  paymentTerms?: string;
+  transportation?: string;
+  deliveryTime?: string;
+  make?: string;
 };
+
+function commercialTermsForVendor(
+  vendors: QuotationComparisonVendorDto[],
+  vendorId: string
+) {
+  const match = vendors.find((v) => String(v.vendorId) === String(vendorId));
+  return {
+    paymentTerms: match?.paymentTerms || '',
+    transportation: match?.transportation || '',
+    deliveryTime: match?.deliveryTime || match?.deliveryTerms || '',
+    make: match?.make || '',
+  };
+}
+
+function VendorHeaderCell({
+  index,
+  name,
+  isL1,
+  selected,
+}: {
+  index: number;
+  name: string;
+  isL1?: boolean;
+  selected?: boolean;
+}) {
+  return (
+    <th className={cn('min-w-[120px]', isL1 && 'bg-emerald-50 text-emerald-800')}>
+      <span className="block">Vendor {index + 1}</span>
+      <span className="block font-normal text-[10px] truncate max-w-[140px] normal-case tracking-normal">
+        {name}
+      </span>
+      {isL1 && (
+        <span className="inline-block mt-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-600">
+          L1
+        </span>
+      )}
+      {selected && (
+        <span className="inline-block mt-0.5 ml-1 text-[9px] font-bold uppercase tracking-wide text-bekem-accent">
+          On PO
+        </span>
+      )}
+    </th>
+  );
+}
+
+function CommercialTermRows({
+  vendors,
+  getVendorId,
+  isL1,
+}: {
+  vendors: Array<{
+    vendorId?: string;
+    id?: string;
+    paymentTerms?: string;
+    transportation?: string;
+    deliveryTime?: string;
+    deliveryTerms?: string;
+    make?: string;
+  }>;
+  getVendorId: (v: { vendorId?: string; id?: string }) => string;
+  isL1: (v: { vendorId?: string; id?: string }) => boolean;
+}) {
+  const rows = [
+    { key: 'paymentTerms', label: 'Payment Terms' },
+    { key: 'transportation', label: 'Transportation' },
+    { key: 'deliveryTime', label: 'Delivery Time' },
+    { key: 'make', label: 'Make' },
+  ] as const;
+
+  return (
+    <>
+      {rows.map((row) => (
+        <tr key={row.key}>
+          <td className="font-medium text-ink-secondary whitespace-nowrap">{row.label}</td>
+          {vendors.map((v) => {
+            const value =
+              row.key === 'deliveryTime'
+                ? v.deliveryTime || v.deliveryTerms || ''
+                : (v[row.key] as string | undefined) || '';
+            return (
+              <td
+                key={getVendorId(v)}
+                className={cn(isL1(v) && 'bg-emerald-50/60', 'text-[11px] align-top')}
+              >
+                {value.trim() ? value : '—'}
+              </td>
+            );
+          })}
+        </tr>
+      ))}
+    </>
+  );
+}
 
 /**
  * Req 59 — expandable per-item comparison.
@@ -35,12 +132,16 @@ export function QuotationComparisonTable({
   const materialComparisons = (comparison.itemComparisons || []).map((item) => {
     let offers = (item.offers || [])
       .filter((o) => o.rate != null && Number(o.rate) > 0)
-      .map((o) => ({
-        vendorId: o.vendorId,
-        vendorName: o.vendorName,
-        rate: Number(o.rate),
-        finalCost: o.finalCost != null ? Number(o.finalCost) : undefined,
-      })) as ItemOffer[];
+      .map((o) => {
+        const terms = commercialTermsForVendor(comparison.vendors || [], o.vendorId);
+        return {
+          vendorId: o.vendorId,
+          vendorName: o.vendorName,
+          rate: Number(o.rate),
+          finalCost: o.finalCost != null ? Number(o.finalCost) : undefined,
+          ...terms,
+        };
+      }) as ItemOffer[];
     offers.sort((a, b) => (a.finalCost ?? a.rate) - (b.finalCost ?? b.rate));
     if (maxVendors && maxVendors > 0) offers = offers.slice(0, maxVendors);
     if (offers.length) {
@@ -107,33 +208,18 @@ export function QuotationComparisonTable({
                       No vendors quoted this product — only vendors selected for this item appear here.
                     </p>
                   ) : (
-                    <table className="data-table min-w-[640px]">
+                    <table className="data-table min-w-[720px]">
                       <thead>
                         <tr>
-                          <th className="w-28">Metric</th>
+                          <th className="w-32">Metric</th>
                           {vendors.map((v, i) => (
-                            <th
+                            <VendorHeaderCell
                               key={v.vendorId}
-                              className={cn(
-                                'min-w-[110px]',
-                                v.isL1 && 'bg-emerald-50 text-emerald-800'
-                              )}
-                            >
-                              <span className="block">Vendor {i + 1}</span>
-                              <span className="block font-normal text-[10px] truncate max-w-[130px]">
-                                {v.vendorName}
-                              </span>
-                              {v.isL1 && (
-                                <span className="inline-block mt-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-600">
-                                  L1
-                                </span>
-                              )}
-                              {selectedVendorId && v.vendorId === selectedVendorId && (
-                                <span className="inline-block mt-0.5 ml-1 text-[9px] font-bold uppercase tracking-wide text-bekem-accent">
-                                  On PO
-                                </span>
-                              )}
-                            </th>
+                              index={i}
+                              name={v.vendorName}
+                              isL1={v.isL1}
+                              selected={!!selectedVendorId && v.vendorId === selectedVendorId}
+                            />
                           ))}
                         </tr>
                       </thead>
@@ -164,6 +250,11 @@ export function QuotationComparisonTable({
                             })}
                           </tr>
                         ))}
+                        <CommercialTermRows
+                          vendors={vendors}
+                          getVendorId={(v) => String(v.vendorId || '')}
+                          isL1={(v) => !!vendors.find((o) => o.vendorId === v.vendorId)?.isL1}
+                        />
                       </tbody>
                     </table>
                   )}
@@ -187,30 +278,18 @@ export function QuotationComparisonTable({
   return (
     <div className={cn('space-y-3', className)}>
       <div className="procurement-landscape-scroll -mx-1">
-        <table className="data-table">
+        <table className="data-table min-w-[720px]">
           <thead>
             <tr>
-              <th className="w-24" />
+              <th className="w-32">Metric</th>
               {vendors.map((v, i) => (
-                <th
+                <VendorHeaderCell
                   key={v.id}
-                  className={cn('min-w-[110px]', v.isL1 && 'bg-emerald-50 text-emerald-800')}
-                >
-                  <span className="block">Vendor {i + 1}</span>
-                  <span className="block font-normal text-[10px] truncate max-w-[130px]">
-                    {v.vendorName}
-                  </span>
-                  {v.isL1 && (
-                    <span className="inline-block mt-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-600">
-                      L1
-                    </span>
-                  )}
-                  {selectedVendorId && v.vendorId === selectedVendorId && (
-                    <span className="inline-block mt-0.5 ml-1 text-[9px] font-bold uppercase tracking-wide text-bekem-accent">
-                      On PO
-                    </span>
-                  )}
-                </th>
+                  index={i}
+                  name={v.vendorName}
+                  isL1={v.isL1}
+                  selected={!!selectedVendorId && v.vendorId === selectedVendorId}
+                />
               ))}
             </tr>
           </thead>
@@ -243,6 +322,11 @@ export function QuotationComparisonTable({
                 ))}
               </tr>
             ))}
+            <CommercialTermRows
+              vendors={vendors}
+              getVendorId={(v) => String(v.id || v.vendorId || '')}
+              isL1={(v) => !!vendors.find((o) => o.id === v.id || o.vendorId === v.vendorId)?.isL1}
+            />
           </tbody>
         </table>
       </div>
