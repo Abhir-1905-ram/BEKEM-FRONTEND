@@ -122,9 +122,18 @@ export function VendorQuotationEditor({
   );
 
   const allVendorOptions = useMemo(() => {
-    const map = new Map<string, { id: string; name: string; code?: string; gstNumber?: string }>();
+    const map = new Map<
+      string,
+      { id: string; name: string; code?: string; gstNumber?: string; phone?: string }
+    >();
     for (const v of vendors ?? []) {
-      map.set(v.id, { id: v.id, name: v.name, code: v.code, gstNumber: v.gstNumber });
+      map.set(v.id, {
+        id: v.id,
+        name: v.name,
+        code: v.code,
+        gstNumber: v.gstNumber,
+        phone: v.phone,
+      });
     }
     for (const q of assignedQuotations) {
       if (q.vendorId && !map.has(q.vendorId)) {
@@ -320,11 +329,16 @@ export function VendorQuotationEditor({
             const filteredVendors = allVendorOptions.filter((vendor) => {
               if (assignedIds.has(vendor.id)) return false;
               if (!searchQuery) return false;
-              return (
-                vendor.name.toLowerCase().includes(searchQuery) ||
-                (vendor.code || '').toLowerCase().includes(searchQuery) ||
-                (vendor.gstNumber || '').toLowerCase().includes(searchQuery)
-              );
+              const haystack = [
+                vendor.name,
+                vendor.code,
+                vendor.gstNumber,
+                vendor.phone,
+              ]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase();
+              return haystack.includes(searchQuery);
             });
             const showSuggestions =
               searchFocusedMaterialId === item.materialId && searchQuery.length > 0;
@@ -426,9 +440,9 @@ export function VendorQuotationEditor({
                                       <span className="block text-xs font-medium text-ink">
                                         {vendor.name}
                                       </span>
-                                      {(vendor.code || vendor.gstNumber) && (
+                                      {(vendor.code || vendor.gstNumber || vendor.phone) && (
                                         <span className="block text-[10px] text-ink-muted mt-0.5">
-                                          {[vendor.code, vendor.gstNumber]
+                                          {[vendor.code, vendor.gstNumber, vendor.phone]
                                             .filter(Boolean)
                                             .join(' · ')}
                                         </span>

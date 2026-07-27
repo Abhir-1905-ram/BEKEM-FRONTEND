@@ -109,7 +109,7 @@ export function PMHomePage() {
           subtitle="Forwarded from store"
           icon={ClipboardCheck}
           tone="warning"
-          onClick={() => navigate('/pm/approvals')}
+          onClick={() => navigate('/pm/material-indents?tab=pending&queue=pm')}
         />
         <ActionCard
           title="Procurement requests"
@@ -150,7 +150,7 @@ export function PMHomePage() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="section-label">Approve requests</h2>
             <button
-              onClick={() => navigate('/pm/approvals')}
+              onClick={() => navigate('/pm/material-indents?tab=pending&queue=pm')}
               className="text-sm font-semibold text-bekem-accent hover:underline"
             >
               View all

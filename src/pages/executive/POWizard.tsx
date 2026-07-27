@@ -195,6 +195,7 @@ export function POWizardPage() {
           materialId: row.materialId,
           hsnCode: row.hsnCode,
           quantity: row.quantity,
+          unit: row.unit || '',
           rate: row.rate,
           gstPercent: row.gstPercent ?? 18,
           amount: totals.lineTotal,

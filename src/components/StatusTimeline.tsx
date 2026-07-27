@@ -12,6 +12,25 @@ interface StatusTimelineProps {
   entityId: string;
 }
 
+function actorLabel(actorRole?: string | null): string {
+  if (!actorRole) return 'System';
+  if ((Object.values(UserRole) as string[]).includes(actorRole)) {
+    return roleDisplayLabel(actorRole as UserRole) || actorRole.replace(/_/g, ' ');
+  }
+  return actorRole.replace(/_/g, ' ');
+}
+
+function timelineBadgeLabel(event: StatusHistoryDto): string {
+  const who = actorLabel(event.actorRole);
+  if (['REJECTED', 'CANCELLED'].includes(event.toStatus)) {
+    return who === 'System' ? event.toStatus.replace(/_/g, ' ') : `Rejected by ${who}`;
+  }
+  if (who === 'System') {
+    return event.toStatus.replace(/_/g, ' ');
+  }
+  return `Approved by ${who}`;
+}
+
 export function StatusTimeline({ entityType, entityId }: StatusTimelineProps) {
   const { data, isLoading } = useQuery({
     queryKey: ['timeline', entityType, entityId],
@@ -61,23 +80,13 @@ export function StatusTimeline({ entityType, entityId }: StatusTimelineProps) {
           </div>
           <div className="flex-1 min-w-0 pt-0.5">
             <div className="flex items-center gap-2 flex-wrap">
-              <StatusBadge status={event.toStatus} />
+              <StatusBadge status={event.toStatus} label={timelineBadgeLabel(event)} />
               <span className="text-xs text-gray-400 tabular-nums">
                 {formatDateTime(event.timestamp)}
               </span>
             </div>
-            <p className="text-sm text-gray-700 mt-1">
-              {event.actorRole ? (
-                <span>
-                  {roleDisplayLabel(event.actorRole as UserRole) ||
-                    event.actorRole.replace(/_/g, ' ')}
-                </span>
-              ) : (
-                <span className="text-gray-500">System</span>
-              )}
-            </p>
             {event.note && (
-              <p className="text-sm text-gray-500 mt-0.5">{event.note}</p>
+              <p className="text-sm text-gray-500 mt-1">{event.note}</p>
             )}
           </div>
         </motion.div>

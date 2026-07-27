@@ -49,11 +49,11 @@ const HO_STATUSES = new Set([
 
 /** Shared pending-queue chips — one per status color, with counts on every role. */
 const ALL_PENDING_QUEUE_CHIPS: IndentQueueFilterOption[] = [
-  { id: 'store', label: 'Pending at Store Incharge' },
-  { id: 'pm', label: 'Pending at PM' },
-  { id: 'executive', label: 'Pending at Executive' },
-  { id: 'coordinator', label: 'Pending at Coordinator' },
-  { id: 'chairman', label: 'Pending at MD/Chairman' },
+  { id: 'store', label: 'Approved by Store Incharge' },
+  { id: 'pm', label: 'Approved by PM' },
+  { id: 'executive', label: 'Approved by Executive' },
+  { id: 'coordinator', label: 'Approved by Coordinator' },
+  { id: 'chairman', label: 'Approved by MD/Chairman' },
 ];
 
 /** Role-specific quick tabs next to the Material Indents / Pending Indents title. */

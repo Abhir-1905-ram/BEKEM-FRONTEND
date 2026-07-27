@@ -136,7 +136,7 @@ export function CoordinatorHomePage() {
             <ActionCard
               title="Indents at Coordinator"
               count={indentsNeedingCoord}
-              subtitle="Shown as Pending at Coordinator on Executive desk"
+              subtitle="Shown as Approved by Coordinator on Executive desk"
               icon={FileText}
               tone="neutral"
               onClick={() => navigate('/coordinator/material-indents?tab=pending&queue=coordinator')}

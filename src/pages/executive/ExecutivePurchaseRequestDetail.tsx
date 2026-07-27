@@ -22,7 +22,7 @@ function priorityLabel(priority?: string) {
 
 function prStatusLabel(pr: PurchaseRequestDto) {
   if (pr.pendingWith && pr.pendingWith in ROLE_LABELS) {
-    return `Pending at ${ROLE_LABELS[pr.pendingWith as UserRole]}`;
+    return `Approved by ${ROLE_LABELS[pr.pendingWith as UserRole]}`;
   }
   return undefined;
 }

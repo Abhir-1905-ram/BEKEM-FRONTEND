@@ -64,7 +64,7 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
     case UserRole.SITE_INCHARGE:
       return [
         ...common,
-        { id: 'new-request', label: 'Indent raiser', href: '/request/new', icon: FilePlus, section: 'workspace' },
+        { id: 'new-request', label: 'New indent', href: '/request/new', icon: FilePlus, section: 'workspace' },
         { id: 'my-requests', label: 'My indents', href: '/incidents', icon: FileText, section: 'workspace' },
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },
       ];
@@ -88,9 +88,8 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
           section: 'po',
         },
         { id: 'add-material', label: 'Product catalog', href: '/materials/new', icon: Package, section: 'workspace' },
-        { id: 'new-request', label: 'Indent raiser', href: '/request/new', icon: FilePlus, section: 'workspace' },
-        { id: 'pending', label: 'Pending indents', href: '/store/requests', icon: FileText, section: 'workspace' },
-        { id: 'completed', label: 'Complete indents', href: '/store/completed', icon: CheckSquare, section: 'workspace' },
+        { id: 'new-request', label: 'New indent', href: '/request/new', icon: FilePlus, section: 'workspace' },
+        { id: 'my-indents', label: 'My indents', href: '/store/requests', icon: FileText, section: 'workspace' },
         { id: 'grn', label: 'Material receipt (GRN)', href: '/store/grn', icon: Package, section: 'workspace' },
         { id: 'issue', label: 'Issue to site', href: '/store/issue', icon: FilePlus, section: 'workspace' },
         { id: 'registers', label: 'Registers', href: '/store/registers', icon: FileText, section: 'workspace' },
@@ -119,8 +118,7 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
         },
         { id: 'add-material', label: 'Product catalog', href: '/materials/new', icon: Package, section: 'workspace' },
         { id: 'material-lookup', label: 'Material search', href: '/pm/material-lookup', icon: Package, section: 'workspace' },
-        { id: 'approvals', label: 'Indent approvals', href: '/pm/approvals', icon: CheckSquare, section: 'workspace' },
-        { id: 'incidents', label: 'Material indents', href: '/pm/material-indents', icon: FileText, section: 'workspace' },
+        { id: 'indents', label: 'Indents', href: '/pm/material-indents', icon: FileText, section: 'workspace' },
         { id: 'branch-transfer', label: 'Branch transfer requests', href: '/pm/branch-transfer-requests', icon: Truck, section: 'workspace' },
         { id: 'approve-wos', label: 'Approve work orders', href: '/pm/approve-wos', icon: HardHat, section: 'workspace' },
         { id: 'stock', label: 'Stock Inventory', href: '/store/stock', icon: Package, section: 'workspace' },

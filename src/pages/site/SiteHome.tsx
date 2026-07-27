@@ -110,7 +110,7 @@ export function SiteHomePage() {
 
       <section className="section-gap">
         <ActionCard
-          title="Indent raiser"
+          title="New indent"
           subtitle="Create a new indent for your site"
           icon={Package}
           tone="primary"
@@ -131,14 +131,6 @@ export function SiteHomePage() {
               }}
             />
           )}
-          <ActionCard
-            title="Pending requests"
-            subtitle={pending > 0 ? 'Open indents in progress' : 'Nothing in queue'}
-            count={pending}
-            icon={Clock}
-            tone="warning"
-            onClick={() => navigate('/incidents?tab=pending')}
-          />
           <ActionCard
             title="Notifications"
             subtitle={unread > 0 ? 'Unread updates' : 'All caught up'}

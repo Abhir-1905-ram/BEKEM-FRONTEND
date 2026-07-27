@@ -547,7 +547,7 @@ export function ProcurementDecisionDetailPage({ listPath }: ProcurementDecisionD
 
                 <div>
 
-                  <label className="text-xs font-medium text-ink-muted">Review note (required)</label>
+                  <label className="text-xs font-medium text-ink-muted">Review note (optional)</label>
 
                   <Textarea
 
@@ -571,7 +571,7 @@ export function ProcurementDecisionDetailPage({ listPath }: ProcurementDecisionD
 
                   accentColor={accent}
 
-                  disabled={!remark.trim() || proceedWithPo.isPending}
+                  disabled={proceedWithPo.isPending}
 
                   onClick={() => proceedWithPo.mutate()}
 

@@ -58,13 +58,24 @@ export function StorePendingRequestsPage() {
     },
   });
 
-  const { data: pendingForCounts } = useQuery({
-    queryKey: ['store-pending-requests', 'pending', 'chip-counts'],
+  /** Open indents across store + onward queues — chip badges must not use tab=pending only
+   *  (for store that is PENDING_STORE alone, so PM/Exec chips would always show 0). */
+  const { data: openForCounts } = useQuery({
+    queryKey: ['store-pending-requests', 'open', 'chip-counts'],
     queryFn: async () => {
-      const res = await api.get<{ data: MaterialRequestDto[] }>('/material-requests', {
-        params: { tab: 'pending' },
-      });
-      return normalizeListData<MaterialRequestDto>(res.data.data);
+      const [pendingRes, approvedRes] = await Promise.all([
+        api.get<{ data: MaterialRequestDto[] }>('/material-requests', {
+          params: { tab: 'pending' },
+        }),
+        api.get<{ data: MaterialRequestDto[] }>('/material-requests', {
+          params: { tab: 'approved' },
+        }),
+      ]);
+      const pending = normalizeListData<MaterialRequestDto>(pendingRes.data.data);
+      const approved = normalizeListData<MaterialRequestDto>(approvedRes.data.data);
+      const byId = new Map<string, MaterialRequestDto>();
+      for (const r of [...pending, ...approved]) byId.set(r.id, r);
+      return [...byId.values()];
     },
   });
 
@@ -83,8 +94,8 @@ export function StorePendingRequestsPage() {
     [pendingRequests, search, queue, category, days]
   );
   const queueCounts = useMemo(
-    () => countIndentQueueFilters(pendingForCounts ?? pendingRequests ?? [], queueOptions),
-    [pendingForCounts, pendingRequests, queueOptions]
+    () => countIndentQueueFilters(openForCounts ?? pendingRequests ?? [], queueOptions),
+    [openForCounts, pendingRequests, queueOptions]
   );
 
   const setSearch = (value: string) => {
@@ -105,21 +116,22 @@ export function StorePendingRequestsPage() {
           </button>
           <div className="min-w-0 flex-1">
             <div className="flex flex-col sm:flex-row sm:items-center sm:flex-wrap gap-2">
-              <h1 className="font-semibold text-gray-900 shrink-0">Pending indents</h1>
+              <h1 className="font-semibold text-gray-900 shrink-0">My indents</h1>
               <IndentQueueQuickButtons
                 value={queue}
                 options={queueOptions}
                 counts={queueCounts}
                 onChange={(next) => {
+                  // Queue chips span Pending + Approved for store — switch to All so list matches badge.
                   patchParams({
                     queue: next || undefined,
-                    tab: next ? 'pending' : tab,
+                    tab: next ? 'all' : tab,
                   });
                 }}
               />
             </div>
             <p className="text-xs text-ink-secondary mt-0.5">
-              Material requests awaiting store / project / HO action
+              Pending and completed material indents for your store
             </p>
           </div>
         </div>
@@ -139,7 +151,12 @@ export function StorePendingRequestsPage() {
           search={localSearch}
           onSearchChange={setSearch}
           queue={queue}
-          onQueueChange={(next) => patchParams({ queue: next || undefined })}
+          onQueueChange={(next) =>
+            patchParams({
+              queue: next || undefined,
+              tab: next ? 'all' : tab,
+            })
+          }
           queueOptions={queueOptions}
           category={category}
           onCategoryChange={(next) => patchParams({ category: next || undefined })}
@@ -160,8 +177,12 @@ export function StorePendingRequestsPage() {
         skeletonRows={3}
         empty={
           <EmptyState
-            title="No pending requests"
-            description="New site indents will appear here for allocation."
+            title={tab === 'completed' ? 'No completed indents yet' : 'No indents yet'}
+            description={
+              tab === 'completed'
+                ? 'Indents appear here after site confirms receipt of issued materials.'
+                : 'New site indents will appear here for allocation.'
+            }
           />
         }
       >

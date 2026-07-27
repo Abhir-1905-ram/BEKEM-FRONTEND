@@ -12,6 +12,7 @@ import { normalizeListData } from '@/hooks/useListQuery';
 import { cn } from '@/lib/utils';
 import { MaterialIndentsTable } from '@/components/MaterialIndentsTable';
 import { IndentListFilters, IndentQueueQuickButtons } from '@/components/IndentListFilters';
+import { PmDailyCapBanner } from '@/components/PmDailyCapBanner';
 import {
   countIndentQueueFilters,
   filterMaterialIndents,
@@ -34,7 +35,7 @@ function subtitleForRole(role: UserRole): string {
     case UserRole.SITE_INCHARGE:
       return 'Your material requests raised from site';
     case UserRole.PROJECT_MANAGER:
-      return 'Material indents across your assigned projects';
+      return 'Indents across your assigned projects — approve, track, and review';
     case UserRole.STORE_INCHARGE:
       return 'Material indents for your store and project';
     case UserRole.EXECUTIVE:
@@ -46,6 +47,11 @@ function subtitleForRole(role: UserRole): string {
     default:
       return 'Material indents across projects';
   }
+}
+
+function titleForRole(role: UserRole): string {
+  if (role === UserRole.PROJECT_MANAGER) return 'Indents';
+  return 'Material indents';
 }
 
 export function IncidentsPage() {
@@ -158,7 +164,7 @@ export function IncidentsPage() {
           <div className="min-w-0 flex-1">
             <div className="flex flex-col sm:flex-row sm:items-center sm:flex-wrap gap-2">
               <h1 className="text-base lg:text-lg font-semibold text-ink tracking-tight shrink-0">
-                Material indents
+                {titleForRole(role)}
               </h1>
               <IndentQueueQuickButtons
                 value={queue}
@@ -188,6 +194,8 @@ export function IncidentsPage() {
           )}
         </div>
       </div>
+
+      {role === UserRole.PROJECT_MANAGER && <PmDailyCapBanner />}
 
       {!isSite && pendingCount > 0 && tab === 'all' && !isError && (
         <div className="mb-3 rounded-lg border border-warning/30 bg-warning-light px-3 py-2.5 flex items-center gap-3">

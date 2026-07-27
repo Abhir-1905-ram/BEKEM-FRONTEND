@@ -42,7 +42,7 @@ export function PmMobileApprovalPage() {
     onSuccess: () => {
       toast.success('Indent approved');
       queryClient.invalidateQueries({ queryKey: ['pm-approvals'] });
-      navigate('/pm/approvals');
+      navigate('/pm/material-indents?tab=pending&queue=pm');
     },
     onError: (e: Error & { response?: { data?: { message?: string } } }) => {
       if (e.message !== 'Biometric confirmation cancelled') {
@@ -62,7 +62,7 @@ export function PmMobileApprovalPage() {
     onSuccess: () => {
       toast.success('Forwarded to HO for stock requisition');
       queryClient.invalidateQueries({ queryKey: ['pm-approvals'] });
-      navigate('/pm/approvals');
+      navigate('/pm/material-indents?tab=pending&queue=pm');
     },
     onError: (e: Error & { response?: { data?: { message?: string } } }) => {
       if (e.message !== 'Biometric confirmation cancelled') {
@@ -82,7 +82,7 @@ export function PmMobileApprovalPage() {
     onSuccess: () => {
       toast.success('Indent rejected');
       queryClient.invalidateQueries({ queryKey: ['pm-approvals'] });
-      navigate('/pm/approvals');
+      navigate('/pm/material-indents?tab=pending&queue=pm');
     },
     onError: (e: Error & { response?: { data?: { message?: string } } }) => {
       if (e.message !== 'Biometric confirmation cancelled') {

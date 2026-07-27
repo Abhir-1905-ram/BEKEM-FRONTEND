@@ -32,7 +32,7 @@ const STATUS_NEXT_ROLE: Record<string, UserRole | null> = {
   CANCELLED: null,
 };
 
-/** Req 58 — status always indicates the next approver. */
+/** Req 58 — status shows who the indent is with for approval. */
 export function formatIndentQueueStatus(status: string, pendingWith?: string): string {
   if (['REJECTED', 'CANCELLED', 'COMPLETED', 'CLOSED'].includes(status)) {
     return getStatusLabel(status);
@@ -41,10 +41,10 @@ export function formatIndentQueueStatus(status: string, pendingWith?: string): s
   // Always show next action role for post-approval handoff statuses
   // (do not treat as completed before Indent Raiser confirm-receipt).
   if (status === 'ISSUED') {
-    return `Pending at ${ROLE_LABELS[UserRole.SITE_INCHARGE]}`;
+    return `Approved by ${ROLE_LABELS[UserRole.SITE_INCHARGE]}`;
   }
   if (status === 'MATERIAL_RECEIVED') {
-    return `Pending at ${ROLE_LABELS[UserRole.STORE_INCHARGE]}`;
+    return `Approved by ${ROLE_LABELS[UserRole.STORE_INCHARGE]}`;
   }
 
   const roleKey =
@@ -53,7 +53,7 @@ export function formatIndentQueueStatus(status: string, pendingWith?: string): s
       : STATUS_NEXT_ROLE[status] || null;
 
   if (roleKey && roleKey in ROLE_LABELS) {
-    return `Pending at ${ROLE_LABELS[roleKey]}`;
+    return `Approved by ${ROLE_LABELS[roleKey]}`;
   }
 
   return getStatusLabel(status);

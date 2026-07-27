@@ -176,7 +176,7 @@ export function StoreHomePage() {
 
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-ink">Pending indents</h2>
+          <h2 className="text-sm font-semibold text-ink">My indents</h2>
           <button
             onClick={() => navigate('/store/stock')}
             className="text-sm font-medium text-bekem-navy hover:underline"

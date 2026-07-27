@@ -90,7 +90,7 @@ export function AllocateFlowPage() {
         message="Indent updated successfully."
         accentColor={accent}
         primaryAction={{
-          label: 'Back to pending indents',
+          label: 'Back to my indents',
           onClick: () => navigate('/store/requests?tab=pending'),
         }}
       />

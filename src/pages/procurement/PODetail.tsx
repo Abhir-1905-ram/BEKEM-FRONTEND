@@ -438,7 +438,9 @@ export function PODetailPage() {
               <Card key={item.id || idx} className="py-2">
                 <p className="text-sm font-medium">{item.description}</p>
                 <p className="text-xs text-gray-500 mt-1">
-                  {item.quantity} × {formatCurrency(item.rate)} = {formatCurrency(item.amount)}
+                  {item.quantity}
+                  {item.unit ? ` ${item.unit}` : ''} × {formatCurrency(item.rate)} ={' '}
+                  {formatCurrency(item.amount)}
                 </p>
               </Card>
             ))}

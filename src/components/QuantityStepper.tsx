@@ -14,7 +14,7 @@ interface QuantityStepperProps {
 export function QuantityStepper({
   value,
   onChange,
-  min = 1,
+  min = 0,
   max,
   step = 1,
   unit,
@@ -25,13 +25,14 @@ export function QuantityStepper({
   const allowDecimal = step < 1;
 
   const commit = (raw: string) => {
+    // Backspace on "1" (or clear) → 0 so user can type a fresh value.
     if (raw === '' || raw === '-') {
-      onChange(min);
+      onChange(0);
       return;
     }
     const n = allowDecimal ? parseFloat(raw) : parseInt(raw, 10);
     if (!Number.isFinite(n)) {
-      onChange(min);
+      onChange(0);
       return;
     }
     let next = n;
@@ -49,10 +50,11 @@ export function QuantityStepper({
           min={min}
           max={max}
           step={step}
-          value={Number.isFinite(value) ? value : min}
+          value={Number.isFinite(value) ? value : 0}
           onChange={(e) => commit(e.target.value)}
           onBlur={(e) => commit(e.target.value)}
           aria-label="Quantity"
+          placeholder="0"
           className={cn(
             'w-full bg-transparent text-center font-bold tabular-nums outline-none',
             'border-b-2 border-current/20 focus:border-current/50',

@@ -56,9 +56,6 @@ const StockPage = lazy(() => import('@/pages/store/StockPage').then((m) => ({ de
 const StorePendingRequestsPage = lazy(() =>
   import('@/pages/store/StorePendingRequests').then((m) => ({ default: m.StorePendingRequestsPage }))
 );
-const StoreCompleteIndentsPage = lazy(() =>
-  import('@/pages/store/StoreCompleteIndents').then((m) => ({ default: m.StoreCompleteIndentsPage }))
-);
 const GrnReceivePage = lazy(() =>
   import('@/pages/store/GrnReceive').then((m) => ({ default: m.GrnReceivePage }))
 );
@@ -90,7 +87,6 @@ const PMBranchTransferRequestsPage = lazy(() =>
 const NotificationsPage = lazy(() =>
   import('@/pages/Notifications').then((m) => ({ default: m.NotificationsPage }))
 );
-const PMApprovalsPage = lazy(() => import('@/pages/pm/PMApprovals').then((m) => ({ default: m.PMApprovalsPage })));
 const PmMobileApprovalPage = lazy(() =>
   import('@/pages/pm/PmMobileApproval').then((m) => ({ default: m.PmMobileApprovalPage }))
 );
@@ -860,21 +856,9 @@ export default function App() {
               />
 
               <Route
-
                 path="/store/completed"
-
-                element={
-
-                  <RoleGuard roles={[UserRole.STORE_INCHARGE]}>
-
-                    <StoreCompleteIndentsPage />
-
-                  </RoleGuard>
-
-                }
-
+                element={<Navigate to="/store/requests?tab=completed" replace />}
               />
-
               <Route
                 path="/store/verify-delivery"
                 element={<Navigate to="/store/grn" replace />}
@@ -982,19 +966,8 @@ export default function App() {
               />
 
               <Route
-
                 path="/pm/approvals"
-
-                element={
-
-                  <RoleGuard roles={[UserRole.PROJECT_MANAGER]}>
-
-                    <PMApprovalsPage />
-
-                  </RoleGuard>
-
-                }
-
+                element={<Navigate to="/pm/material-indents?tab=pending&queue=pm" replace />}
               />
 
               <Route
