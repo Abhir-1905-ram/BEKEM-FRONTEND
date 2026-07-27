@@ -178,6 +178,7 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
         },
         { id: 'verify-po', label: 'Verify POs', href: '/coordinator/verify-pos', icon: Shield, section: 'po' },
         { id: 'procurement-decisions', label: 'Procurement Decisions', href: '/coordinator/procurement-decisions', icon: ClipboardCheck, section: 'po' },
+        { id: 'rfq-inbox', label: 'RFQ inbox', href: '/coordinator/rfq/inbox', icon: FileStack, section: 'po' },
         { id: 'ho-indents', label: 'Generate indent (HO)', href: '/coordinator/ho-indents', icon: FilePlus, section: 'workspace' },
         { id: 'grn', label: 'Material receipt (GRN)', href: '/coordinator/grn', icon: Package, section: 'workspace' },
         { id: 'grn-approvals', label: 'GRN on hold', href: '/coordinator/grn-approvals', icon: Shield, section: 'workspace' },

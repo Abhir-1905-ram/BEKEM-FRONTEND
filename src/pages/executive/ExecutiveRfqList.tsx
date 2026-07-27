@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ChevronRight, FileStack, Plus } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { PurchaseRequestDto, RfqListItemDto } from '@afios/shared';
+import { ROLE_LABELS, UserRole } from '@afios/shared';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
@@ -11,7 +12,21 @@ import { ListQueryBoundary } from '@/components/ListQueryBoundary';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { formatCurrency, formatDate } from '@afios/shared';
 
-export function ExecutiveRfqListPage() {
+function raisedByLabel(rfq: RfqListItemDto) {
+  if (!rfq.raisedByName) return '—';
+  const role =
+    rfq.raisedByRole && ROLE_LABELS[rfq.raisedByRole as UserRole]
+      ? ROLE_LABELS[rfq.raisedByRole as UserRole]
+      : rfq.raisedByRole || '';
+  return role ? `${rfq.raisedByName} (${role})` : rfq.raisedByName;
+}
+
+interface ExecutiveRfqListPageProps {
+  /** Coordinator/chairman browse: view RFQs with raiser attribution, no create actions. */
+  browseOnly?: boolean;
+}
+
+export function ExecutiveRfqListPage({ browseOnly = false }: ExecutiveRfqListPageProps) {
   const navigate = useNavigate();
 
   const { data: rfqs, isLoading: rfqsLoading, isError: rfqsError, refetch: refetchRfqs, isFetching: rfqsFetching } = useQuery({
@@ -36,6 +51,7 @@ export function ExecutiveRfqListPage() {
       });
       return res.data.data ?? [];
     },
+    enabled: !browseOnly,
   });
 
   const rfqByPrId = useMemo(() => {
@@ -47,13 +63,13 @@ export function ExecutiveRfqListPage() {
   }, [rfqs]);
 
   const openCount = (rfqs ?? []).filter((r) => r.status === 'OPEN').length;
-  const isLoading = rfqsLoading || prsLoading;
-  const isError = rfqsError || prsError;
-  const isFetching = rfqsFetching || prsFetching;
+  const isLoading = rfqsLoading || (!browseOnly && prsLoading);
+  const isError = rfqsError || (!browseOnly && prsError);
+  const isFetching = rfqsFetching || (!browseOnly && prsFetching);
 
   const refetch = () => {
     refetchRfqs();
-    refetchPrs();
+    if (!browseOnly) refetchPrs();
   };
 
   const startRfq = (purchaseRequestId: string, resume = false) => {
@@ -66,12 +82,18 @@ export function ExecutiveRfqListPage() {
     <div className="page-container max-w-full">
       <PageHeader
         title="Request for quotation (RFQ)"
-        subtitle="Share RFQ → wait for vendor quotes → finalize → then Create PO"
+        subtitle={
+          browseOnly
+            ? 'RFQs raised by Executives — who raised each RFQ is shown below'
+            : 'Share RFQ → wait for vendor quotes → finalize → then Create PO'
+        }
         action={
-          <Button variant="primary" onClick={() => navigate('/executive/rfq/new')}>
-            <Plus className="h-4 w-4" />
-            Create RFQ
-          </Button>
+          browseOnly ? undefined : (
+            <Button variant="primary" onClick={() => navigate('/executive/rfq/new')}>
+              <Plus className="h-4 w-4" />
+              Create RFQ
+            </Button>
+          )
         }
       />
 
@@ -81,11 +103,16 @@ export function ExecutiveRfqListPage() {
         </div>
         <div>
           <p className="text-sm font-semibold text-ink">
-            {readyPurchaseRequests?.length ?? 0} ready for RFQ · {openCount} open RFQ
-            {openCount === 1 ? '' : 's'}
+            {browseOnly
+              ? `${rfqs?.length ?? 0} RFQ${(rfqs?.length ?? 0) === 1 ? '' : 's'} · ${openCount} open`
+              : `${readyPurchaseRequests?.length ?? 0} ready for RFQ · ${openCount} open RFQ${
+                  openCount === 1 ? '' : 's'
+                }`}
           </p>
           <p className="text-xs text-ink-muted">
-            Standard flow: Decision → RFQ share → Vendor quotes → Finalize → Create PO
+            {browseOnly
+              ? 'When an Executive raises an RFQ, it appears here with Raised by attribution'
+              : 'Standard flow: Decision → RFQ share → Vendor quotes → Finalize → Create PO'}
           </p>
         </div>
       </div>
@@ -100,14 +127,18 @@ export function ExecutiveRfqListPage() {
         empty={
           <EmptyState
             title="No RFQs yet"
-            description="After a procurement decision, purchase requests appear here to start RFQ — compare vendor quotes before raising a PO."
-            actionLabel="Create RFQ"
-            onAction={() => navigate('/executive/rfq/new')}
+            description={
+              browseOnly
+                ? 'RFQs raised by Executives will appear here.'
+                : 'After a procurement decision, purchase requests appear here to start RFQ — compare vendor quotes before raising a PO.'
+            }
+            actionLabel={browseOnly ? undefined : 'Create RFQ'}
+            onAction={browseOnly ? undefined : () => navigate('/executive/rfq/new')}
           />
         }
       >
         <>
-          {!!readyPurchaseRequests?.length && (
+          {!browseOnly && !!readyPurchaseRequests?.length && (
             <section className="mb-6">
               <h2 className="section-label mb-3">Ready for RFQ</h2>
               <p className="text-xs text-ink-secondary mb-3">
@@ -127,32 +158,36 @@ export function ExecutiveRfqListPage() {
                     </tr>
                   </thead>
                   <tbody>
-                {readyPurchaseRequests.map((pr) => {
-                  const rfq = rfqByPrId.get(pr.id);
-                  const isOpen = rfq?.status === 'OPEN';
+                    {readyPurchaseRequests.map((pr) => {
+                      const rfq = rfqByPrId.get(pr.id);
+                      const isOpen = rfq?.status === 'OPEN';
 
-                  return (
-                    <tr key={pr.id}>
-                      <td className="cell-code whitespace-nowrap">{pr.prNumber}</td>
-                      <td className="cell-text whitespace-nowrap">{pr.materialRequest?.indentNumber || 'Purchase request'}</td>
-                      <td className="cell-text whitespace-nowrap">{pr.project?.code || '—'}</td>
-                      <td className="num tabular-nums whitespace-nowrap">{formatCurrency(pr.amountEstimate)}</td>
-                      <td className="cell-code whitespace-nowrap">{rfq?.rfqNumber || '—'}</td>
-                      <td>{rfq ? <StatusBadge status={rfq.status} /> : '—'}</td>
-                      <td>
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={() =>
-                            isOpen ? navigate(`/rfqs/${rfq!.id}`) : startRfq(pr.id, false)
-                          }
-                        >
-                          {isOpen ? 'Await quotes' : 'Create RFQ'}
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                      return (
+                        <tr key={pr.id}>
+                          <td className="cell-code whitespace-nowrap">{pr.prNumber}</td>
+                          <td className="cell-text whitespace-nowrap">
+                            {pr.materialRequest?.indentNumber || 'Purchase request'}
+                          </td>
+                          <td className="cell-text whitespace-nowrap">{pr.project?.code || '—'}</td>
+                          <td className="num tabular-nums whitespace-nowrap">
+                            {formatCurrency(pr.amountEstimate)}
+                          </td>
+                          <td className="cell-code whitespace-nowrap">{rfq?.rfqNumber || '—'}</td>
+                          <td>{rfq ? <StatusBadge status={rfq.status} /> : '—'}</td>
+                          <td>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() =>
+                                isOpen ? navigate(`/rfqs/${rfq!.id}`) : startRfq(pr.id, false)
+                              }
+                            >
+                              {isOpen ? 'Await quotes' : 'Create RFQ'}
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -161,13 +196,14 @@ export function ExecutiveRfqListPage() {
 
           {!!rfqs?.length && (
             <section>
-              <h2 className="section-label mb-3">All RFQs</h2>
+              <h2 className="section-label mb-3">{browseOnly ? 'RFQs' : 'All RFQs'}</h2>
               <div className="table-shell">
-                <table className="data-table min-w-[64rem]">
+                <table className="data-table min-w-[72rem]">
                   <thead>
                     <tr>
                       <th>RFQ No</th>
                       <th>Indent</th>
+                      <th>Raised by</th>
                       <th>Created</th>
                       <th>Due</th>
                       <th>Status</th>
@@ -175,37 +211,44 @@ export function ExecutiveRfqListPage() {
                     </tr>
                   </thead>
                   <tbody>
-                {rfqs.map((rfq) => (
-                  <tr
-                    key={rfq.id}
-                    className="cursor-pointer"
-                    onClick={() => navigate(`/rfqs/${rfq.id}`)}
-                  >
-                    <td className="cell-code whitespace-nowrap">{rfq.rfqNumber}</td>
-                    <td className="cell-text whitespace-nowrap">{rfq.indentNumber || 'Purchase request'}</td>
-                    <td className="whitespace-nowrap">{formatDate(rfq.createdAt)}</td>
-                    <td className="whitespace-nowrap">{rfq.dueDate ? formatDate(rfq.dueDate) : '—'}</td>
-                    <td><StatusBadge status={rfq.status} /></td>
-                    <td className="text-right">
-                      {rfq.status === 'FINALIZED' && rfq.purchaseRequestId ? (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(
-                              `/executive/po/new?purchaseRequestId=${rfq.purchaseRequestId}`
-                            );
-                          }}
-                        >
-                          Create PO
-                        </Button>
-                      ) : (
-                        <ChevronRight className="h-4 w-4 text-ink-muted inline-block" />
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                    {rfqs.map((rfq) => (
+                      <tr
+                        key={rfq.id}
+                        className="cursor-pointer"
+                        onClick={() => navigate(`/rfqs/${rfq.id}`)}
+                      >
+                        <td className="cell-code whitespace-nowrap">{rfq.rfqNumber}</td>
+                        <td className="cell-text whitespace-nowrap">
+                          {rfq.indentNumber || 'Purchase request'}
+                        </td>
+                        <td className="cell-text whitespace-nowrap">{raisedByLabel(rfq)}</td>
+                        <td className="whitespace-nowrap">{formatDate(rfq.createdAt)}</td>
+                        <td className="whitespace-nowrap">
+                          {rfq.dueDate ? formatDate(rfq.dueDate) : '—'}
+                        </td>
+                        <td>
+                          <StatusBadge status={rfq.status} />
+                        </td>
+                        <td className="text-right">
+                          {!browseOnly && rfq.status === 'FINALIZED' && rfq.purchaseRequestId ? (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(
+                                  `/executive/po/new?purchaseRequestId=${rfq.purchaseRequestId}`
+                                );
+                              }}
+                            >
+                              Create PO
+                            </Button>
+                          ) : (
+                            <ChevronRight className="h-4 w-4 text-ink-muted inline-block" />
+                          )}
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>

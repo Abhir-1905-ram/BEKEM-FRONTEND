@@ -604,6 +604,15 @@ export default function App() {
               />
 
               <Route
+                path="/coordinator/rfq/inbox"
+                element={
+                  <RoleGuard roles={[UserRole.COORDINATOR]}>
+                    <ExecutiveRfqListPage browseOnly />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
                 path="/executive/ho-indents"
                 element={<Navigate to="/coordinator/ho-indents" replace />}
               />

@@ -2,18 +2,22 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, Mail, MessageCircle } from 'lucide-react';
+import { UserRole } from '@afios/shared';
 import { api } from '@/lib/api';
 import type { RfqDetailDto } from '@afios/shared';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ListQueryBoundary } from '@/components/ListQueryBoundary';
 import { downloadExport } from '@/lib/downloadExport';
+import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
 
 export function RfqDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const userRole = useAuthStore((s) => s.user?.role);
+  const canProceedToPo = userRole === UserRole.EXECUTIVE;
   const [rfqsObtainedChecked, setRfqsObtainedChecked] = useState(false);
 
   const { data: rfq, ...query } = useQuery({
@@ -131,6 +135,19 @@ export function RfqDetailPage() {
                   Indent <span className="font-medium text-ink">{rfq.indentNumber}</span>
                 </p>
               )}
+              {rfq.raisedByName && (
+                <p className="text-sm text-ink-secondary">
+                  Raised by{' '}
+                  <span className="font-medium text-ink">
+                    {rfq.raisedByName}
+                    {rfq.raisedByRole === 'EXECUTIVE'
+                      ? ' (Executive)'
+                      : rfq.raisedByRole
+                        ? ` (${rfq.raisedByRole})`
+                        : ''}
+                  </span>
+                </p>
+              )}
               {(rfq.items?.length ?? 0) > 0 && (
                 <ul className="text-sm text-ink space-y-1">
                   {rfq.items.map((item) => (
@@ -147,30 +164,40 @@ export function RfqDetailPage() {
             </div>
 
             <div className="panel p-3 space-y-3">
-              <label className="flex items-start gap-2.5 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  className="mt-0.5 h-4 w-4"
-                  checked={quotesObtained || rfqsObtainedChecked}
-                  disabled={quotesObtained || markObtained.isPending}
-                  onChange={(e) => setRfqsObtainedChecked(e.target.checked)}
-                />
-                <span>
-                  <span className="block text-sm font-semibold text-ink">RFQs Obtained</span>
-                  <span className="block text-xs text-ink-secondary mt-0.5">
-                    Check this after vendors have shared their quotations.
-                  </span>
-                </span>
-              </label>
+              {canProceedToPo ? (
+                <>
+                  <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 h-4 w-4"
+                      checked={quotesObtained || rfqsObtainedChecked}
+                      disabled={quotesObtained || markObtained.isPending}
+                      onChange={(e) => setRfqsObtainedChecked(e.target.checked)}
+                    />
+                    <span>
+                      <span className="block text-sm font-semibold text-ink">RFQs Obtained</span>
+                      <span className="block text-xs text-ink-secondary mt-0.5">
+                        Check this after vendors have shared their quotations.
+                      </span>
+                    </span>
+                  </label>
 
-              {showProceed && (
-                <Button
-                  variant="primary"
-                  disabled={markObtained.isPending || !rfq.purchaseRequestId}
-                  onClick={() => void proceedToPo()}
-                >
-                  {markObtained.isPending ? 'Saving…' : 'Proceed with PO Creation'}
-                </Button>
+                  {showProceed && (
+                    <Button
+                      variant="primary"
+                      disabled={markObtained.isPending || !rfq.purchaseRequestId}
+                      onClick={() => void proceedToPo()}
+                    >
+                      {markObtained.isPending ? 'Saving…' : 'Proceed with PO Creation'}
+                    </Button>
+                  )}
+                </>
+              ) : (
+                <p className="text-xs text-ink-secondary">
+                  {quotesObtained
+                    ? 'Vendor quotations obtained — Executive can proceed with PO creation.'
+                    : 'Waiting for Executive to obtain vendor quotations and create PO.'}
+                </p>
               )}
             </div>
           </div>

@@ -97,6 +97,8 @@ export function ProcurementRequestsBrowsePage({
                 <th className="num">Value</th>
                 <th>Requested</th>
                 <th>Status</th>
+                <th>RFQ</th>
+                <th>Raised by (RFQ)</th>
                 <th>Materials</th>
                 {detailPath ? <th className="w-10" /> : null}
               </tr>
@@ -120,6 +122,14 @@ export function ProcurementRequestsBrowsePage({
                   </td>
                   <td>
                     <StatusBadge status={pr.status} />
+                  </td>
+                  <td className="cell-code whitespace-nowrap">{pr.rfqNumber || '—'}</td>
+                  <td className="cell-text whitespace-nowrap">
+                    {pr.rfqRaisedByName
+                      ? pr.rfqRaisedByRole === 'EXECUTIVE'
+                        ? `Raised by ${pr.rfqRaisedByName} (Executive)`
+                        : `Raised by ${pr.rfqRaisedByName}`
+                      : '—'}
                   </td>
                   <td className="cell-text">{pr.materialsSummary || '—'}</td>
                   {detailPath ? (

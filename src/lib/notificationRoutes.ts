@@ -33,8 +33,20 @@ export function getNotificationPath(
     return null;
   }
 
+  if (n.relatedEntityType === 'RFQ') {
+    if (
+      role === UserRole.EXECUTIVE ||
+      role === UserRole.COORDINATOR ||
+      role === UserRole.CHAIRMAN
+    ) {
+      return `/rfqs/${n.relatedEntityId}`;
+    }
+    return null;
+  }
+
   if (n.relatedEntityType === 'PurchaseRequest') {
     if (role === UserRole.EXECUTIVE) return `/executive/purchase-requests/${n.relatedEntityId}`;
+    if (role === UserRole.COORDINATOR) return '/coordinator/rfq/inbox';
     return null;
   }
 
