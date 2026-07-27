@@ -32,7 +32,7 @@ import { DetailFieldInline, DetailFieldRow } from '@/components/ui/DetailFields'
 const STEPS = [
   'Choose request',
   'Items & stock',
-  'Vendor quotations (3+)',
+  'Vendor quotations (1–100)',
   'Review & share',
 ];
 
@@ -431,22 +431,26 @@ export function RfqWizardPage() {
           {step === 2 && comparison && (
             <motion.div key="s2" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}>
               <p className="text-xs text-ink-secondary mb-2">
-                RFQ <span className="font-mono font-semibold">{rfqNumber}</span> — assign at least
-                3 vendors per product.
+                RFQ <span className="font-mono font-semibold">{rfqNumber}</span> — assign 1 to 100
+                vendors (3+ recommended for comparison).
               </p>
               <VendorQuotationEditor
                 quotations={drafts}
                 quantity={quantity}
                 items={comparison.items}
                 onChange={(rows) => setDrafts(onlyAssignedDrafts(rows))}
-                minRows={3}
+                minRows={1}
               />
               <Button
                 className="mt-4"
                 variant="accent"
                 accentColor={accent}
                 size="lg"
-                disabled={assignedDrafts.length < 3 || submitRfq.isPending}
+                disabled={
+                  assignedDrafts.length < 1 ||
+                  assignedDrafts.length > 100 ||
+                  submitRfq.isPending
+                }
                 onClick={() => submitRfq.mutate()}
               >
                 {submitRfq.isPending ? 'Saving…' : 'Continue to review & share'}
