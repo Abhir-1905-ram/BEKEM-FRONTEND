@@ -47,10 +47,6 @@ export function formatIndentQueueStatus(
     return getStatusLabel(status);
   }
 
-  const roleKey =
-    pendingWith && pendingWith in ROLE_LABELS
-      ? (pendingWith as UserRole)
-      : STATUS_NEXT_ROLE[status] || null;
   switch (status) {
     case 'PENDING_STORE':
       return `Awaiting ${roleLabel(UserRole.STORE_INCHARGE)}`;
