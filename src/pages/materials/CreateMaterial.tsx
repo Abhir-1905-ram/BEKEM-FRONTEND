@@ -530,11 +530,13 @@ export function CreateMaterialPage() {
             />
           </div>
           <div>
-            <label className="text-xs font-semibold text-ink-muted mb-1 block">Description</label>
+            <label className="text-xs font-semibold text-ink-muted mb-1 block">
+              Product description
+            </label>
             <Textarea
               value={createForm.description}
               onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
-              placeholder="Specifications, brand, usage notes…"
+              placeholder="Vendor-facing specification, brand, size, or grade. Do not use internal notes."
             />
           </div>
           <div className="grid sm:grid-cols-2 gap-3">
@@ -565,6 +567,7 @@ export function CreateMaterialPage() {
             <Input
               value={createForm.hsnCode}
               onChange={(e) => setCreateForm({ ...createForm, hsnCode: e.target.value })}
+              placeholder="e.g. 25232930"
             />
           </div>
           <div>
@@ -730,10 +733,13 @@ export function CreateMaterialPage() {
             />
           </div>
           <div>
-            <label className="text-xs font-semibold text-ink-muted mb-1 block">Description</label>
+            <label className="text-xs font-semibold text-ink-muted mb-1 block">
+              Product description
+            </label>
             <Textarea
               value={editForm.description}
               onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+              placeholder="Vendor-facing specification, brand, size, or grade. Do not use internal notes."
             />
           </div>
           <div className="grid sm:grid-cols-2 gap-3">
@@ -766,6 +772,7 @@ export function CreateMaterialPage() {
             <Input
               value={editForm.hsnCode}
               onChange={(e) => setEditForm({ ...editForm, hsnCode: e.target.value })}
+              placeholder="e.g. 25232930"
             />
           </div>
           <div>

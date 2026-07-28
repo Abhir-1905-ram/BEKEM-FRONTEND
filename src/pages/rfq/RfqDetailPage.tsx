@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, Mail, MessageCircle } from 'lucide-react';
@@ -31,6 +31,12 @@ export function RfqDetailPage() {
 
   const quotesObtained = rfq?.status === 'FINALIZED' || Boolean(rfq?.quotesObtainedAt);
   const showProceed = quotesObtained || rfqsObtainedChecked;
+
+  useEffect(() => {
+    if (quotesObtained) {
+      setRfqsObtainedChecked(true);
+    }
+  }, [quotesObtained]);
 
   const markObtained = useMutation({
     mutationFn: async () => {
@@ -172,7 +178,13 @@ export function RfqDetailPage() {
                       className="mt-0.5 h-4 w-4"
                       checked={quotesObtained || rfqsObtainedChecked}
                       disabled={quotesObtained || markObtained.isPending}
-                      onChange={(e) => setRfqsObtainedChecked(e.target.checked)}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setRfqsObtainedChecked(checked);
+                        if (checked && !quotesObtained) {
+                          void markObtained.mutateAsync();
+                        }
+                      }}
                     />
                     <span>
                       <span className="block text-sm font-semibold text-ink">RFQs Obtained</span>
@@ -188,7 +200,7 @@ export function RfqDetailPage() {
                       disabled={markObtained.isPending || !rfq.purchaseRequestId}
                       onClick={() => void proceedToPo()}
                     >
-                      {markObtained.isPending ? 'Saving…' : 'Proceed with PO Creation'}
+                      {markObtained.isPending ? 'Saving…' : 'Open PO creation'}
                     </Button>
                   )}
                 </>

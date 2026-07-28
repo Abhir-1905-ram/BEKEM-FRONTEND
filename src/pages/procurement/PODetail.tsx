@@ -36,6 +36,38 @@ import type { DelegationStatusDto, PoGrnsDto } from '@afios/shared';
 
 const PO_PDF_AFTER_COORDINATOR_STATUSES = ['APPROVED'] as const;
 
+function getNextStepInfo(po: PurchaseOrderDto) {
+  switch (po.status) {
+    case 'PM_PENDING':
+      return {
+        owner: 'Project Manager',
+        step: 'Review and approve the PO before coordinator verification.',
+      };
+    case 'PENDING_REVIEW':
+    case 'COORDINATOR_PENDING':
+      return {
+        owner: 'Coordinator',
+        step: 'Verify pricing, documents, and routing before final approval.',
+      };
+    case 'PENDING_APPROVAL':
+    case 'CHAIRMAN_PENDING':
+      return {
+        owner: 'Chairman',
+        step: 'Give final approval so the PO can be issued to the vendor.',
+      };
+    case 'APPROVED':
+      return {
+        owner: po.emailStatus === 'sent' ? 'Vendor / Store' : 'Executive / Procurement team',
+        step:
+          po.emailStatus === 'sent'
+            ? 'Vendor supplies the material. Store receives it through GRN, then issues it to site.'
+            : 'Send the approved PO to the vendor, then wait for delivery and receive it through GRN.',
+      };
+    default:
+      return null;
+  }
+}
+
 export function PODetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -280,6 +312,7 @@ export function PODetailPage() {
   }
 
   const po = data.data;
+  const nextStep = getNextStepInfo(po);
   const needsChairmanBand = po.amount > 10000;
   const isCoordinator =
     role === UserRole.COORDINATOR &&
@@ -391,6 +424,15 @@ export function PODetailPage() {
         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
           Acting on behalf of {actingOnBehalf}
         </p>
+      )}
+
+      {nextStep && (
+        <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2">
+          <p className="text-xs font-semibold text-sky-900">Next step / Owner</p>
+          <p className="text-sm text-sky-950 mt-1">
+            <span className="font-medium">{nextStep.owner}</span> · {nextStep.step}
+          </p>
+        </div>
       )}
 
       <Card className="mb-3">

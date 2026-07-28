@@ -189,6 +189,9 @@ export function RequestDetailPage() {
             id: request.id,
             materialId: request.materialId,
             quantityRequested: request.quantityRequested || 0,
+            quantityAllocated: request.quantityAllocated || 0,
+            location: request.location || '',
+            requiredByDate: request.requiredByDate || null,
             material: request.material,
             requestedQty: request.items?.[0]?.requestedQty,
             availableQty: request.items?.[0]?.availableQty,
@@ -400,16 +403,6 @@ export function RequestDetailPage() {
               {formatCurrency(request.estimatedValue)}
             </DetailField>
           )}
-          {request.requiredByDate && (
-            <DetailField label="Required by" labelClassName="text-gray-500">
-              {formatDate(request.requiredByDate)}
-            </DetailField>
-          )}
-          {request.location && (
-            <DetailField label="Location" labelClassName="text-gray-500">
-              {request.location}
-            </DetailField>
-          )}
           {request.purpose && (
             <DetailField label="Reason for request" fullWidth labelClassName="text-gray-500" valueClassName="font-normal">
               {request.purpose}
@@ -418,6 +411,49 @@ export function RequestDetailPage() {
         </DetailFieldGrid>
       </Card>
       )}
+
+      <Card className="mb-3 overflow-hidden p-0">
+        <div className="px-4 py-3 border-b border-surface-border">
+          <h2 className="font-semibold text-gray-900">Indent line items</h2>
+          <p className="text-xs text-ink-secondary mt-1">
+            Location, required date, allocated, and issued quantities are tracked per product line.
+          </p>
+        </div>
+        <div className="table-shell">
+          <table className="data-table min-w-[56rem]">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Location</th>
+                <th>Required by</th>
+                <th className="num">Requested</th>
+                <th className="num">Allocated</th>
+                <th className="num">Issued</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr key={item.id}>
+                  <td className="cell-text">{item.material?.name || 'Material'}</td>
+                  <td className="cell-text">{item.location || '—'}</td>
+                  <td className="whitespace-nowrap">
+                    {item.requiredByDate ? formatDate(item.requiredByDate) : '—'}
+                  </td>
+                  <td className="num tabular-nums">
+                    {item.quantityRequested} {item.unit || item.material?.unit || ''}
+                  </td>
+                  <td className="num tabular-nums">
+                    {item.quantityAllocated ?? 0} {item.unit || item.material?.unit || ''}
+                  </td>
+                  <td className="num tabular-nums">
+                    {item.quantityIssued ?? 0} {item.unit || item.material?.unit || ''}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
       <h2 className="font-semibold text-gray-900 mb-3">Stock comparison (requesting site)</h2>
       <StockComparisonTable

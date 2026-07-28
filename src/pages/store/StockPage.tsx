@@ -392,10 +392,10 @@ export function StockPage() {
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div>
-              <h1 className="font-semibold text-gray-900">Stock Inventory</h1>
+              <h1 className="font-semibold text-gray-900">Live stock balance</h1>
               <p className="text-xs text-gray-500">
                 {projectSubtitle && <span className="block font-medium text-gray-700">{projectSubtitle}</span>}
-                Live stock balance from GRN and issue transactions
+                Live balance from GRN receipts and Issue to site transactions
               </p>
             </div>
           </div>
@@ -411,7 +411,7 @@ export function StockPage() {
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950 mb-3">
           <p className="font-semibold">Live stock ledger</p>
           <p className="text-xs mt-0.5">
-            This view updates from GRN receipts and Issue to site transactions automatically.
+            This balance updates from GRN receipt dates and Issue to site transactions automatically.
           </p>
         </div>
 

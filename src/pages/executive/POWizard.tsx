@@ -237,15 +237,15 @@ export function POWizardPage() {
         referenceNote:
           referenceNote || (selectedMr?.indentNumber ? `Indent ${selectedMr.indentNumber}` : ''),
         whyWeChoseThisVendor:
-          vendorChoiceKind === 'NON_L1'
-            ? vendorSelectionReason.trim() || whyWeChoseThisVendor.trim()
-            : whyWeChoseThisVendor.trim() || vendorSelectionReason.trim(),
+          vendorChoiceKind === 'L1'
+            ? whyWeChoseThisVendor.trim()
+            : '',
         vendorSelectionReasons: Object.fromEntries(
-          assignedVendorIds
+          (vendorChoiceKind === 'NON_L1' ? assignedVendorIds : [])
             .filter((vid) => String(vid) !== String(l1VendorId || ''))
             .map((vid) => [
               vid,
-              vendorSelectionReason.trim() || whyWeChoseThisVendor.trim(),
+              vendorSelectionReason.trim(),
             ])
             .filter(([, reason]) => !!reason)
         ),
@@ -1135,7 +1135,7 @@ export function POWizardPage() {
                 className="mt-2"
               />
               <p className="text-xs text-ink-muted mt-1">
-                If actual delivery is after this date, Stock Inventory shows the row in red and Store
+                If actual delivery is after this date, Live stock balance shows the row in red and Store
                 Manager must enter a delay reason (visible to Coordinator and Chairman).
               </p>
 

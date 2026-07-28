@@ -76,7 +76,7 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
         { id: 'my-indents', label: 'My indents', href: '/store/requests', icon: FileText, section: 'workspace' },
         { id: 'grn', label: 'Material receipt (GRN)', href: '/store/grn', icon: Package, section: 'workspace' },
         { id: 'issue', label: 'Issue to site', href: '/store/issue', icon: FilePlus, section: 'workspace' },
-        { id: 'stock', label: 'Stock Inventory', href: '/store/stock', icon: Package, section: 'workspace' },
+        { id: 'stock', label: 'Live stock balance', href: '/store/stock', icon: Package, section: 'workspace' },
         { id: 'registers', label: 'Registers', href: '/store/registers', icon: FileText, section: 'workspace' },
         { id: 'stock-aging', label: 'Stock aging', href: '/store/stock-aging', icon: Package, section: 'workspace' },
         { id: 'add-material', label: 'Product catalog', href: '/materials/new', icon: Package, section: 'workspace' },
@@ -121,7 +121,7 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
         { id: 'indents', label: 'Indents', href: '/pm/material-indents', icon: FileText, section: 'workspace' },
         { id: 'branch-transfer', label: 'Branch transfer requests', href: '/pm/branch-transfer-requests', icon: Truck, section: 'workspace' },
         { id: 'approve-wos', label: 'Approve work orders', href: '/pm/approve-wos', icon: HardHat, section: 'workspace' },
-        { id: 'stock', label: 'Stock Inventory', href: '/store/stock', icon: Package, section: 'workspace' },
+        { id: 'stock', label: 'Live stock balance', href: '/store/stock', icon: Package, section: 'workspace' },
         { id: 'finance', label: 'Finance & Tally', href: '/pm/finance', icon: BarChart3, section: 'workspace' },
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },
       ];
@@ -149,7 +149,7 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
         { id: 'review-wos', label: 'Review work orders', href: '/executive/review-wos', icon: HardHat, section: 'workspace' },
         { id: 'vendors', label: 'Vendors', href: '/vendors', icon: Users, section: 'workspace' },
         { id: 'finance', label: 'Finance & Tally', href: '/executive/finance', icon: BarChart3, section: 'workspace' },
-        { id: 'stock', label: 'Stock Inventory', href: '/store/stock', icon: Package, section: 'workspace' },
+        { id: 'stock', label: 'Live stock balance', href: '/store/stock', icon: Package, section: 'workspace' },
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },
       ];
 
@@ -185,7 +185,7 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
         { id: 'finance', label: 'Finance & Tally', href: '/coordinator/finance', icon: BarChart3, section: 'workspace' },
         { id: 'incidents', label: 'Material indents', href: '/coordinator/material-indents', icon: FileText, section: 'workspace' },
         { id: 'add-material', label: 'Product catalog', href: '/materials/new', icon: Package, section: 'workspace' },
-        { id: 'stock', label: 'Stock Inventory', href: '/store/stock', icon: Package, section: 'workspace' },
+        { id: 'stock', label: 'Live stock balance', href: '/store/stock', icon: Package, section: 'workspace' },
         { id: 'audit', label: 'Audit log', href: '/audit-logs', icon: FileStack, section: 'workspace' },
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },
       ];
@@ -210,7 +210,7 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
         { id: 'approvals', label: 'Approve POs', href: '/chairman/approve-pos', icon: CheckSquare, section: 'po' },
         { id: 'grn-approvals', label: 'GRN on hold', href: '/chairman/grn-approvals', icon: Package, section: 'workspace' },
         { id: 'approve-wos', label: 'Approve work orders', href: '/chairman/approve-wos', icon: HardHat, section: 'workspace' },
-        { id: 'stock', label: 'Stock Inventory', href: '/store/stock', icon: Package, section: 'workspace' },
+        { id: 'stock', label: 'Live stock balance', href: '/store/stock', icon: Package, section: 'workspace' },
         { id: 'branch-transfers', label: 'Branch transfer monitoring', href: '/chairman/branch-transfers', icon: Truck, section: 'workspace' },
         { id: 'user-analytics', label: 'User analytics', href: '/chairman/user-analytics', icon: BarChart3, section: 'workspace' },
         { id: 'settings', label: 'Admin settings', href: '/admin/settings', icon: Shield, section: 'workspace' },
