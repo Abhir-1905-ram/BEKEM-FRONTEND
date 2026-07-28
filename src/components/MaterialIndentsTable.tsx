@@ -3,35 +3,6 @@ import type { MaterialRequestDto } from '@afios/shared';
 import { formatDate, ROLE_LABELS, UserRole } from '@afios/shared';
 import { StatusBadge, getStatusLabel } from '@/components/ui/StatusBadge';
 
-/** Fallback next approver when `pendingWith` is missing on the DTO. */
-const STATUS_NEXT_ROLE: Record<string, UserRole | null> = {
-  PENDING_STORE: UserRole.STORE_INCHARGE,
-  ALLOCATED: UserRole.STORE_INCHARGE,
-  FORWARDED_TO_PM: UserRole.PROJECT_MANAGER,
-  BRANCH_TRANSFER_REQUESTED: UserRole.PROJECT_MANAGER,
-  PENDING_HO: UserRole.EXECUTIVE,
-  PENDING_EXECUTIVE_DECISION: UserRole.EXECUTIVE,
-  EXECUTIVE_DECISION_PO: UserRole.COORDINATOR,
-  EXECUTIVE_DECISION_BRANCH_TRANSFER: UserRole.COORDINATOR,
-  PM_APPROVED: UserRole.STORE_INCHARGE,
-  PURCHASE_REQUESTED: UserRole.EXECUTIVE,
-  RFQ_OPEN: UserRole.EXECUTIVE,
-  QUOTED: UserRole.EXECUTIVE,
-  VENDOR_SELECTED: UserRole.EXECUTIVE,
-  // Desk comes from linked PO via `pendingWith` — do not assume Coordinator.
-  PO_CREATED: null,
-  COORDINATOR_VERIFIED: UserRole.CHAIRMAN,
-  COORDINATOR_PENDING: UserRole.COORDINATOR,
-  CHAIRMAN_PENDING: UserRole.CHAIRMAN,
-  CHAIRMAN_APPROVED: UserRole.STORE_INCHARGE,
-  MATERIAL_RECEIVED: UserRole.STORE_INCHARGE,
-  ISSUED: UserRole.SITE_INCHARGE,
-  COMPLETED: null,
-  CLOSED: null,
-  REJECTED: null,
-  CANCELLED: null,
-};
-
 function roleLabel(role: UserRole | null | undefined) {
   if (role === UserRole.SITE_INCHARGE) return 'Indent raiser';
   return role ? ROLE_LABELS[role] : '';
@@ -40,7 +11,7 @@ function roleLabel(role: UserRole | null | undefined) {
 /** Show awaiting first, then latest approver until the next approver acts. */
 export function formatIndentQueueStatus(
   status: string,
-  pendingWith?: string,
+  _pendingWith?: string,
   _approverNames?: MaterialRequestDto['approverNames']
 ): string {
   if (['REJECTED', 'CANCELLED', 'COMPLETED', 'CLOSED'].includes(status)) {
