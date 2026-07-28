@@ -72,6 +72,15 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
     case UserRole.STORE_INCHARGE:
       return [
         ...common,
+        { id: 'new-request', label: 'New indent', href: '/request/new', icon: FilePlus, section: 'workspace' },
+        { id: 'my-indents', label: 'My indents', href: '/store/requests', icon: FileText, section: 'workspace' },
+        { id: 'grn', label: 'Material receipt (GRN)', href: '/store/grn', icon: Package, section: 'workspace' },
+        { id: 'issue', label: 'Issue to site', href: '/store/issue', icon: FilePlus, section: 'workspace' },
+        { id: 'stock', label: 'Stock Inventory', href: '/store/stock', icon: Package, section: 'workspace' },
+        { id: 'registers', label: 'Registers', href: '/store/registers', icon: FileText, section: 'workspace' },
+        { id: 'stock-aging', label: 'Stock aging', href: '/store/stock-aging', icon: Package, section: 'workspace' },
+        { id: 'add-material', label: 'Product catalog', href: '/materials/new', icon: Package, section: 'workspace' },
+        { id: 'finance', label: 'Finance & Tally', href: '/store/finance', icon: BarChart3, section: 'workspace' },
         // PO column — view only procurement they raised
         {
           id: 'procurement-requests',
@@ -87,15 +96,6 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
           icon: ShoppingCart,
           section: 'po',
         },
-        { id: 'add-material', label: 'Product catalog', href: '/materials/new', icon: Package, section: 'workspace' },
-        { id: 'new-request', label: 'New indent', href: '/request/new', icon: FilePlus, section: 'workspace' },
-        { id: 'my-indents', label: 'My indents', href: '/store/requests', icon: FileText, section: 'workspace' },
-        { id: 'grn', label: 'Material receipt (GRN)', href: '/store/grn', icon: Package, section: 'workspace' },
-        { id: 'issue', label: 'Issue to site', href: '/store/issue', icon: FilePlus, section: 'workspace' },
-        { id: 'registers', label: 'Registers', href: '/store/registers', icon: FileText, section: 'workspace' },
-        { id: 'stock-aging', label: 'Stock aging', href: '/store/stock-aging', icon: Package, section: 'workspace' },
-        { id: 'stock', label: 'Stock Inventory', href: '/store/stock', icon: Package, section: 'workspace' },
-        { id: 'finance', label: 'Finance & Tally', href: '/store/finance', icon: BarChart3, section: 'workspace' },
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },
       ];
 
@@ -129,6 +129,8 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
     case UserRole.EXECUTIVE:
       return [
         ...common,
+        { id: 'incidents', label: 'Material indents', href: '/executive/material-indents', icon: FileText, section: 'workspace' },
+        { id: 'procurement-decisions', label: 'Procurement decisions', href: '/executive/procurement-decisions', icon: ClipboardCheck, section: 'po' },
         {
           id: 'purchase-requests',
           label: 'Procurement requests',
@@ -136,9 +138,7 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
           icon: FilePlus,
           section: 'po',
         },
-        { id: 'rfq-inbox', label: 'RFQ inbox', href: '/executive/rfq/inbox', icon: FileStack, section: 'po' },
-        { id: 'create-rfq', label: 'Create RFQ', href: '/executive/rfq/new', icon: FilePlus, section: 'po' },
-        { id: 'create-po', label: 'Create PO', href: '/executive/po/new', icon: ShoppingCart, section: 'po' },
+        { id: 'rfq-inbox', label: 'RFQs', href: '/executive/rfq/inbox', icon: FileStack, section: 'po' },
         {
           id: 'purchase-orders',
           label: 'Purchase orders',
@@ -146,12 +146,8 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
           icon: ShoppingCart,
           section: 'po',
         },
-        { id: 'procurement-decisions', label: 'Procurement Decisions', href: '/executive/procurement-decisions', icon: ClipboardCheck, section: 'po' },
-        { id: 'incidents', label: 'Material indents', href: '/executive/material-indents', icon: FileText, section: 'workspace' },
-        { id: 'create-wo', label: 'Generate WO', href: '/executive/wo/new', icon: HardHat, section: 'workspace' },
         { id: 'review-wos', label: 'Review work orders', href: '/executive/review-wos', icon: HardHat, section: 'workspace' },
         { id: 'vendors', label: 'Vendors', href: '/vendors', icon: Users, section: 'workspace' },
-        { id: 'create-vendor', label: 'Add vendor', href: '/executive/vendors/new', icon: Users, section: 'workspace' },
         { id: 'finance', label: 'Finance & Tally', href: '/executive/finance', icon: BarChart3, section: 'workspace' },
         { id: 'stock', label: 'Stock Inventory', href: '/store/stock', icon: Package, section: 'workspace' },
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },

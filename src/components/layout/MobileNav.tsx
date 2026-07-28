@@ -53,42 +53,29 @@ export function MobileNav({ role, homePath, unread }: MobileNavProps) {
               <X className="h-4 w-4" />
             </button>
           </div>
-          <div className="p-2 space-y-3">
-            {(['po', 'workspace', 'core'] as const).map((section) => {
-              const items = shortcuts.filter((s) => {
-                const sec = s.section || (CORE_IDS.has(s.id) ? 'core' : 'workspace');
-                return sec === section;
-              });
-              if (!items.length || section === 'core') return null;
-              return (
-                <div key={section}>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 px-3 pb-1">
-                    {section === 'po' ? 'PO' : 'Workspace'}
-                  </p>
-                  <div className="space-y-1">
-                    {items.map((item) => (
-                      <NavLink
-                        key={item.id}
-                        to={item.href}
-                        end={item.id === 'home'}
-                        onClick={() => setMenuOpen(false)}
-                        className={({ isActive }) =>
-                          cn(
-                            'flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold',
-                            isActive ? 'bg-white text-bekem-navy' : 'text-white/70 hover:bg-white/10'
-                          )
-                        }
-                      >
-                        <item.icon className="h-5 w-5 shrink-0" />
-                        <span className="flex-1">{item.label}</span>
-                      </NavLink>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
+          <div className="p-2 space-y-1">
             {shortcuts
-              .filter((s) => (s.section || 'core') === 'core')
+              .filter((s) => s.section === 'po' || (s.section || 'workspace') === 'workspace')
+              .filter((s) => !CORE_IDS.has(s.id))
+              .map((item) => (
+                <NavLink
+                  key={item.id}
+                  to={item.href}
+                  end={item.id === 'home'}
+                  onClick={() => setMenuOpen(false)}
+                  className={({ isActive }) =>
+                    cn(
+                      'flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold',
+                      isActive ? 'bg-white text-bekem-navy' : 'text-white/70 hover:bg-white/10'
+                    )
+                  }
+                >
+                  <item.icon className="h-5 w-5 shrink-0" />
+                  <span className="flex-1">{item.label}</span>
+                </NavLink>
+              ))}
+            {shortcuts
+              .filter((s) => s.id === 'notifications' || s.id === 'profile')
               .map((item) => (
                 <NavLink
                   key={item.id}

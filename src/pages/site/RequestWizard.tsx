@@ -40,6 +40,8 @@ interface LineDraft {
   material: MaterialDto;
   quantity: number;
   unit: string;
+  location: string;
+  requiredByDate: string;
 }
 
 const MATERIAL_CATEGORIES = MATERIAL_CATEGORY_NAMES;
@@ -67,6 +69,8 @@ export function RequestWizardPage() {
   const [lines, setLines] = useState<LineDraft[]>([]);
   const [pickQty, setPickQty] = useState(0);
   const [pickUnit, setPickUnit] = useState('Nos');
+  const [pickLocation, setPickLocation] = useState('');
+  const [pickRequiredByDate, setPickRequiredByDate] = useState('');
   const [selectedMaterial, setSelectedMaterial] = useState<MaterialDto | null>(null);
   const [customName, setCustomName] = useState('');
   const [customUnit, setCustomUnit] = useState('Nos');
@@ -78,8 +82,6 @@ export function RequestWizardPage() {
   const [success, setSuccess] = useState(false);
   const [indentNumber, setIndentNumber] = useState('');
   const [purpose, setPurpose] = useState('');
-  const [location, setLocation] = useState('');
-  const [requiredByDate, setRequiredByDate] = useState('');
   const [requestedByName, setRequestedByName] = useState('');
   const [indentCategoryId, setIndentCategoryId] = useState('');
 
@@ -115,14 +117,13 @@ export function RequestWizardPage() {
       const rows = res.data.data ?? [];
       const term = search.trim().toLowerCase();
       if (!term) return rows;
-      // Client-side case-insensitive safety net + prefer name/code hits.
+      // Only name / code / grade — do not keep description/category hits in the list.
       return rows
         .filter((m) => {
-          const hay = [m.name, m.code, m.grade, m.category, m.description]
-            .filter(Boolean)
-            .join(' ')
-            .toLowerCase();
-          return hay.includes(term);
+          const name = String(m.name || '').toLowerCase();
+          const code = String(m.code || '').toLowerCase();
+          const grade = String(m.grade || '').toLowerCase();
+          return name.includes(term) || code.includes(term) || grade.includes(term);
         })
         .sort((a, b) => {
           const score = (m: MaterialDto) => {
@@ -181,9 +182,23 @@ export function RequestWizardPage() {
     },
   });
 
-  const addLine = (material: MaterialDto, qty = pickQty, unit = pickUnit) => {
+  const addLine = (
+    material: MaterialDto,
+    qty = pickQty,
+    unit = pickUnit,
+    location = pickLocation,
+    requiredByDate = pickRequiredByDate
+  ) => {
     if (qty <= 0) {
       toast.error('Enter quantity');
+      return;
+    }
+    if (!location.trim()) {
+      toast.error('Enter location');
+      return;
+    }
+    if (!requiredByDate) {
+      toast.error('Select required by date');
       return;
     }
     if (!requestedByName.trim()) {
@@ -203,16 +218,25 @@ export function RequestWizardPage() {
       return;
     }
     const lineUnit = (unit || material.unit || 'Nos').trim() || 'Nos';
-    const next = [{ material, quantity: qty, unit: lineUnit }];
+    const newLine: LineDraft = {
+      material,
+      quantity: qty,
+      unit: lineUnit,
+      location: location.trim(),
+      requiredByDate,
+    };
+    const withoutSame = lines.filter((l) => l.material.id !== material.id);
+    const next = [...withoutSame, newLine];
     if (wouldExceedCap(next)) {
       toast.error('This would exceed the ₹5,000 limit for Below ₹5,000 indents');
       return;
     }
-    // Single-product indent only — replace any existing line.
     setLines(next);
     setSelectedMaterial(null);
     setPickQty(0);
     setPickUnit('Nos');
+    setPickLocation('');
+    setPickRequiredByDate('');
     setSearch('');
   };
 
@@ -239,7 +263,9 @@ export function RequestWizardPage() {
         description: customDescription.trim() || undefined,
       });
       await queryClient.invalidateQueries({ queryKey: ['materials'] });
-      addLine(material, customQty, unit);
+      setSelectedMaterial(material);
+      setPickQty(customQty);
+      setPickUnit(unit);
       setCustomName('');
       setCustomUnit('Nos');
       setCustomCategory('Civil Materials');
@@ -249,8 +275,8 @@ export function RequestWizardPage() {
       setShowCustomForm(false);
       toast.success(
         meta.reused
-          ? `“${name}” already in catalog — added to indent`
-          : `“${name}” saved to Material Master and added to indent`
+          ? `“${name}” already in catalog — enter qty, location & date below`
+          : `“${name}” saved to Material Master — enter qty, location & date below`
       );
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } } };
@@ -281,6 +307,15 @@ export function RequestWizardPage() {
     );
   };
 
+  const updateLineField = (
+    materialId: string,
+    patch: Partial<Pick<LineDraft, 'location' | 'requiredByDate' | 'quantity' | 'unit'>>
+  ) => {
+    setLines((prev) =>
+      prev.map((l) => (l.material.id === materialId ? { ...l, ...patch } : l))
+    );
+  };
+
   const removeLine = (materialId: string) => {
     setLines((prev) => prev.filter((l) => l.material.id !== materialId));
   };
@@ -303,6 +338,8 @@ export function RequestWizardPage() {
     const inCart = lines.find((l) => l.material.id === material.id);
     setPickQty(inCart?.quantity ?? 0);
     setPickUnit(inCart?.unit || material.unit || 'Nos');
+    setPickLocation(inCart?.location || '');
+    setPickRequiredByDate(inCart?.requiredByDate || '');
   };
 
   const goBack = () => {
@@ -345,7 +382,7 @@ export function RequestWizardPage() {
 
   if (sitesLoading && (isSiteIncharge || step === 'materials')) {
     return (
-      <div className="page-container max-w-5xl">
+      <div className="page-container max-w-full">
         <div className="h-48 rounded-3xl bg-surface-muted animate-pulse" />
       </div>
     );
@@ -373,7 +410,7 @@ export function RequestWizardPage() {
         <PageHeader
           eyebrow={`${roleLabel} · Step 1 of 2`}
           title="Select site"
-          subtitle="Confirm which site this new indent is for before adding the product."
+          subtitle="Confirm which site this new indent is for before adding products."
         />
 
         {sitesLoading ? (
@@ -448,7 +485,7 @@ export function RequestWizardPage() {
   }
 
   return (
-    <div className="page-container max-w-5xl">
+    <div className="page-container max-w-full">
       <div className="flex items-start gap-2 mb-2">
         <button
           type="button"
@@ -462,7 +499,7 @@ export function RequestWizardPage() {
           <PageHeader
             eyebrow={skipProjectStep ? roleLabel : `${roleLabel} · Step 2 of 2`}
             title="New indent"
-            subtitle="One product per indent. Search the catalog, or add a product if it is not listed."
+            subtitle="Add multiple products — each with its own quantity, location and required-by date."
           />
         </div>
       </div>
@@ -571,68 +608,99 @@ export function RequestWizardPage() {
             <div className="flex items-center justify-between gap-2">
               <h2 className="text-sm font-semibold text-ink">Your indent</h2>
               <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-bekem-accent/10 text-bekem-accent">
-                {lines.length ? '1 product' : '0 products'}
+                {lines.length} product{lines.length === 1 ? '' : 's'}
               </span>
             </div>
 
             {lines.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-surface-border bg-surface-muted/40 px-4 py-8 text-center">
                 <Package className="h-8 w-8 text-ink-muted mx-auto mb-2" />
-                <p className="text-sm font-medium text-ink-secondary">No product added yet</p>
+                <p className="text-sm font-medium text-ink-secondary">No products added yet</p>
                 <p className="text-xs text-ink-muted mt-1">
-                  Select one product from catalog (single product per indent)
+                  Select products from catalog — each has its own qty, location and date
                 </p>
               </div>
             ) : (
-              <div className="max-h-[320px] overflow-y-auto pr-1 rounded-2xl border border-surface-border bg-white">
-                <div className="grid grid-cols-[minmax(0,1.2fr)_92px_88px_36px] gap-2 px-3 py-2 border-b border-surface-border bg-surface-muted/40 text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
-                  <span>Item</span>
-                  <span className="text-center">Qty</span>
-                  <span className="text-center">Unit</span>
-                  <span />
-                </div>
-                <ul className="space-y-0">
+              <div className="max-h-[min(520px,60vh)] overflow-y-auto pr-1 space-y-3">
                 {lines.map((line, idx) => (
-                  <li
+                  <div
                     key={line.material.id}
-                    className="grid grid-cols-[minmax(0,1.2fr)_92px_88px_36px] gap-2 px-3 py-2 border-b border-surface-border last:border-b-0 items-start"
+                    className="rounded-2xl border border-surface-border bg-white p-3 space-y-3"
                   >
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-ink-muted">#{idx + 1}</p>
-                      <p className="font-semibold text-sm text-ink truncate">{line.material.name}</p>
-                      <p className="text-xs text-ink-secondary mt-0.5">
-                        {line.material.code}
-                        {line.material.grade ? ` · ${line.material.grade}` : ''}
-                      </p>
+                    <div className="flex items-start gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold text-ink-muted">#{idx + 1}</p>
+                        <p className="font-semibold text-sm text-ink truncate">{line.material.name}</p>
+                        <p className="text-xs text-ink-secondary mt-0.5">
+                          {line.material.code}
+                          {line.material.grade ? ` · ${line.material.grade}` : ''}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeLine(line.material.id)}
+                        className="shrink-0 p-2 rounded-lg text-rose-500 hover:bg-rose-50 transition-colors"
+                        aria-label="Remove item"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
-                    <div className="pt-1">
-                      <QuantityStepper
-                        size="compact"
-                        value={line.quantity}
-                        onChange={(v) => updateLineQty(line.material.id, v)}
-                        min={0}
-                        unit={line.unit}
-                        accentColor={accent}
-                      />
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted mb-1 block">
+                          Qty
+                        </label>
+                        <QuantityStepper
+                          size="compact"
+                          value={line.quantity}
+                          onChange={(v) => updateLineQty(line.material.id, v)}
+                          min={0}
+                          unit={line.unit}
+                          accentColor={accent}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted mb-1 block">
+                          Unit
+                        </label>
+                        <Input
+                          value={line.unit}
+                          onChange={(e) => updateLineUnit(line.material.id, e.target.value)}
+                          placeholder="Nos"
+                          className="h-9 text-sm text-center"
+                        />
+                      </div>
                     </div>
-                    <div className="pt-1">
+                    <div>
+                      <label className="text-xs font-semibold text-ink-muted mb-1 block">
+                        Location <span className="text-danger">*</span>
+                      </label>
                       <Input
-                        value={line.unit}
-                        onChange={(e) => updateLineUnit(line.material.id, e.target.value)}
-                        placeholder="Nos"
-                        className="h-9 text-sm text-center"
+                        value={line.location}
+                        onChange={(e) =>
+                          updateLineField(line.material.id, { location: e.target.value })
+                        }
+                        placeholder="Site location / area / chainage"
+                        className="text-sm"
                       />
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => removeLine(line.material.id)}
-                      className="mt-1 shrink-0 p-2 rounded-lg text-rose-500 hover:bg-rose-50 transition-colors"
-                      aria-label="Remove item"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <div>
+                      <label className="text-xs font-semibold text-ink-muted mb-1 block">
+                        Required by date <span className="text-danger">*</span>
+                      </label>
+                      <Input
+                        type="date"
+                        value={line.requiredByDate}
+                        onChange={(e) =>
+                          updateLineField(line.material.id, { requiredByDate: e.target.value })
+                        }
+                        className="text-sm"
+                      />
+                    </div>
+
                     {showPricing && (
-                      <div className="col-span-full flex items-center justify-between text-xs pt-1 border-t border-dashed border-surface-border mt-1">
+                      <div className="flex items-center justify-between text-xs pt-1 border-t border-dashed border-surface-border">
                         {hasMaterialUnitPrice(line.material) ? (
                           <>
                             <span className="text-ink-muted">
@@ -655,9 +723,8 @@ export function RequestWizardPage() {
                         )}
                       </div>
                     )}
-                  </li>
+                  </div>
                 ))}
-                </ul>
               </div>
             )}
 
@@ -673,28 +740,6 @@ export function RequestWizardPage() {
                   className="text-sm"
                 />
               </div>
-              <div>
-                <label className="text-xs font-semibold text-ink-muted mb-1 block">
-                  Location <span className="text-danger">*</span>
-                </label>
-                <Input
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Site location / area / chainage"
-                  className="text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-ink-muted mb-1 block">
-                  Required by date <span className="text-danger">*</span>
-                </label>
-                <Input
-                  type="date"
-                  value={requiredByDate}
-                  onChange={(e) => setRequiredByDate(e.target.value)}
-                  className="text-sm"
-                />
-              </div>
               {atCap && (
                 <p className="text-[11px] text-warning-dark bg-warning/10 border border-warning/30 rounded px-2 py-1.5">
                   {INDENT_CAP_REACHED_MESSAGE}
@@ -707,31 +752,36 @@ export function RequestWizardPage() {
                 className="w-full"
                 disabled={
                   lines.length === 0 ||
-                  lines.some((l) => l.quantity <= 0) ||
+                  lines.some(
+                    (l) =>
+                      l.quantity <= 0 || !l.location.trim() || !l.requiredByDate
+                  ) ||
                   !purpose.trim() ||
-                  !location.trim() ||
-                  !requiredByDate ||
                   !requestedByName.trim() ||
                   !indentCategoryId ||
                   !indentRequestType ||
                   belowCapInvalid ||
                   mutation.isPending
                 }
-                onClick={() =>
+                onClick={() => {
+                  const first = lines[0];
+                  if (!first) return;
                   mutation.mutate({
                     indentRequestType: indentRequestType as IndentRequestType,
                     purpose: purpose.trim(),
                     requestedByName: requestedByName.trim(),
                     indentCategoryId,
-                    location: location.trim(),
-                    requiredByDate: new Date(requiredByDate).toISOString(),
+                    location: first.location.trim(),
+                    requiredByDate: new Date(first.requiredByDate).toISOString(),
                     items: lines.map((l) => ({
                       materialId: l.material.id,
                       unit: l.unit || l.material.unit || 'Nos',
                       quantityRequested: l.quantity,
+                      location: l.location.trim(),
+                      requiredByDate: new Date(l.requiredByDate).toISOString(),
                     })),
-                  })
-                }
+                  });
+                }}
               >
                 <Plus className="h-4 w-4" />
                 {mutation.isPending ? 'Submitting…' : 'Submit indent'}
@@ -785,6 +835,28 @@ export function RequestWizardPage() {
                     />
                   </div>
                 </div>
+                <div>
+                  <label className="text-xs font-semibold text-ink-muted mb-1 block">
+                    Location <span className="text-danger">*</span>
+                  </label>
+                  <Input
+                    value={pickLocation}
+                    onChange={(e) => setPickLocation(e.target.value)}
+                    placeholder="Site location / area / chainage"
+                    className="h-11"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-ink-muted mb-1 block">
+                    Required by date <span className="text-danger">*</span>
+                  </label>
+                  <Input
+                    type="date"
+                    value={pickRequiredByDate}
+                    onChange={(e) => setPickRequiredByDate(e.target.value)}
+                    className="h-11"
+                  />
+                </div>
                 <div className="flex gap-2">
                   <Button
                     variant="secondary"
@@ -792,6 +864,8 @@ export function RequestWizardPage() {
                     onClick={() => {
                       setSelectedMaterial(null);
                       setPickQty(0);
+                      setPickLocation('');
+                      setPickRequiredByDate('');
                     }}
                   >
                     <ArrowLeft className="h-4 w-4" />
@@ -801,10 +875,24 @@ export function RequestWizardPage() {
                     variant="accent"
                     accentColor={accent}
                     className="flex-1"
-                    disabled={!canAddMaterials || isBlockedForBelowCap(selectedMaterial) || pickQty <= 0}
-                    onClick={() => addLine(selectedMaterial, pickQty, pickUnit)}
+                    disabled={
+                      !canAddMaterials ||
+                      isBlockedForBelowCap(selectedMaterial) ||
+                      pickQty <= 0 ||
+                      !pickLocation.trim() ||
+                      !pickRequiredByDate
+                    }
+                    onClick={() =>
+                      addLine(
+                        selectedMaterial,
+                        pickQty,
+                        pickUnit,
+                        pickLocation,
+                        pickRequiredByDate
+                      )
+                    }
                   >
-                    {lines.length ? 'Replace product' : 'Add to indent'}
+                    Add to indent
                   </Button>
                 </div>
               </div>
@@ -910,7 +998,7 @@ export function RequestWizardPage() {
                           </span>
                         ) : (
                           <span className="shrink-0 text-xs font-medium text-bekem-accent">
-                            {lines.length ? 'Replace →' : 'Select →'}
+                            Select →
                           </span>
                         )}
                       </div>

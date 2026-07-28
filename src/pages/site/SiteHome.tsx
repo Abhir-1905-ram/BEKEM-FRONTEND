@@ -1,9 +1,8 @@
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import {
   Package,
   ChevronRight,
-  Bell,
   Clock,
   XCircle,
   CheckCircle2,
@@ -11,7 +10,7 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatDate, getGreeting } from '@afios/shared';
-import type { MaterialRequestDto, NotificationDto } from '@afios/shared';
+import type { MaterialRequestDto } from '@afios/shared';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { formatIndentQueueStatus } from '@/components/MaterialIndentsTable';
 import { EmptyState } from '@/components/EmptyState';
@@ -35,14 +34,6 @@ export function SiteHomePage() {
     },
   });
 
-  const { data: notifications } = useQuery({
-    queryKey: ['notifications'],
-    queryFn: async () => {
-      const res = await api.get<{ data: NotificationDto[] }>('/notifications');
-      return res.data.data ?? [];
-    },
-  });
-
   const awaitingVerify = (requests ?? []).filter((r) => r.status === 'ISSUED');
   const pending =
     requests?.filter((r) => !['COMPLETED', 'CLOSED', 'REJECTED', 'CANCELLED'].includes(r.status))
@@ -50,8 +41,19 @@ export function SiteHomePage() {
   const rejected = requests?.filter((r) => r.status === 'REJECTED').length || 0;
   const completed =
     requests?.filter((r) => ['COMPLETED', 'CLOSED'].includes(r.status)).length || 0;
-  const unread = notifications?.filter((n) => !n.isRead).length || 0;
   const recent = requests?.slice(0, 5) || [];
+
+  /** Drop today actions already covered by the verify section / sidebar. */
+  const todayActions = useMemo(() => {
+    const skip = new Set(['site-collect-verify', 'site-new-indent', 'notifications']);
+    return (today ?? []).filter((a) => {
+      if (skip.has(a.id)) return false;
+      if (awaitingVerify.length > 0 && /collect|verif/i.test(`${a.title} ${a.subtitle || ''}`)) {
+        return false;
+      }
+      return true;
+    });
+  }, [today, awaitingVerify.length]);
 
   return (
     <div className="page-container">
@@ -61,7 +63,7 @@ export function SiteHomePage() {
         subtitle="Site material requests and indents"
       />
 
-      <TodayPanel actions={today ?? []} loading={todayLoading} />
+      <TodayPanel actions={todayActions} loading={todayLoading} />
 
       {awaitingVerify.length > 0 && (
         <section className="section-gap panel overflow-hidden border-2 border-bekem-accent/40">
@@ -107,40 +109,6 @@ export function SiteHomePage() {
           </ul>
         </section>
       )}
-
-      <section className="section-gap">
-        <ActionCard
-          title="New indent"
-          subtitle="Create a new indent for your site"
-          icon={Package}
-          tone="primary"
-          featured
-          onClick={() => navigate('/request/new')}
-        />
-        <div className="grid gap-2.5 sm:grid-cols-2 mt-4">
-          {awaitingVerify.length > 0 && (
-            <ActionCard
-              title="Collect & verify stock"
-              subtitle="Issued from store — confirm receipt"
-              count={awaitingVerify.length}
-              icon={ClipboardCheck}
-              tone="warning"
-              onClick={() => {
-                if (awaitingVerify.length === 1) navigate(`/requests/${awaitingVerify[0].id}`);
-                else navigate('/incidents?tab=pending');
-              }}
-            />
-          )}
-          <ActionCard
-            title="Notifications"
-            subtitle={unread > 0 ? 'Unread updates' : 'All caught up'}
-            count={unread}
-            icon={Bell}
-            tone="info"
-            onClick={() => navigate('/notifications')}
-          />
-        </div>
-      </section>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 section-gap">
         <ActionCard

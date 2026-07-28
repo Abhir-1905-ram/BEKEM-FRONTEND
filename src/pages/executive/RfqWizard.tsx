@@ -96,6 +96,7 @@ export function RfqWizardPage() {
         requested,
         available,
         required,
+        requiredByDate: item.requiredByDate || null,
         coveredByStock: required <= 0,
       };
     });
@@ -335,6 +336,7 @@ export function RfqWizardPage() {
                       <tr>
                         <th>Material</th>
                         <th className="num">Requested</th>
+                        <th>Required by</th>
                         <th className="num">Available</th>
                         <th className="num">Shortfall</th>
                         <th>Status</th>
@@ -360,6 +362,11 @@ export function RfqWizardPage() {
                             </td>
                             <td className="num tabular-nums">
                               {line.requested} {line.unit}
+                            </td>
+                            <td className="whitespace-nowrap">
+                              {line.requiredByDate
+                                ? new Date(line.requiredByDate).toLocaleDateString('en-GB')
+                                : '—'}
                             </td>
                             <td className="num tabular-nums">{line.available}</td>
                             <td className="num tabular-nums font-semibold">
@@ -398,13 +405,17 @@ export function RfqWizardPage() {
               ) : null}
               <div className="grid sm:grid-cols-2 gap-3 mb-3">
                 <div>
-                  <label className="text-xs font-semibold text-ink-muted">Quote due date</label>
+                  <label className="text-xs font-semibold text-ink-muted">Vendor quote due date</label>
                   <Input
                     type="date"
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
                     className="mt-1 h-9"
                   />
+                  <p className="mt-1 text-[11px] text-ink-muted">
+                    This is the common last date for vendor replies. Product need dates are shown in
+                    each line above.
+                  </p>
                 </div>
               </div>
               <p className="text-[11px] text-ink-muted mb-2">

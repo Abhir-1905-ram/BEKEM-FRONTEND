@@ -145,7 +145,7 @@ export function AppShell() {
           id="main-content"
           className={cn('flex-1 overflow-y-auto w-full', hideNav ? 'pb-4' : 'pb-20 lg:pb-8')}
         >
-          <div className="max-w-dashboard mx-auto px-2.5 sm:px-3 lg:px-4 py-0.5">
+          <div className="w-full max-w-full px-2.5 sm:px-3 lg:px-4 py-0.5">
             <RouteErrorBoundary resetKey={location.pathname}>
               <Outlet />
             </RouteErrorBoundary>

@@ -32,31 +32,59 @@ const STATUS_NEXT_ROLE: Record<string, UserRole | null> = {
   CANCELLED: null,
 };
 
-/** Req 58 — status shows who the indent is with for approval. */
-export function formatIndentQueueStatus(status: string, pendingWith?: string): string {
+function roleLabel(role: UserRole | null | undefined) {
+  if (role === UserRole.SITE_INCHARGE) return 'Indent raiser';
+  return role ? ROLE_LABELS[role] : '';
+}
+
+/** Show awaiting first, then latest approver until the next approver acts. */
+export function formatIndentQueueStatus(
+  status: string,
+  pendingWith?: string,
+  _approverNames?: MaterialRequestDto['approverNames']
+): string {
   if (['REJECTED', 'CANCELLED', 'COMPLETED', 'CLOSED'].includes(status)) {
     return getStatusLabel(status);
-  }
-
-  // Always show next action role for post-approval handoff statuses
-  // (do not treat as completed before Indent Raiser confirm-receipt).
-  if (status === 'ISSUED') {
-    return `Approved by ${ROLE_LABELS[UserRole.SITE_INCHARGE]}`;
-  }
-  if (status === 'MATERIAL_RECEIVED') {
-    return `Approved by ${ROLE_LABELS[UserRole.STORE_INCHARGE]}`;
   }
 
   const roleKey =
     pendingWith && pendingWith in ROLE_LABELS
       ? (pendingWith as UserRole)
       : STATUS_NEXT_ROLE[status] || null;
-
-  if (roleKey && roleKey in ROLE_LABELS) {
-    return `Approved by ${ROLE_LABELS[roleKey]}`;
+  switch (status) {
+    case 'PENDING_STORE':
+      return `Awaiting ${roleLabel(UserRole.STORE_INCHARGE)}`;
+    case 'ALLOCATED':
+    case 'FORWARDED_TO_PM':
+    case 'BRANCH_TRANSFER_REQUESTED':
+      return `Approved by ${roleLabel(UserRole.STORE_INCHARGE)}`;
+    case 'PM_APPROVED':
+    case 'PENDING_HO':
+    case 'PENDING_EXECUTIVE_DECISION':
+      return `Approved by ${roleLabel(UserRole.PROJECT_MANAGER)}`;
+    case 'PURCHASE_REQUESTED':
+    case 'RFQ_OPEN':
+    case 'QUOTED':
+    case 'VENDOR_SELECTED':
+    case 'PO_CREATED':
+    case 'EXECUTIVE_DECISION_PO':
+    case 'EXECUTIVE_DECISION_BRANCH_TRANSFER':
+      return `Approved by ${roleLabel(UserRole.EXECUTIVE)}`;
+    case 'COORDINATOR_PENDING':
+    case 'PENDING_REVIEW':
+    case 'COORDINATOR_VERIFIED':
+      return `Approved by ${roleLabel(UserRole.COORDINATOR)}`;
+    case 'CHAIRMAN_PENDING':
+      return `Approved by ${roleLabel(UserRole.COORDINATOR)}`;
+    case 'CHAIRMAN_APPROVED':
+      return `Approved by ${roleLabel(UserRole.CHAIRMAN)}`;
+    case 'MATERIAL_RECEIVED':
+      return `Approved by ${roleLabel(UserRole.STORE_INCHARGE)}`;
+    case 'ISSUED':
+      return `Approved by ${roleLabel(UserRole.STORE_INCHARGE)}`;
+    default:
+      return getStatusLabel(status);
   }
-
-  return getStatusLabel(status);
 }
 
 type IndentTableRow = {
@@ -67,6 +95,7 @@ type IndentTableRow = {
   indentCategory: string;
   requestedByName: string;
   pendingWith?: string;
+  approverNames?: MaterialRequestDto['approverNames'];
   status: string;
 };
 
@@ -79,6 +108,7 @@ function toIndentRows(requests: MaterialRequestDto[]): IndentTableRow[] {
     indentCategory: r.indentCategory?.name || '—',
     requestedByName: r.requestedByName || r.requester?.name || '—',
     pendingWith: r.pendingWith,
+    approverNames: r.approverNames,
     status: r.status,
   }));
 }
@@ -121,7 +151,7 @@ export function MaterialIndentsTable({
               <td>
                 <StatusBadge
                   status={row.status}
-                  label={formatIndentQueueStatus(row.status, row.pendingWith)}
+                  label={formatIndentQueueStatus(row.status, row.pendingWith, row.approverNames)}
                 />
               </td>
               <td className="text-right">

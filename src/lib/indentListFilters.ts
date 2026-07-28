@@ -4,9 +4,10 @@ import { formatIndentQueueStatus } from '@/components/MaterialIndentsTable';
 
 /** Title-side / dropdown queue filters. Labels vary by role. */
 export type IndentQueueQuickFilter =
+  | 'awaiting-store'
+  | 'approved-store'
   | 'pm'
   | 'ho'
-  | 'store'
   | 'coordinator'
   | 'chairman'
   | 'executive';
@@ -49,7 +50,8 @@ const HO_STATUSES = new Set([
 
 /** Shared pending-queue chips — one per status color, with counts on every role. */
 const ALL_PENDING_QUEUE_CHIPS: IndentQueueFilterOption[] = [
-  { id: 'store', label: 'Approved by Store Incharge' },
+  { id: 'awaiting-store', label: 'Awaiting Store Incharge' },
+  { id: 'approved-store', label: 'Approved by Store Incharge' },
   { id: 'pm', label: 'Approved by PM' },
   { id: 'executive', label: 'Approved by Executive' },
   { id: 'coordinator', label: 'Approved by Coordinator' },
@@ -60,6 +62,7 @@ const ALL_PENDING_QUEUE_CHIPS: IndentQueueFilterOption[] = [
 export function getIndentQueueFiltersForRole(role: UserRole): IndentQueueFilterOption[] {
   switch (role) {
     case UserRole.SITE_INCHARGE:
+      return ALL_PENDING_QUEUE_CHIPS;
     case UserRole.STORE_INCHARGE:
     case UserRole.PROJECT_MANAGER:
     case UserRole.EXECUTIVE:
@@ -79,8 +82,12 @@ export function matchesIndentQueueQuickFilter(
   const status = request.status;
   const pending = request.pendingWith;
 
-  if (filter === 'store') {
-    if (pending === UserRole.STORE_INCHARGE) return true;
+  if (filter === 'awaiting-store') {
+    if (pending) return pending === UserRole.STORE_INCHARGE;
+    return status === 'PENDING_STORE';
+  }
+  if (filter === 'approved-store') {
+    if (pending === UserRole.STORE_INCHARGE) return status !== 'PENDING_STORE';
     // Don't treat HO roles as store even if status is in STORE_STATUSES
     if (
       pending === UserRole.PROJECT_MANAGER ||
@@ -90,7 +97,7 @@ export function matchesIndentQueueQuickFilter(
     ) {
       return false;
     }
-    return STORE_STATUSES.has(status);
+    return STORE_STATUSES.has(status) && status !== 'PENDING_STORE';
   }
   if (filter === 'coordinator') {
     if (pending) return pending === UserRole.COORDINATOR;
@@ -200,7 +207,15 @@ export function uniqueIndentCategories(requests: MaterialRequestDto[]): string[]
 }
 
 export function isIndentQueueFilterId(value: string): value is IndentQueueQuickFilter {
-  return ['pm', 'ho', 'store', 'coordinator', 'chairman', 'executive'].includes(value);
+  return [
+    'awaiting-store',
+    'approved-store',
+    'pm',
+    'ho',
+    'coordinator',
+    'chairman',
+    'executive',
+  ].includes(value);
 }
 
 /** Count indents matching each quick-queue chip (for badges). */

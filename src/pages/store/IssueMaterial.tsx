@@ -269,7 +269,7 @@ export function IssueMaterialPage() {
                 <tr>
                   <th>Indent No</th>
                   <th>Reason</th>
-                  <th>Indent raiser</th>
+                  <th>Requested by</th>
                   <th className="num">Items</th>
                   <th>Date</th>
                   <th>Status</th>

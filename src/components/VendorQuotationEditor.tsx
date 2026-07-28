@@ -143,6 +143,14 @@ export function VendorQuotationEditor({
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [vendors, assignedQuotations]);
 
+  const vendorMaterialIds = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const vendor of vendors ?? []) {
+      map.set(vendor.id, new Set((vendor.materialIds || []).map(String)));
+    }
+    return map;
+  }, [vendors]);
+
   const findQuotationIndex = (vendorId: string) => quotations.findIndex((q) => q.vendorId === vendorId);
 
   const buildVendorRow = (vendorId: string, vendorName?: string): VendorQuotationDraft => {
@@ -328,6 +336,8 @@ export function VendorQuotationEditor({
             const assignedIds = new Set(assignedForProduct.map((q) => q.vendorId));
             const filteredVendors = allVendorOptions.filter((vendor) => {
               if (assignedIds.has(vendor.id)) return false;
+              const mappedMaterialIds = vendorMaterialIds.get(vendor.id);
+              if (!mappedMaterialIds?.has(item.materialId)) return false;
               if (!searchQuery) return false;
               const haystack = [
                 vendor.name,
@@ -342,6 +352,9 @@ export function VendorQuotationEditor({
             });
             const showSuggestions =
               searchFocusedMaterialId === item.materialId && searchQuery.length > 0;
+            const mappedVendorCount = allVendorOptions.filter((vendor) =>
+              vendorMaterialIds.get(vendor.id)?.has(item.materialId)
+            ).length;
             const assignedNames = assignedForProduct.map((q) => q.vendorName || q.vendorId);
             return (
               <div key={item.materialId} className="border border-surface-border rounded-lg overflow-visible">
@@ -412,7 +425,9 @@ export function VendorQuotationEditor({
                               <p className="text-[10px] font-medium text-ink-muted">
                                 {filteredVendors.length
                                   ? `${filteredVendors.length} vendor${filteredVendors.length === 1 ? '' : 's'} — scroll to see all`
-                                  : 'No matches'}
+                                  : mappedVendorCount
+                                    ? 'No matching vendor for this product search'
+                                    : 'No vendors mapped to this product yet'}
                               </p>
                             </div>
                             <ul className="max-h-[min(22rem,50vh)] overflow-y-auto overscroll-contain">

@@ -28,6 +28,18 @@ const QUEUE_CHIP_STYLES: Record<
   IndentQueueQuickFilter,
   { idle: string; active: string; badge: string; badgeActive: string }
 > = {
+  'awaiting-store': {
+    idle: 'bg-warning-light text-warning-dark border-warning/30 hover:border-warning/60',
+    active: 'bg-warning text-white border-warning',
+    badge: 'bg-white/80 text-warning-dark',
+    badgeActive: 'bg-white/25 text-white',
+  },
+  'approved-store': {
+    idle: 'bg-warning-light text-warning-dark border-warning/30 hover:border-warning/60',
+    active: 'bg-warning text-white border-warning',
+    badge: 'bg-white/80 text-warning-dark',
+    badgeActive: 'bg-white/25 text-white',
+  },
   pm: {
     idle: 'bg-review-light text-review-dark border-review/30 hover:border-review/60',
     active: 'bg-review text-white border-review',
@@ -35,12 +47,6 @@ const QUEUE_CHIP_STYLES: Record<
     badgeActive: 'bg-white/25 text-white',
   },
   ho: {
-    idle: 'bg-warning-light text-warning-dark border-warning/30 hover:border-warning/60',
-    active: 'bg-warning text-white border-warning',
-    badge: 'bg-white/80 text-warning-dark',
-    badgeActive: 'bg-white/25 text-white',
-  },
-  store: {
     idle: 'bg-warning-light text-warning-dark border-warning/30 hover:border-warning/60',
     active: 'bg-warning text-white border-warning',
     badge: 'bg-white/80 text-warning-dark',
@@ -64,6 +70,13 @@ const QUEUE_CHIP_STYLES: Record<
     badge: 'bg-white/80 text-bekem-navy',
     badgeActive: 'bg-white/25 text-white',
   },
+};
+
+const DEFAULT_QUEUE_CHIP_STYLE = {
+  idle: 'bg-slate-100 text-slate-700 border-slate-200 hover:border-slate-300',
+  active: 'bg-slate-700 text-white border-slate-700',
+  badge: 'bg-white/80 text-slate-700',
+  badgeActive: 'bg-white/25 text-white',
 };
 
 export function IndentListFilters({
@@ -110,19 +123,21 @@ export function IndentListFilters({
               </option>
             ))}
           </select>
-          <select
-            value={queue}
-            onChange={(e) => onQueueChange(e.target.value as IndentQueueQuickFilter | '')}
-            className="h-9 rounded border border-surface-border bg-white px-2 text-xs text-ink min-w-[11rem]"
-            aria-label="Filter by pending status"
-          >
-            <option value="">All statuses</option>
-            {queueOptions.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.label}
-              </option>
-            ))}
-          </select>
+          {queueOptions.length > 0 && (
+            <select
+              value={queue}
+              onChange={(e) => onQueueChange(e.target.value as IndentQueueQuickFilter | '')}
+              className="h-9 rounded border border-surface-border bg-white px-2 text-xs text-ink min-w-[11rem]"
+              aria-label="Filter by pending status"
+            >
+              <option value="">All statuses</option>
+              {queueOptions.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+          )}
           <select
             value={days}
             onChange={(e) => onDaysChange(e.target.value as IndentDaysFilter)}
@@ -181,7 +196,7 @@ export function IndentQueueQuickButtons({
       {options.map((f) => {
         const active = value === f.id;
         const count = counts?.[f.id] ?? 0;
-        const styles = QUEUE_CHIP_STYLES[f.id];
+        const styles = QUEUE_CHIP_STYLES[f.id] ?? DEFAULT_QUEUE_CHIP_STYLE;
         return (
           <button
             key={f.id}

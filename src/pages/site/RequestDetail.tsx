@@ -1,24 +1,33 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Navigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Copy } from 'lucide-react';
+import { ArrowLeft, Copy, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { forbiddenQueryOptions, isForbiddenError, useRedirectOnForbidden } from '@/lib/forbiddenRedirect';
 import { useAuthStore } from '@/stores/authStore';
-import { formatDate, formatCurrency, ROLE_COLORS, UserRole, hideIndentPricingForRole, INDENT_REQUEST_TYPE_LABELS } from '@afios/shared';
-import type { MaterialRequestDto } from '@afios/shared';
+import {
+  formatDate,
+  formatCurrency,
+  ROLE_COLORS,
+  UserRole,
+  hideIndentPricingForRole,
+  INDENT_REQUEST_TYPE_LABELS,
+  canEditIndentOneLevelAhead,
+} from '@afios/shared';
+import type { MaterialRequestDto, UpdateIndentDto } from '@afios/shared';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { StatusTimeline } from '@/components/StatusTimeline';
-import { Textarea } from '@/components/ui/Input';
+import { Input, Textarea } from '@/components/ui/Input';
 import { StockComparisonTable } from '@/components/StockComparisonTable';
 import { CrossProjectStockPanel } from '@/components/CrossProjectStockPanel';
 import { PmDailyCapBanner } from '@/components/PmDailyCapBanner';
 import { useApprovalShortcuts } from '@/hooks/useApprovalShortcuts';
 import { DetailField, DetailFieldGrid } from '@/components/ui/DetailFields';
 import { formatIndentQueueStatus } from '@/components/MaterialIndentsTable';
+import { QuantityStepper } from '@/components/QuantityStepper';
 
 export function RequestDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -29,6 +38,13 @@ export function RequestDetailPage() {
   const accent = ROLE_COLORS[UserRole.PROJECT_MANAGER].primary;
   const [pmRemark, setPmRemark] = useState('');
   const [pmRemarkError, setPmRemarkError] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [editPurpose, setEditPurpose] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [editRequestedByName, setEditRequestedByName] = useState('');
+  const [editRequiredByDate, setEditRequiredByDate] = useState('');
+  const [editQty, setEditQty] = useState(0);
+  const [editUnit, setEditUnit] = useState('Nos');
 
   const { data: request, isLoading, isError, error } = useQuery({
     queryKey: ['material-request', id],
@@ -41,6 +57,35 @@ export function RequestDetailPage() {
   });
 
   useRedirectOnForbidden(error);
+
+  useEffect(() => {
+    if (!request) return;
+    setEditPurpose(request.purpose || '');
+    setEditLocation(request.location || '');
+    setEditRequestedByName(request.requestedByName || request.requester?.name || '');
+    setEditRequiredByDate(
+      request.requiredByDate ? String(request.requiredByDate).slice(0, 10) : ''
+    );
+    const first = request.items?.[0];
+    setEditQty(first?.quantityRequested ?? request.quantityRequested ?? 0);
+    setEditUnit(first?.unit || first?.material?.unit || 'Nos');
+  }, [request]);
+
+  const saveIndent = useMutation({
+    mutationFn: async (payload: UpdateIndentDto) => {
+      const res = await api.patch<{ data: MaterialRequestDto }>(`/material-requests/${id}`, payload);
+      return res.data.data;
+    },
+    onSuccess: () => {
+      toast.success('Indent updated');
+      setEditing(false);
+      queryClient.invalidateQueries({ queryKey: ['material-request', id] });
+      queryClient.invalidateQueries({ queryKey: ['material-requests'] });
+    },
+    onError: (err: Error & { response?: { data?: { message?: string } } }) => {
+      toast.error(err.response?.data?.message || 'Could not update indent');
+    },
+  });
 
   const pmLocalClose = useMutation({
     mutationFn: async (remark: string) => {
@@ -159,6 +204,8 @@ export function RequestDetailPage() {
     );
   const canConfirmReceipt = role === UserRole.SITE_INCHARGE && request.status === 'ISSUED';
   const hidePricing = hideIndentPricingForRole(role, request.indentRequestType);
+  const canEdit =
+    request.canEdit === true || canEditIndentOneLevelAhead(role, request.status);
 
   const requirePmRemark = () => {
     if (!pmRemark.trim()) {
@@ -200,7 +247,24 @@ export function RequestDetailPage() {
             className="mt-1"
           />
         </div>
+        {canEdit && !editing && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setEditing(true)}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            Modify
+          </Button>
+        )}
       </header>
+
+      {canEdit && (
+        <p className="mb-3 text-[11px] text-ink-secondary rounded-lg border border-surface-border bg-surface-muted/40 px-3 py-2">
+          You can modify this indent only while it is pending one level ahead. Once it moves further
+          (e.g. Store → PM), edit will lock for your role.
+        </p>
+      )}
 
       {canPmDecide && !isBelowCap && showPmApprove && <PmDailyCapBanner />}
 
@@ -211,10 +275,107 @@ export function RequestDetailPage() {
         </div>
       )}
 
+      {editing ? (
+        <Card className="mb-3 space-y-3 p-3">
+          <p className="text-sm font-semibold text-ink">Modify indent</p>
+          <div>
+            <label className="text-xs font-semibold text-ink-muted mb-1 block">Requested by</label>
+            <Input
+              value={editRequestedByName}
+              onChange={(e) => setEditRequestedByName(e.target.value)}
+              className="text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-ink-muted mb-1 block">Reason for request</label>
+            <Input
+              value={editPurpose}
+              onChange={(e) => setEditPurpose(e.target.value)}
+              className="text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-ink-muted mb-1 block">Location</label>
+            <Input
+              value={editLocation}
+              onChange={(e) => setEditLocation(e.target.value)}
+              className="text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-ink-muted mb-1 block">Required by date</label>
+            <Input
+              type="date"
+              value={editRequiredByDate}
+              onChange={(e) => setEditRequiredByDate(e.target.value)}
+              className="text-sm"
+            />
+          </div>
+          {request.items?.[0] && (
+            <div className="rounded-xl border border-surface-border p-3 space-y-2">
+              <p className="text-sm font-medium text-ink">
+                {request.items[0].material?.name || 'Product'}
+              </p>
+              <div className="grid grid-cols-2 gap-2 items-end">
+                <QuantityStepper
+                  size="compact"
+                  value={editQty}
+                  onChange={setEditQty}
+                  min={0}
+                  unit={editUnit}
+                  accentColor={accent}
+                />
+                <div>
+                  <label className="text-xs font-semibold text-ink-muted mb-1 block">Unit</label>
+                  <Input value={editUnit} onChange={(e) => setEditUnit(e.target.value)} className="text-sm" />
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="flex gap-2">
+            <Button variant="ghost" className="flex-1" onClick={() => setEditing(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              className="flex-1"
+              disabled={
+                saveIndent.isPending ||
+                !editPurpose.trim() ||
+                !editRequestedByName.trim() ||
+                editQty <= 0
+              }
+              onClick={() => {
+                const first = request.items?.[0];
+                const payload: UpdateIndentDto = {
+                  purpose: editPurpose.trim(),
+                  requestedByName: editRequestedByName.trim(),
+                  location: editLocation.trim(),
+                  requiredByDate: editRequiredByDate
+                    ? new Date(editRequiredByDate).toISOString()
+                    : null,
+                };
+                if (first?.materialId || first?.material?.id) {
+                  payload.items = [
+                    {
+                      materialId: first.materialId || first.material?.id,
+                      unit: editUnit,
+                      quantityRequested: editQty,
+                    },
+                  ];
+                }
+                saveIndent.mutate(payload);
+              }}
+            >
+              {saveIndent.isPending ? 'Saving…' : 'Save changes'}
+            </Button>
+          </div>
+        </Card>
+      ) : (
       <Card className="mb-3">
         <DetailFieldGrid>
           {(request.requestedByName || request.requester?.name) && (
-            <DetailField label="Indent raiser" labelClassName="text-gray-500">
+            <DetailField label="Requested by" labelClassName="text-gray-500">
               {request.requestedByName || request.requester?.name}
             </DetailField>
           )}
@@ -244,6 +405,11 @@ export function RequestDetailPage() {
               {formatDate(request.requiredByDate)}
             </DetailField>
           )}
+          {request.location && (
+            <DetailField label="Location" labelClassName="text-gray-500">
+              {request.location}
+            </DetailField>
+          )}
           {request.purpose && (
             <DetailField label="Reason for request" fullWidth labelClassName="text-gray-500" valueClassName="font-normal">
               {request.purpose}
@@ -251,6 +417,7 @@ export function RequestDetailPage() {
           )}
         </DetailFieldGrid>
       </Card>
+      )}
 
       <h2 className="font-semibold text-gray-900 mb-3">Stock comparison (requesting site)</h2>
       <StockComparisonTable

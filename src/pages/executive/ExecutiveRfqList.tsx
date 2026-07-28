@@ -230,7 +230,18 @@ export function ExecutiveRfqListPage({ browseOnly = false }: ExecutiveRfqListPag
                           <StatusBadge status={rfq.status} />
                         </td>
                         <td className="text-right">
-                          {!browseOnly && rfq.status === 'FINALIZED' && rfq.purchaseRequestId ? (
+                          {!browseOnly && rfq.status === 'FINALIZED' && rfq.poId ? (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/purchase-orders/${rfq.poId}`);
+                              }}
+                            >
+                              View PO
+                            </Button>
+                          ) : !browseOnly && rfq.status === 'FINALIZED' && rfq.purchaseRequestId ? (
                             <Button
                               variant="secondary"
                               size="sm"

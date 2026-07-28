@@ -363,17 +363,6 @@ export function POWizardPage() {
     });
   };
 
-  if (success) {
-    return (
-      <SuccessScreen
-        title={createdPoCount > 1 ? `${createdPoCount} POs created!` : 'PO created!'}
-        message="RFQ and quotations were auto-generated. PO(s) are now pending coordinator verification."
-        accentColor={accent}
-        primaryAction={{ label: 'Back to home', onClick: () => navigate('/') }}
-      />
-    );
-  }
-
   const pickFiles = (files: FileList | null) => {
     if (!files?.length) return;
     const added = Array.from(files).map((f) => ({
@@ -485,8 +474,20 @@ export function POWizardPage() {
   useEffect(() => {
     if (!preselectedPrId || selectedPr || prLoading || selectingPr) return;
     const pr = openPurchaseRequests.find((p) => p.id === preselectedPrId);
-    if (!pr) return;
-    void selectPurchaseRequest(pr);
+    if (pr) {
+      void selectPurchaseRequest(pr);
+      return;
+    }
+    void (async () => {
+      try {
+        const res = await api.get<{ data: PurchaseRequestDto }>(`/purchase-requests/${preselectedPrId}`);
+        if (res.data.data) {
+          await selectPurchaseRequest(res.data.data);
+        }
+      } catch {
+        // Ignore fallback failures and leave manual selection available.
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once when PR list is ready
   }, [preselectedPrId, openPurchaseRequests, prLoading, selectedPr, selectingPr]);
 
@@ -667,6 +668,14 @@ export function POWizardPage() {
       : vendorSelectionReason.trim().length > 0);
 
   return (
+    success ? (
+      <SuccessScreen
+        title={createdPoCount > 1 ? `${createdPoCount} POs created!` : 'PO created!'}
+        message="RFQ and quotations were auto-generated. PO(s) are now pending coordinator verification."
+        accentColor={accent}
+        primaryAction={{ label: 'Back to home', onClick: () => navigate('/') }}
+      />
+    ) : (
     <div className="min-h-screen flex flex-col w-full max-w-lg lg:max-w-6xl mx-auto bg-[#F8FAFC]">
       <header className="flex items-center gap-3 px-4 pt-4 pb-2">
         <button
@@ -1433,5 +1442,6 @@ export function POWizardPage() {
         </AnimatePresence>
       </div>
     </div>
+    )
   );
 }

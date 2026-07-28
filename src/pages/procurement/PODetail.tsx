@@ -458,7 +458,7 @@ export function PODetailPage() {
                 className="text-xs font-medium text-bekem-accent hover:underline"
                 onClick={() => navigate(`/rfqs/${data.rfqId}`)}
               >
-                Open RFQ
+                View source RFQ
               </button>
             )}
           </div>

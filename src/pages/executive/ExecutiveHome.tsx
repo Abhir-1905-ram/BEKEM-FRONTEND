@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, ChevronRight, AlertTriangle, FileStack } from 'lucide-react';
+import { ShoppingCart, ChevronRight, AlertTriangle, FileStack, ClipboardCheck, FilePlus, FileText } from 'lucide-react';
 import { getGreeting, formatCurrency } from '@afios/shared';
 import type { DeliveryAlertDto, ExecutiveDashboardDto, PurchaseOrderDto, RfqListItemDto } from '@afios/shared';
 import { api } from '@/lib/api';
@@ -20,6 +20,7 @@ import { FulfillmentStatusChip } from '@/components/FulfillmentStatusChip';
 import { PoEmailStatusChip } from '@/components/PoEmailStatusChip';
 import { TodayPanel } from '@/components/layout/TodayPanel';
 import { useTodayActions } from '@/hooks/useTodayActions';
+import { ActionCard } from '@/components/ui/ActionCard';
 
 export function ExecutiveHomePage() {
   const navigate = useNavigate();
@@ -121,8 +122,8 @@ export function ExecutiveHomePage() {
     <div className="page-container">
       <PageHeader
         eyebrow={getGreeting()}
-        title="All projects"
-        subtitle="Company-wide procurement — no project switch required"
+        title="Procurement process"
+        subtitle="Review indents, take decisions, raise RFQs, and create POs in order"
         action={
           <div className="flex flex-wrap gap-2">
             <Button variant="primary" size="lg" onClick={() => navigate('/executive/rfq/new')}>
@@ -138,6 +139,44 @@ export function ExecutiveHomePage() {
       />
 
       <TodayPanel actions={today ?? []} loading={todayLoading} />
+
+      <section className="section-gap">
+        <h2 className="section-label mb-3">Process</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+          <ActionCard
+            title="1. Review indents"
+            subtitle="Check site and store requests that need procurement attention"
+            count={dashboard?.totals.pendingIndentCount ?? 0}
+            icon={FileText}
+            tone="warning"
+            onClick={() => navigate('/executive/material-indents')}
+          />
+          <ActionCard
+            title="2. Take decisions"
+            subtitle="Choose purchase order or branch transfer for pending requests"
+            count={widgets?.widgets.pendingProcurementDecisions ?? 0}
+            icon={ClipboardCheck}
+            tone="info"
+            onClick={() => navigate('/executive/procurement-decisions')}
+          />
+          <ActionCard
+            title="3. Raise RFQs"
+            subtitle="Move approved purchase requests into quotation collection"
+            count={widgets?.widgets.pendingPurchaseRequests ?? 0}
+            icon={FilePlus}
+            tone="primary"
+            onClick={() => navigate('/executive/rfq/inbox')}
+          />
+          <ActionCard
+            title="4. Manage POs"
+            subtitle="Track open purchase orders and follow through to fulfillment"
+            count={dashboard?.totals.openPoCount ?? 0}
+            icon={ShoppingCart}
+            tone="success"
+            onClick={() => navigate('/executive/purchase-orders')}
+          />
+        </div>
+      </section>
 
       <DashboardSearch placeholder="Search projects, materials, employees, POs…" />
 
@@ -230,7 +269,7 @@ export function ExecutiveHomePage() {
             </div>
           </div>
 
-          <h2 className="section-label mb-4">Projects (A–Z)</h2>
+          <h2 className="section-label mb-4">Project overview</h2>
           {!filteredProjects.length ? (
             <EmptyState title="No projects match filters" description="Clear filters to see all projects." />
           ) : (

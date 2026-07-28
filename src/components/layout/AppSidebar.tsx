@@ -19,9 +19,14 @@ export function AppSidebar({ unread }: AppSidebarProps) {
   const { t } = useI18n();
   const role = user?.role as UserRole;
   const shortcuts = role ? getRoleNavShortcuts(role) : [];
-  const coreNav = shortcuts.filter((s) => (s.section || 'workspace') === 'core');
+  const homeNav = shortcuts.filter((s) => s.id === 'home');
+  const accountNav = shortcuts.filter((s) => s.id === 'notifications' || s.id === 'profile');
   const poNav = shortcuts.filter((s) => s.section === 'po');
-  const workspaceNav = shortcuts.filter((s) => (s.section || 'workspace') === 'workspace');
+  const workspaceNav = shortcuts.filter(
+    (s) => (s.section || 'workspace') === 'workspace' && s.id !== 'home'
+  );
+  const mainNav =
+    role === UserRole.STORE_INCHARGE ? [...workspaceNav, ...poNav] : [...poNav, ...workspaceNav];
 
   const labelFor = (id: string, fallback: string) => {
     if (id === 'home') return t('nav.dashboard');
@@ -54,18 +59,6 @@ export function AppSidebar({ unread }: AppSidebarProps) {
     </NavLink>
   );
 
-  const renderSection = (title: string, items: typeof shortcuts) => {
-    if (!items.length) return null;
-    return (
-      <div className="mt-4">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 px-2.5 pb-1.5">
-          {title}
-        </p>
-        <div className="space-y-1">{items.map(renderLink)}</div>
-      </div>
-    );
-  };
-
   return (
     <aside className="hidden lg:flex lg:flex-col lg:w-[232px] lg:shrink-0 bg-surface-sidebar lg:sticky lg:top-0 lg:h-screen border-r border-bekem-navy-dark/30">
       <div className="px-4 pt-4 pb-3 border-b border-white/10">
@@ -73,9 +66,11 @@ export function AppSidebar({ unread }: AppSidebarProps) {
       </div>
 
       <nav className="flex-1 px-2 pt-3 overflow-y-auto sidebar-scroll" aria-label="Main navigation">
-        <div className="space-y-1">{coreNav.map(renderLink)}</div>
-        {renderSection('PO', poNav)}
-        {renderSection('Workspace', workspaceNav)}
+        <div className="space-y-1">
+          {homeNav.map(renderLink)}
+          {mainNav.map(renderLink)}
+          {accountNav.map(renderLink)}
+        </div>
       </nav>
 
       <div className="p-3 mt-auto shrink-0 border-t border-white/10">

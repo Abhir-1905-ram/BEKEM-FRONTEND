@@ -255,6 +255,31 @@ export function StockPage() {
     },
   });
 
+  const {
+    data: liveBalanceRows,
+    isLoading: liveLoading,
+    isError: liveError,
+    refetch: refetchLive,
+    isFetching: liveFetching,
+  } = useQuery({
+    queryKey: ['stock-balance-live'],
+    enabled: isStore,
+    queryFn: async () => {
+      const res = await api.get<{
+        data: Array<{
+          id: string;
+          itemCode: string;
+          itemDescription: string;
+          unit: string;
+          totalReceived: number;
+          totalIssued: number;
+          currentBalance: number;
+        }>;
+      }>('/stock/balance');
+      return res.data.data ?? [];
+    },
+  });
+
   const { data: crossProjectRows } = useQuery({
     queryKey: ['pm-cross-stock', materialCompare],
     enabled: isPm && materialCompare.trim().length >= 2,
@@ -334,6 +359,11 @@ export function StockPage() {
 
   const rows = data?.data ?? [];
   const meta = data?.meta;
+  const liveRows = (liveBalanceRows ?? []).filter((row) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return [row.itemCode, row.itemDescription, row.unit].filter(Boolean).join(' ').toLowerCase().includes(q);
+  });
   const projectFilterOptions =
     isPm && meta?.assignedProjects?.length
       ? meta.assignedProjects.map((p) => ({ id: p.name, label: p.name }))
@@ -348,6 +378,81 @@ export function StockPage() {
     : isPm
       ? 'Filter by your assigned projects'
       : null;
+
+  if (isStore) {
+    return (
+      <div className="px-4 pt-4 pb-6 max-w-[1200px] mx-auto">
+        <header className="flex flex-col gap-2.5 mb-3">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/')}
+              className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-gray-100"
+              aria-label="Go back"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div>
+              <h1 className="font-semibold text-gray-900">Stock Inventory</h1>
+              <p className="text-xs text-gray-500">
+                {projectSubtitle && <span className="block font-medium text-gray-700">{projectSubtitle}</span>}
+                Live stock balance from GRN and issue transactions
+              </p>
+            </div>
+          </div>
+          <input
+            type="search"
+            placeholder="Search item code, description, unit…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="rounded-xl border border-border px-3 py-2 text-sm flex-1 min-w-[200px]"
+          />
+        </header>
+
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950 mb-3">
+          <p className="font-semibold">Live stock ledger</p>
+          <p className="text-xs mt-0.5">
+            This view updates from GRN receipts and Issue to site transactions automatically.
+          </p>
+        </div>
+
+        <ListQueryBoundary
+          isLoading={liveLoading}
+          isError={liveError}
+          onRetry={() => refetchLive()}
+          retrying={liveFetching && !liveLoading}
+          isEmpty={!liveRows.length}
+          empty={<EmptyState title="No live stock found" description="GRN receipts will appear here automatically." />}
+        >
+          <div className="table-shell">
+            <table className="data-table min-w-[720px]">
+              <thead>
+                <tr>
+                  <th>Item code</th>
+                  <th>Description</th>
+                  <th>Unit</th>
+                  <th className="num">Received</th>
+                  <th className="num">Issued</th>
+                  <th className="num">Current balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {liveRows.map((row) => (
+                  <tr key={row.id}>
+                    <td className="cell-code whitespace-nowrap">{row.itemCode || '—'}</td>
+                    <td className="cell-text">{row.itemDescription || '—'}</td>
+                    <td className="whitespace-nowrap">{row.unit || '—'}</td>
+                    <td className="num tabular-nums">{fmtNum(row.totalReceived) || '—'}</td>
+                    <td className="num tabular-nums">{fmtNum(row.totalIssued) || '—'}</td>
+                    <td className="num tabular-nums font-semibold">{fmtNum(row.currentBalance) || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </ListQueryBoundary>
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 pt-4 pb-6 max-w-[1600px] mx-auto">
