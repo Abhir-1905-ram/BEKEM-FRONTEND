@@ -8,6 +8,10 @@ interface StockComparisonTableProps {
   showBanner?: boolean;
   /** Show unit price and line total columns when item pricing is present. */
   showPricing?: boolean;
+  /** Show GRN/issue fulfillment quantities instead of the legacy allocated column. */
+  showFulfillment?: boolean;
+  /** Hide store-only "Available to issue" (e.g. Indent raiser). */
+  showAvailableToIssue?: boolean;
   /** Server-computed total (sum of line totals). Falls back to item sum. */
   totalEstimatedValue?: number | null;
 }
@@ -17,6 +21,10 @@ function lineItems(items: IndentLineItemDto[]) {
     const requestedQty = item.requestedQty ?? item.quantityRequested ?? 0;
     const availableQty = item.availableQty ?? 0;
     const allocatedQty = item.quantityAllocated ?? 0;
+    const receivedQty = item.quantityReceived ?? 0;
+    const issuedQty = item.quantityIssued ?? 0;
+    const availableToIssueQty = item.availableToIssueQty ?? 0;
+    const pendingReceiptQty = item.pendingReceiptQty ?? Math.max(0, requestedQty - receivedQty);
     const unitPrice = item.unitPrice ?? null;
     const lineTotal =
       item.lineTotal ??
@@ -27,6 +35,10 @@ function lineItems(items: IndentLineItemDto[]) {
       unit: item.unit || item.material?.unit || '',
       requestedQty,
       allocatedQty,
+      receivedQty,
+      issuedQty,
+      availableToIssueQty,
+      pendingReceiptQty,
       requiredQty: computeRequiredQty(requestedQty, availableQty),
       unitPrice,
       lineTotal,
@@ -39,6 +51,8 @@ export function StockComparisonTable({
   className,
   showBanner = true,
   showPricing = false,
+  showFulfillment = false,
+  showAvailableToIssue = true,
   totalEstimatedValue,
 }: StockComparisonTableProps) {
   const rows = lineItems(items);
@@ -46,6 +60,9 @@ export function StockComparisonTable({
 
   const hasShortfall = rows.some((row) => row.requiredQty > 0);
   const hasPricing = showPricing || rows.some((row) => row.unitPrice != null);
+  const fulfillmentCols = showFulfillment
+    ? 3 + (showAvailableToIssue ? 1 : 0)
+    : 1;
   const computedTotal =
     totalEstimatedValue ??
     (hasPricing
@@ -77,7 +94,18 @@ export function StockComparisonTable({
             <tr>
               <th>Item</th>
               <th className="num w-20">Requested</th>
-              <th className="num w-20">Allocated</th>
+              {showFulfillment ? (
+                <>
+                  <th className="num w-20">GRN received</th>
+                  <th className="num w-20">Issued</th>
+                  {showAvailableToIssue && (
+                    <th className="num w-24">Available to issue</th>
+                  )}
+                  <th className="num w-24">Pending receipt</th>
+                </>
+              ) : (
+                <th className="num w-20">Allocated</th>
+              )}
               {hasPricing && (
                 <>
                   <th className="num w-24">Unit price</th>
@@ -94,7 +122,20 @@ export function StockComparisonTable({
                   {row.unit && !hasPricing ? ` (${row.unit})` : ''}
                 </td>
                 <td className="num">{formatQuantity(row.requestedQty, row.unit)}</td>
-                <td className="num">{formatQuantity(row.allocatedQty, row.unit)}</td>
+                {showFulfillment ? (
+                  <>
+                    <td className="num">{formatQuantity(row.receivedQty, row.unit)}</td>
+                    <td className="num">{formatQuantity(row.issuedQty, row.unit)}</td>
+                    {showAvailableToIssue && (
+                      <td className="num font-medium text-emerald-700">
+                        {formatQuantity(row.availableToIssueQty, row.unit)}
+                      </td>
+                    )}
+                    <td className="num">{formatQuantity(row.pendingReceiptQty, row.unit)}</td>
+                  </>
+                ) : (
+                  <td className="num">{formatQuantity(row.allocatedQty, row.unit)}</td>
+                )}
                 {hasPricing && (
                   <>
                     <td className="num text-ink-secondary">
@@ -109,7 +150,7 @@ export function StockComparisonTable({
           {hasPricing && computedTotal != null && (
             <tfoot>
               <tr className="bg-slate-100 font-semibold">
-                <td colSpan={4} className="text-right">
+                <td colSpan={2 + fulfillmentCols + (hasPricing ? 1 : 0)} className="text-right">
                   Total estimated value
                 </td>
                 <td className="num font-bold">{formatCurrency(computedTotal)}</td>
