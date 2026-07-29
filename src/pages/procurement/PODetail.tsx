@@ -32,6 +32,7 @@ import { ProcurementRefField } from '@/components/ProcurementRefField';
 import { FulfillmentStatusChip } from '@/components/FulfillmentStatusChip';
 import { DetailField, DetailFieldGrid } from '@/components/ui/DetailFields';
 import { useApprovalShortcuts } from '@/hooks/useApprovalShortcuts';
+import { useApprovalLimits } from '@/hooks/useApprovalLimits';
 import type { DelegationStatusDto, PoGrnsDto } from '@afios/shared';
 
 const PO_PDF_AFTER_COORDINATOR_STATUSES = ['APPROVED'] as const;
@@ -74,6 +75,7 @@ export function PODetailPage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user)!;
   const role = user.role as UserRole;
+  const { data: approvalLimits } = useApprovalLimits();
   const [note, setNote] = useState('');
   const [editing, setEditing] = useState(false);
   const [showOverrideModal, setShowOverrideModal] = useState(false);
@@ -140,9 +142,12 @@ export function PODetailPage() {
         id,
       ]);
       if (previous && payload.action === 'APPROVE') {
+        const amount = Number(previous.data.amount || 0);
+        const threshold = approvalLimits?.poCoordinatorMaxInr ?? 5000;
+        const nextStatus = amount > threshold ? 'CHAIRMAN_PENDING' : 'APPROVED';
         queryClient.setQueryData(['purchase-order', id], {
           ...previous,
-          data: { ...previous.data, status: 'APPROVED' },
+          data: { ...previous.data, status: nextStatus },
         });
       }
       return { previous };
@@ -164,7 +169,11 @@ export function PODetailPage() {
       setDoneMessage(msg);
       setDone(true);
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ['purchase-order', id] }),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchase-order', id] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-orders-browse'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+    },
   });
 
   const pmApprove = useMutation({
@@ -202,6 +211,11 @@ export function PODetailPage() {
       setDoneMessage('Purchase order approved');
       setDone(true);
     },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchase-order', id] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-orders-browse'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+    },
   });
 
   const approveOverride = useMutation({
@@ -215,7 +229,11 @@ export function PODetailPage() {
     onError: (e: Error & { response?: { data?: { message?: string } } }) => {
       toast.error(e.response?.data?.message || 'Override approval failed');
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ['purchase-order', id] }),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchase-order', id] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-orders-browse'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+    },
   });
 
   const reject = useMutation({
@@ -313,7 +331,8 @@ export function PODetailPage() {
 
   const po = data.data;
   const nextStep = getNextStepInfo(po);
-  const needsChairmanBand = po.amount > 10000;
+  const chairmanThreshold = approvalLimits?.poCoordinatorMaxInr ?? 5000;
+  const needsChairmanBand = po.amount > chairmanThreshold;
   const isCoordinator =
     role === UserRole.COORDINATOR &&
     (po.status === 'PENDING_REVIEW' ||

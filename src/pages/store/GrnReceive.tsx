@@ -8,6 +8,7 @@ import {
   UserRole,
   formatCurrency,
   formatDate,
+  formatQuantity,
   type PurchaseOrderDto,
   type PoGrnReceiptLineDto,
   type ProjectGrnCounterDto,
@@ -20,6 +21,19 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { ListQueryBoundary } from '@/components/ListQueryBoundary';
 import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 import { cn } from '@/lib/utils';
+import { DetailField, DetailFieldGrid } from '@/components/ui/DetailFields';
+
+type ReceiveType = 'PARTIAL' | 'FULL';
+type AttachmentCategory = 'INVOICE' | 'CHALLAN' | 'PHOTO';
+
+interface GrnAttachmentDto {
+  id?: string;
+  name: string;
+  fileType: string;
+  category: AttachmentCategory;
+  url?: string;
+  dataBase64?: string;
+}
 
 interface GrnListRow {
   id: string;
@@ -30,15 +44,44 @@ interface GrnListRow {
   vendorName: string;
   status: string;
   receivedAt: string | null;
+  invoiceNo?: string;
+  invoiceDate?: string | null;
+  invoiceValue?: number;
+  challanNo?: string;
+  ewayBillNumber?: string;
+  vehicleNo?: string;
+  driverName?: string;
+  note?: string;
+  remarks?: string;
+  receiveType?: string;
+  quantityOrdered?: number;
+  quantityReceivedThisGrn?: number;
+  quantityReceived?: number;
+  quantityRemaining?: number;
+  items?: Array<{
+    materialName: string;
+    quantity: number;
+    quantityOrdered?: number;
+    unit?: string;
+    rate?: number;
+  }>;
+  attachments?: GrnAttachmentDto[];
+  receivedByName?: string;
 }
 
-type ReceiveType = 'PARTIAL' | 'FULL';
-type AttachmentCategory = 'INVOICE' | 'CHALLAN' | 'PHOTO';
+function formatQtySummary(ordered?: number, received?: number, remaining?: number) {
+  return {
+    ordered: formatQuantity(Number(ordered || 0)),
+    received: formatQuantity(Number(received || 0)),
+    left: formatQuantity(Number(remaining || 0)),
+  };
+}
 
 interface GrnAttachment {
   name: string;
   fileType: string;
   category: AttachmentCategory;
+  dataBase64?: string;
 }
 
 interface GrnCreateResponse {
@@ -46,6 +89,34 @@ interface GrnCreateResponse {
   grnNumber: string;
   status: string;
   approvalStage?: string;
+}
+
+async function readFileAsBase64(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+async function openStoredAttachment(url: string, fileName: string, fileType?: string) {
+  const path = url.startsWith('/api/') ? url.slice(4) : url;
+  const res = await api.get(path, { responseType: 'blob' });
+  const blob = new Blob([res.data], { type: fileType || res.data.type || 'application/octet-stream' });
+  const objectUrl = window.URL.createObjectURL(blob);
+  const opened = window.open(objectUrl, '_blank', 'noopener,noreferrer');
+  if (!opened) {
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+  window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 60_000);
 }
 
 function mapPoLinesToReceiptLines(po: PurchaseOrderDto): PoGrnReceiptLineDto[] {
@@ -78,10 +149,11 @@ function hasAttachmentCategory(attachments: GrnAttachment[], category: Attachmen
 export function GrnReceivePage() {
   const accent = ROLE_COLORS[UserRole.COORDINATOR].primary;
   const [selectedPo, setSelectedPo] = useState<PurchaseOrderDto | null>(null);
+  const [selectedGrnId, setSelectedGrnId] = useState<string | null>(null);
   const [receiptLines, setReceiptLines] = useState<PoGrnReceiptLineDto[]>([]);
-  const [receivedByLine, setReceivedByLine] = useState<Record<string, number>>({});
+  const [receivedByLine, setReceivedByLine] = useState<Record<string, number | ''>>({});
   const [invoicePriceByLine, setInvoicePriceByLine] = useState<Record<string, number>>({});
-  const [receiveType, setReceiveType] = useState<ReceiveType>('FULL');
+  const [receiveType, setReceiveType] = useState<ReceiveType>('PARTIAL');
   const [invoiceNo, setInvoiceNo] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [challanNo, setChallanNo] = useState('');
@@ -112,6 +184,20 @@ export function GrnReceivePage() {
   });
 
   const {
+    data: grnDetail,
+    isLoading: grnDetailLoading,
+    isError: grnDetailError,
+    refetch: refetchGrnDetail,
+  } = useQuery({
+    queryKey: ['grn-detail', selectedGrnId],
+    queryFn: async () => {
+      const res = await api.get<{ data: GrnListRow }>(`/goods-receipts/${selectedGrnId}`);
+      return res.data.data;
+    },
+    enabled: !!selectedGrnId,
+  });
+
+  const {
     data: grnContext,
     isLoading: grnLoading,
     isError: grnError,
@@ -130,7 +216,7 @@ export function GrnReceivePage() {
   const invoiceValue = useMemo(() => {
     return receiptLines.reduce((sum, row) => {
       const key = lineKey(row);
-      const qty = receivedByLine[key] ?? 0;
+      const qty = Number(receivedByLine[key] || 0);
       const price = invoicePriceByLine[key] ?? row.poRate;
       return sum + qty * price;
     }, 0);
@@ -149,11 +235,11 @@ export function GrnReceivePage() {
         : [];
     if (!lines.length) return;
     setReceiptLines(lines);
-    const received: Record<string, number> = {};
+    const received: Record<string, number | ''> = {};
     const prices: Record<string, number> = {};
     lines.forEach((line) => {
       const key = lineKey(line);
-      received[key] = receiveType === 'FULL' ? line.remainingQty : 0;
+      received[key] = receiveType === 'FULL' ? line.remainingQty : '';
       prices[key] = line.poRate;
     });
     setReceivedByLine(received);
@@ -162,10 +248,11 @@ export function GrnReceivePage() {
 
   const resetForm = () => {
     setSelectedPo(null);
+    setSelectedGrnId(null);
     setReceiptLines([]);
     setReceivedByLine({});
     setInvoicePriceByLine({});
-    setReceiveType('FULL');
+    setReceiveType('PARTIAL');
     setInvoiceNo('');
     setChallanNo('');
     setEwayBillNumber('');
@@ -173,18 +260,25 @@ export function GrnReceivePage() {
     setAttachments([]);
   };
 
-  const pickFiles = (
+  const pickFiles = async (
     files: FileList | null,
     category: AttachmentCategory,
     input: HTMLInputElement | null
   ) => {
     if (!files?.length) return;
-    const added = Array.from(files).map((f) => ({
-      name: f.name,
-      fileType: f.type || 'application/octet-stream',
-      category,
-    }));
-    setAttachments((prev) => [...prev, ...added]);
+    try {
+      const added = await Promise.all(
+        Array.from(files).map(async (f) => ({
+          name: f.name,
+          fileType: f.type || 'application/octet-stream',
+          category,
+          dataBase64: await readFileAsBase64(f),
+        }))
+      );
+      setAttachments((prev) => [...prev, ...added]);
+    } catch {
+      toast.error('Could not read one or more files');
+    }
     if (input) input.value = '';
   };
 
@@ -194,6 +288,14 @@ export function GrnReceivePage() {
 
   const validateSubmit = (saveDraft: boolean) => {
     if (saveDraft) return true;
+    const totalReceivingNow = Object.values(receivedByLine).reduce<number>(
+      (sum, value) => sum + Number(value || 0),
+      0
+    );
+    if (totalReceivingNow <= 0) {
+      toast.error('Enter the quantity received in this GRN');
+      return false;
+    }
     if (!hasInvoiceUpload || !hasChallanUpload) {
       toast.error('Invoice and Challan uploads are required');
       return false;
@@ -209,7 +311,7 @@ export function GrnReceivePage() {
       if (!selectedPo) throw new Error('No PO');
       const items = receiptLines.map((line) => {
         const key = lineKey(line);
-        const qty = receivedByLine[key] ?? 0;
+        const qty = Number(receivedByLine[key] || 0);
         const invoiceUnitPrice = invoicePriceByLine[key] ?? line.poRate;
         return {
           materialId: line.materialId!,
@@ -262,8 +364,9 @@ export function GrnReceivePage() {
   };
 
   const openPo = (po: PurchaseOrderDto) => {
+    setSelectedGrnId(null);
     setSelectedPo(po);
-    setReceiveType('FULL');
+    setReceiveType('PARTIAL');
     setInvoiceNo('');
     setChallanNo('');
     setEwayBillNumber('');
@@ -271,14 +374,165 @@ export function GrnReceivePage() {
     setAttachments([]);
   };
 
+  const openGrn = (grnId: string) => {
+    setSelectedPo(null);
+    setSelectedGrnId(grnId);
+  };
+
   return (
-    <div className="page-container max-w-6xl">
+    <div className="page-container max-w-full">
       <PageHeader
         title="Material receipt (GRN)"
         subtitle="One GRN per supplier invoice — variances go on hold for approval"
       />
 
-      {!selectedPo ? (
+      {selectedGrnId ? (
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={() => setSelectedGrnId(null)}
+            className="inline-flex items-center gap-2 text-sm font-medium text-ink-secondary hover:text-ink"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to GRN list
+          </button>
+
+          {grnDetailLoading && <p className="text-sm text-ink-muted">Loading GRN…</p>}
+          {grnDetailError && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 flex flex-wrap items-center justify-between gap-2">
+              <span>Could not load this GRN.</span>
+              <Button type="button" variant="secondary" size="sm" onClick={() => refetchGrnDetail()}>
+                Retry
+              </Button>
+            </div>
+          )}
+
+          {grnDetail && (
+            <div className="panel overflow-hidden">
+              <div className="h-1 bg-bekem-accent" />
+              <div className="p-4 sm:p-3 space-y-4">
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-surface-border pb-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
+                      Material receipt
+                    </p>
+                    <h2 className="text-lg font-semibold text-ink mt-0.5">{grnDetail.grnNumber}</h2>
+                    <p className="text-sm text-ink-secondary mt-1">
+                      {grnDetail.poNumber} · {grnDetail.vendorName}
+                    </p>
+                  </div>
+                  <StatusBadge status={grnDetail.status} />
+                </div>
+
+                <DetailFieldGrid>
+                  <DetailField label="Indent">{grnDetail.indentNumber || '—'}</DetailField>
+                  <DetailField label="Received on">
+                    {grnDetail.receivedAt ? formatDate(grnDetail.receivedAt) : '—'}
+                  </DetailField>
+                  <DetailField label="Received by">{grnDetail.receivedByName || '—'}</DetailField>
+                  <DetailField label="Receive type">{grnDetail.receiveType || '—'}</DetailField>
+                  <DetailField label="Invoice number">{grnDetail.invoiceNo || '—'}</DetailField>
+                  <DetailField label="Invoice date">
+                    {grnDetail.invoiceDate ? formatDate(grnDetail.invoiceDate) : '—'}
+                  </DetailField>
+                  <DetailField label="Invoice value">
+                    {grnDetail.invoiceValue != null
+                      ? formatCurrency(grnDetail.invoiceValue)
+                      : '—'}
+                  </DetailField>
+                  <DetailField label="Challan number">{grnDetail.challanNo || '—'}</DetailField>
+                  <DetailField label="E-Way bill">{grnDetail.ewayBillNumber || '—'}</DetailField>
+                  <DetailField label="Vehicle">{grnDetail.vehicleNo || '—'}</DetailField>
+                  <DetailField label="Driver">{grnDetail.driverName || '—'}</DetailField>
+                  <DetailField label="Remarks" fullWidth>
+                    {grnDetail.note || grnDetail.remarks || '—'}
+                  </DetailField>
+                </DetailFieldGrid>
+
+                <div>
+                  <p className="section-label mb-2">Items received</p>
+                  <div className="table-shell">
+                    <table className="data-table min-w-[40rem]">
+                      <thead>
+                        <tr>
+                          <th>Material</th>
+                          <th className="num">Ordered</th>
+                          <th className="num">Received in this GRN</th>
+                          <th>Unit</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(grnDetail.items || []).map((item, index) => (
+                          <tr key={`${item.materialName}-${index}`}>
+                            <td className="cell-text">{item.materialName}</td>
+                            <td className="num tabular-nums">
+                              {formatQuantity(Number(item.quantityOrdered || 0))}
+                            </td>
+                            <td className="num tabular-nums font-semibold">
+                              {formatQuantity(Number(item.quantity || 0))}
+                            </td>
+                            <td>{item.unit || '—'}</td>
+                          </tr>
+                        ))}
+                        {!grnDetail.items?.length && (
+                          <tr>
+                            <td colSpan={4} className="text-ink-muted">
+                              No line items recorded
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="section-label mb-2">Documents shared</p>
+                  {(grnDetail.attachments || []).length ? (
+                    <ul className="space-y-2">
+                      {grnDetail.attachments!.map((file, index) => (
+                        <li
+                          key={`${file.name}-${index}`}
+                          className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-surface-border px-3 py-2"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-ink truncate">
+                              {file.category}: {file.name}
+                            </p>
+                            <p className="text-[11px] text-ink-muted">{file.fileType}</p>
+                          </div>
+                          {file.url ? (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              onClick={() =>
+                                void openStoredAttachment(
+                                  file.url!,
+                                  file.name,
+                                  file.fileType
+                                ).catch(() => toast.error('Could not open file'))
+                              }
+                            >
+                              Open
+                            </Button>
+                          ) : (
+                            <span className="text-[11px] text-ink-muted">
+                              File name recorded only
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-ink-muted">No documents attached to this GRN.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : !selectedPo ? (
         <div className="space-y-6">
         <div>
           <h2 className="section-label mb-3">Pending material receipts</h2>
@@ -296,18 +550,27 @@ export function GrnReceivePage() {
           }
         >
           <div className="table-shell">
-            <table className="data-table min-w-[64rem]">
+            <table className="data-table min-w-[72rem]">
               <thead>
                 <tr>
                   <th>PO No</th>
                   <th>Reference</th>
                   <th>Vendor</th>
                   <th>Project</th>
+                  <th className="num">Ordered</th>
+                  <th className="num">Received</th>
+                  <th className="num">Left</th>
                   <th className="w-10" />
                 </tr>
               </thead>
               <tbody>
-                {(orders ?? []).map((po) => (
+                {(orders ?? []).map((po) => {
+                  const qty = formatQtySummary(
+                    po.receiptSummary?.orderedQty,
+                    po.receiptSummary?.receivedQty,
+                    po.receiptSummary?.remainingQty
+                  );
+                  return (
                   <tr key={po.id} className="cursor-pointer" onClick={() => openPo(po)}>
                     <td className="cell-code whitespace-nowrap">PO #{po.displayPoNumber || '—'}</td>
                     <td className="cell-text whitespace-nowrap">{po.procurementRef || po.poNumber}</td>
@@ -315,11 +578,15 @@ export function GrnReceivePage() {
                     <td className="cell-text whitespace-nowrap">
                       {po.purchaseRequest?.project?.code || '—'}
                     </td>
+                    <td className="num tabular-nums whitespace-nowrap">{qty.ordered}</td>
+                    <td className="num tabular-nums whitespace-nowrap">{qty.received}</td>
+                    <td className="num tabular-nums whitespace-nowrap font-semibold">{qty.left}</td>
                     <td className="text-right">
                       <ChevronRight className="h-4 w-4 text-ink-muted inline-block" />
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -342,32 +609,59 @@ export function GrnReceivePage() {
               }
             >
               <div className="table-shell">
-                <table className="data-table min-w-[56rem]">
+                <table className="data-table min-w-[80rem]">
                   <thead>
                     <tr>
                       <th>GRN Number</th>
                       <th>PO Number</th>
                       <th>Indent Number</th>
                       <th>Vendor</th>
+                      <th>Invoice</th>
                       <th>Material Receipt Date</th>
+                      <th className="num">Ordered</th>
+                      <th className="num">This GRN</th>
+                      <th className="num">Received</th>
+                      <th className="num">Left</th>
                       <th>Status</th>
+                      <th className="w-10" />
                     </tr>
                   </thead>
                   <tbody>
-                    {(receipts ?? []).map((g) => (
-                      <tr key={g.id}>
+                    {(receipts ?? []).map((g) => {
+                      const qty = formatQtySummary(
+                        g.quantityOrdered,
+                        g.quantityReceived,
+                        g.quantityRemaining
+                      );
+                      return (
+                      <tr
+                        key={g.id}
+                        className="cursor-pointer"
+                        onClick={() => openGrn(g.id)}
+                      >
                         <td className="cell-code whitespace-nowrap">{g.grnNumber}</td>
                         <td className="cell-code whitespace-nowrap">{g.poNumber || '—'}</td>
                         <td className="cell-code whitespace-nowrap">{g.indentNumber || '—'}</td>
                         <td className="cell-text">{g.vendorName || '—'}</td>
+                        <td className="cell-code whitespace-nowrap">{g.invoiceNo || '—'}</td>
                         <td className="whitespace-nowrap">
                           {g.receivedAt ? formatDate(g.receivedAt) : '—'}
                         </td>
+                        <td className="num tabular-nums whitespace-nowrap">{qty.ordered}</td>
+                        <td className="num tabular-nums whitespace-nowrap">
+                          {formatQuantity(Number(g.quantityReceivedThisGrn || 0))}
+                        </td>
+                        <td className="num tabular-nums whitespace-nowrap">{qty.received}</td>
+                        <td className="num tabular-nums whitespace-nowrap font-semibold">{qty.left}</td>
                         <td>
                           <StatusBadge status={g.status} />
                         </td>
+                        <td className="text-right">
+                          <ChevronRight className="h-4 w-4 text-ink-muted inline-block" />
+                        </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -425,13 +719,14 @@ export function GrnReceivePage() {
               )}
 
               <div className="overflow-x-auto rounded-xl border border-surface-border">
-                <table className="data-table min-w-[760px]">
+                <table className="data-table min-w-[860px]">
                   <thead>
                     <tr>
                       <th className="text-left">Item</th>
                       <th className="text-right w-20">Ordered</th>
-                      <th className="text-right w-28">Received</th>
-                      <th className="text-right w-20">Balance</th>
+                      <th className="text-right w-28">Already received</th>
+                      <th className="text-right w-28">Receive now</th>
+                      <th className="text-right w-24">Balance after</th>
                       <th className="text-center w-14">Unit</th>
                       <th className="text-right w-28">PO rate</th>
                       <th className="text-right w-32">Invoice rate</th>
@@ -441,14 +736,15 @@ export function GrnReceivePage() {
                   <tbody>
                     {!receiptLines.length && !grnLoading ? (
                       <tr>
-                        <td colSpan={8} className="text-center text-sm text-ink-muted py-6">
+                        <td colSpan={9} className="text-center text-sm text-ink-muted py-6">
                           No line items on this PO.
                         </td>
                       </tr>
                     ) : null}
                     {receiptLines.map((row) => {
                       const key = lineKey(row);
-                      const received = receivedByLine[key] ?? 0;
+                      const receivedValue = receivedByLine[key] ?? '';
+                      const received = Number(receivedValue || 0);
                       const invoicePrice = invoicePriceByLine[key] ?? row.poRate;
                       const balance = Math.max(0, row.orderedQty - row.previouslyReceived - received);
                       const lineTotal = received * invoicePrice;
@@ -459,21 +755,21 @@ export function GrnReceivePage() {
                         <tr key={key}>
                           <td>
                             <p className="font-medium text-ink">{row.description}</p>
-                            {row.previouslyReceived > 0 && (
-                              <p className="text-[11px] text-ink-muted mt-0.5">
-                                Previously received: {row.previouslyReceived}
-                              </p>
-                            )}
                           </td>
                           <td className="text-right tabular-nums font-medium">{row.orderedQty}</td>
+                          <td className="text-right tabular-nums font-medium text-ink-secondary">
+                            {row.previouslyReceived}
+                          </td>
                           <td className="text-right">
                             <Input
                               type="number"
                               min={0}
                               step="any"
-                              value={received}
+                              value={receivedValue}
+                              placeholder="Enter qty"
                               onChange={(e) => {
-                                const v = Math.max(0, Number(e.target.value) || 0);
+                                const raw = e.target.value;
+                                const v = raw === '' ? '' : Math.max(0, Number(raw));
                                 setReceivedByLine((prev) => ({ ...prev, [key]: v }));
                               }}
                               className={cn(
@@ -514,7 +810,7 @@ export function GrnReceivePage() {
                   </tbody>
                   <tfoot>
                     <tr className="bg-surface-muted/40">
-                      <td colSpan={7} className="text-right font-semibold text-ink-secondary">
+                      <td colSpan={8} className="text-right font-semibold text-ink-secondary">
                         Invoice value
                       </td>
                       <td className="text-right font-bold tabular-nums">{formatCurrency(invoiceValue)}</td>
@@ -571,9 +867,9 @@ export function GrnReceivePage() {
                 </div>
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-ink-muted">Uploads</p>
-                  <input ref={invoiceRef} type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => pickFiles(e.target.files, 'INVOICE', invoiceRef.current)} />
-                  <input ref={challanRef} type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => pickFiles(e.target.files, 'CHALLAN', challanRef.current)} />
-                  <input ref={photosRef} type="file" className="hidden" accept="image/*" multiple onChange={(e) => pickFiles(e.target.files, 'PHOTO', photosRef.current)} />
+                  <input ref={invoiceRef} type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => void pickFiles(e.target.files, 'INVOICE', invoiceRef.current)} />
+                  <input ref={challanRef} type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => void pickFiles(e.target.files, 'CHALLAN', challanRef.current)} />
+                  <input ref={photosRef} type="file" className="hidden" accept="image/*" multiple onChange={(e) => void pickFiles(e.target.files, 'PHOTO', photosRef.current)} />
                   <div className="flex flex-wrap gap-2">
                     <Button
                       type="button"

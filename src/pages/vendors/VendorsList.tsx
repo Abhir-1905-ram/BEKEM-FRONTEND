@@ -24,7 +24,7 @@ export function VendorsListPage() {
   return (
     <div className="page-container max-w-full">
       <PageHeader
-        title="Vendors"
+        title="Vendors master list"
         subtitle="Supplier scorecards and performance history"
         action={
           role === UserRole.EXECUTIVE ? (

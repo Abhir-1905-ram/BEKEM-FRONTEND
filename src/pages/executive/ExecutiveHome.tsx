@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, ChevronRight, AlertTriangle, FileStack, ClipboardCheck, FilePlus, FileText } from 'lucide-react';
+import { ShoppingCart, ChevronRight, AlertTriangle, FileText } from 'lucide-react';
 import { getGreeting, formatCurrency } from '@afios/shared';
-import type { DeliveryAlertDto, ExecutiveDashboardDto, PurchaseOrderDto, RfqListItemDto } from '@afios/shared';
+import type { DeliveryAlertDto, ExecutiveDashboardDto, PurchaseOrderDto } from '@afios/shared';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/EmptyState';
@@ -13,9 +13,6 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { DashboardSearch } from '@/components/layout/DashboardSearch';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { DashboardWidgetCards } from '@/components/DashboardWidgetCards';
-import { ExecutiveProcurementWidget } from '@/components/ExecutiveProcurementWidget';
-import { ExecutivePurchaseRequestsWidget } from '@/components/ExecutivePurchaseRequestsWidget';
-import { ExecutiveRfqWidget } from '@/components/ExecutiveRfqWidget';
 import { FulfillmentStatusChip } from '@/components/FulfillmentStatusChip';
 import { PoEmailStatusChip } from '@/components/PoEmailStatusChip';
 import { TodayPanel } from '@/components/layout/TodayPanel';
@@ -62,22 +59,6 @@ export function ExecutiveHomePage() {
     },
   });
 
-  const {
-    data: rfqs,
-    isLoading: rfqsLoading,
-  } = useQuery({
-    queryKey: ['executive-rfqs'],
-    queryFn: async () => {
-      const res = await api.get<{ data: RfqListItemDto[] }>('/rfqs');
-      return res.data.data ?? [];
-    },
-  });
-
-  const openRfqCount = useMemo(
-    () => (rfqs ?? []).filter((r) => r.status === 'OPEN').length,
-    [rfqs]
-  );
-
   const { data: deliveryAlerts } = useQuery({
     queryKey: ['delivery-alerts'],
     queryFn: async () => {
@@ -122,19 +103,17 @@ export function ExecutiveHomePage() {
     <div className="page-container">
       <PageHeader
         eyebrow={getGreeting()}
-        title="Procurement process"
-        subtitle="Review indents, take decisions, raise RFQs, and create POs in order"
+        title="Executive dashboard"
+        subtitle="Manage the complete procurement process from one Indents page"
         action={
-          <div className="flex flex-wrap gap-2">
-            <Button variant="primary" size="lg" onClick={() => navigate('/executive/rfq/new')}>
-              <FileStack className="h-4 w-4" />
-              Create RFQ
-            </Button>
-            <Button variant="secondary" size="lg" onClick={() => navigate('/executive/po/new')}>
-              <ShoppingCart className="h-4 w-4" />
-              Create PO
-            </Button>
-          </div>
+          <Button
+            variant="primary"
+            size="lg"
+            onClick={() => navigate('/executive/material-indents')}
+          >
+            <FileText className="h-4 w-4" />
+            Open Indents
+          </Button>
         }
       />
 
@@ -142,33 +121,17 @@ export function ExecutiveHomePage() {
 
       <section className="section-gap">
         <h2 className="section-label mb-3">Process</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <ActionCard
-            title="1. Review indents"
-            subtitle="Check site and store requests that need procurement attention"
+            title="Indents workflow"
+            subtitle="Review, decide, create RFQ, create PO, and track fulfillment"
             count={dashboard?.totals.pendingIndentCount ?? 0}
             icon={FileText}
             tone="warning"
             onClick={() => navigate('/executive/material-indents')}
           />
           <ActionCard
-            title="2. Take decisions"
-            subtitle="Choose purchase order or branch transfer for pending requests"
-            count={widgets?.widgets.pendingProcurementDecisions ?? 0}
-            icon={ClipboardCheck}
-            tone="info"
-            onClick={() => navigate('/executive/procurement-decisions')}
-          />
-          <ActionCard
-            title="3. Raise RFQs"
-            subtitle="Move approved purchase requests into quotation collection"
-            count={widgets?.widgets.pendingPurchaseRequests ?? 0}
-            icon={FilePlus}
-            tone="primary"
-            onClick={() => navigate('/executive/rfq/inbox')}
-          />
-          <ActionCard
-            title="4. Manage POs"
+            title="Purchase orders"
             subtitle="Track open purchase orders and follow through to fulfillment"
             count={dashboard?.totals.openPoCount ?? 0}
             icon={ShoppingCart}
@@ -192,27 +155,6 @@ export function ExecutiveHomePage() {
           </div>
         </div>
       )}
-
-      <ExecutiveProcurementWidget
-        total={widgets?.widgets.pendingProcurementDecisions}
-        poPending={widgets?.widgets.pendingPoDecisions}
-        btPending={widgets?.widgets.pendingBtDecisions}
-        loading={widgetsLoading}
-        onClick={() => navigate('/executive/procurement-decisions')}
-      />
-
-      <ExecutiveRfqWidget
-        openCount={openRfqCount}
-        totalCount={rfqs?.length ?? 0}
-        loading={rfqsLoading}
-        onClick={() => navigate('/executive/rfq/inbox')}
-      />
-
-      <ExecutivePurchaseRequestsWidget
-        count={widgets?.widgets.pendingPurchaseRequests}
-        loading={widgetsLoading}
-        onClick={() => navigate('/executive/rfq/inbox')}
-      />
 
       <DashboardWidgetCards widgets={widgets?.widgets} loading={widgetsLoading} />
 

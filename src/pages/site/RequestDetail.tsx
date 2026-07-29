@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/authStore';
 import {
   formatDate,
   formatCurrency,
+  formatQuantity,
   ROLE_COLORS,
   UserRole,
   hideIndentPricingForRole,
@@ -205,8 +206,19 @@ export function RequestDetailPage() {
     ['PENDING_HO', 'PENDING_EXECUTIVE_DECISION', 'EXECUTIVE_DECISION_PO', 'EXECUTIVE_DECISION_BRANCH_TRANSFER'].includes(
       request.status
     );
+  const showProcurementTrace =
+    [UserRole.EXECUTIVE, UserRole.COORDINATOR].includes(role) &&
+    Boolean(
+      request.purchaseRequestId ||
+        request.rfqId ||
+        request.poId ||
+        canHoReview
+    );
+  const awaitingDecision = ['PENDING_HO', 'PENDING_EXECUTIVE_DECISION'].includes(request.status);
   const canConfirmReceipt = role === UserRole.SITE_INCHARGE && request.status === 'ISSUED';
   const hidePricing = hideIndentPricingForRole(role, request.indentRequestType);
+  const isIndentRaiser = role === UserRole.SITE_INCHARGE;
+  const showAvailableToIssue = !isIndentRaiser;
   const canEdit =
     request.canEdit === true || canEditIndentOneLevelAhead(role, request.status);
 
@@ -416,7 +428,9 @@ export function RequestDetailPage() {
         <div className="px-4 py-3 border-b border-surface-border">
           <h2 className="font-semibold text-gray-900">Indent line items</h2>
           <p className="text-xs text-ink-secondary mt-1">
-            Location, required date, allocated, and issued quantities are tracked per product line.
+            {showAvailableToIssue
+              ? 'GRN receipts, issues, available stock, and pending receipts are tracked per product line.'
+              : 'GRN receipts, issues, and pending receipts are tracked per product line.'}
           </p>
         </div>
         <div className="table-shell">
@@ -427,8 +441,12 @@ export function RequestDetailPage() {
                 <th>Location</th>
                 <th>Required by</th>
                 <th className="num">Requested</th>
-                <th className="num">Allocated</th>
+                <th className="num">GRN received</th>
                 <th className="num">Issued</th>
+                {showAvailableToIssue && (
+                  <th className="num">Available to issue</th>
+                )}
+                <th className="num">Pending receipt</th>
               </tr>
             </thead>
             <tbody>
@@ -443,10 +461,18 @@ export function RequestDetailPage() {
                     {item.quantityRequested} {item.unit || item.material?.unit || ''}
                   </td>
                   <td className="num tabular-nums">
-                    {item.quantityAllocated ?? 0} {item.unit || item.material?.unit || ''}
+                    {item.quantityReceived ?? 0} {item.unit || item.material?.unit || ''}
                   </td>
                   <td className="num tabular-nums">
                     {item.quantityIssued ?? 0} {item.unit || item.material?.unit || ''}
+                  </td>
+                  {showAvailableToIssue && (
+                    <td className="num tabular-nums font-semibold text-emerald-700">
+                      {item.availableToIssueQty ?? 0} {item.unit || item.material?.unit || ''}
+                    </td>
+                  )}
+                  <td className="num tabular-nums">
+                    {item.pendingReceiptQty ?? 0} {item.unit || item.material?.unit || ''}
                   </td>
                 </tr>
               ))}
@@ -455,11 +481,65 @@ export function RequestDetailPage() {
         </div>
       </Card>
 
+      <Card className="mb-3 overflow-hidden p-0">
+        <div className="px-4 py-3 border-b border-surface-border">
+          <h2 className="font-semibold text-gray-900">GRN and invoice details</h2>
+          <p className="text-xs text-ink-secondary mt-1">
+            Complete receipt traceability for this indent.
+          </p>
+        </div>
+        {request.grns?.length ? (
+          <div className="divide-y divide-surface-border">
+            {request.grns.map((grn) => (
+              <div key={grn.id} className="p-4 space-y-3">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <DetailField label="GRN number">{grn.grnNumber}</DetailField>
+                  <DetailField label="Received on">{formatDate(grn.receivedAt)}</DetailField>
+                  <DetailField label="GRN status">
+                    {grn.status.replace(/_/g, ' ')}
+                  </DetailField>
+                  <DetailField label="PO number">{grn.poNumber || '—'}</DetailField>
+                  <DetailField label="Vendor">{grn.vendorName || '—'}</DetailField>
+                  <DetailField label="Invoice number">
+                    {grn.invoiceNumber || '—'}
+                  </DetailField>
+                  <DetailField label="Invoice date">
+                    {grn.invoiceDate ? formatDate(grn.invoiceDate) : '—'}
+                  </DetailField>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Products received</p>
+                  <div className="rounded-lg border border-surface-border divide-y divide-surface-border">
+                    {grn.items.map((item) => (
+                      <div
+                        key={`${grn.id}-${item.materialId}`}
+                        className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
+                      >
+                        <span className="text-gray-900">{item.materialName}</span>
+                        <span className="font-medium tabular-nums">
+                          {formatQuantity(item.quantityReceived, item.unit)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="px-4 py-5 text-sm text-ink-muted">
+            No GRN or invoice has been recorded for this indent yet.
+          </p>
+        )}
+      </Card>
+
       <h2 className="font-semibold text-gray-900 mb-3">Stock comparison (requesting site)</h2>
       <StockComparisonTable
         items={items}
         className="mb-3"
         showPricing={!hidePricing}
+        showFulfillment
+        showAvailableToIssue={showAvailableToIssue}
         totalEstimatedValue={hidePricing ? undefined : request.estimatedValue}
       />
 
@@ -541,26 +621,119 @@ export function RequestDetailPage() {
         </div>
       )}
 
-      {canHoReview && (
+      {showProcurementTrace && (
         <div className="mb-3 space-y-3 panel p-3">
-          <p className="text-sm font-semibold text-ink">Head Office procurement</p>
-          <p className="text-xs text-ink-secondary">
-            This indent is in the procurement decision workflow. Open Procurement Decisions to select
-            or review the method.
-          </p>
-          <Button
-            variant="accent"
-            accentColor={ROLE_COLORS[UserRole.EXECUTIVE].primary}
-            onClick={() =>
-              navigate(
-                role === UserRole.COORDINATOR
-                  ? `/coordinator/procurement-decisions/${request.id}`
-                  : `/executive/procurement-decisions/${request.id}`
-              )
-            }
-          >
-            Open procurement decision
-          </Button>
+          <p className="text-sm font-semibold text-ink">Procurement progress</p>
+          <div className="space-y-1.5 text-sm text-ink-secondary">
+            <p>
+              PR:{' '}
+              <span className="font-medium text-ink">
+                {request.prNumber || (request.purchaseRequestId ? 'Created' : 'Not created')}
+              </span>
+            </p>
+            <p>
+              RFQ:{' '}
+              <span className="font-medium text-ink">
+                {request.rfqNumber
+                  ? `${request.rfqNumber}${
+                      request.rfqStatus
+                        ? ` · ${
+                            request.rfqStatus === 'OPEN'
+                              ? 'awaiting quotes'
+                              : request.rfqStatus === 'FINALIZED'
+                                ? request.poId
+                                  ? 'finalized (PO created)'
+                                  : 'finalized — ready for PO'
+                                : request.rfqStatus.replace(/_/g, ' ')
+                          }`
+                        : ''
+                    }`
+                  : 'Not started'}
+              </span>
+            </p>
+            <p>
+              PO:{' '}
+              <span className="font-medium text-ink">
+                {request.poNumber
+                  ? `${request.poNumber}${
+                      request.poStatus ? ` · ${request.poStatus.replace(/_/g, ' ')}` : ''
+                    }`
+                  : 'Not created'}
+              </span>
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {awaitingDecision && (
+              <Button
+                variant="accent"
+                accentColor={ROLE_COLORS[UserRole.EXECUTIVE].primary}
+                onClick={() =>
+                  navigate(
+                    role === UserRole.COORDINATOR
+                      ? `/coordinator/procurement-decisions/${request.id}`
+                      : `/executive/procurement-decisions/${request.id}`
+                  )
+                }
+              >
+                Review & decide
+              </Button>
+            )}
+            {!request.rfqId && request.purchaseRequestId && role === UserRole.EXECUTIVE && (
+              <Button
+                variant="primary"
+                onClick={() =>
+                  navigate(
+                    `/executive/rfq/new?purchaseRequestId=${request.purchaseRequestId}`
+                  )
+                }
+              >
+                Create RFQ
+              </Button>
+            )}
+            {request.rfqId && (
+              <Button variant="secondary" onClick={() => navigate(`/rfqs/${request.rfqId}`)}>
+                Open RFQ
+              </Button>
+            )}
+            {request.rfqId &&
+              request.rfqStatus === 'FINALIZED' &&
+              !request.poId &&
+              request.purchaseRequestId &&
+              role === UserRole.EXECUTIVE && (
+                <Button
+                  variant="primary"
+                  onClick={() =>
+                    navigate(
+                      `/executive/po/new?purchaseRequestId=${request.purchaseRequestId}`
+                    )
+                  }
+                >
+                  Create PO
+                </Button>
+              )}
+            {request.poId && (
+              <Button
+                variant="secondary"
+                onClick={() => navigate(`/purchase-orders/${request.poId}`)}
+              >
+                View PO
+              </Button>
+            )}
+            {request.status === 'EXECUTIVE_DECISION_BRANCH_TRANSFER' && (
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  navigate(
+                    role === UserRole.COORDINATOR
+                      ? `/coordinator/procurement-decisions/${request.id}`
+                      : `/executive/procurement-decisions/${request.id}`
+                  )
+                }
+              >
+                View branch transfer
+              </Button>
+            )}
+          </div>
         </div>
       )}
 

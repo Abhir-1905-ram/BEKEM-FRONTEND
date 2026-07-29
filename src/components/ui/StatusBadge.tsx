@@ -129,10 +129,12 @@ const STATUS_LABELS: Record<string, string> = {
   CHAIRMAN_APPROVED: 'Approved by Chairman',
   REJECTED: 'Rejected',
   CANCELLED: 'Cancelled',
-  CHAIRMAN_PENDING: 'Approved by Coordinator',
-  COORDINATOR_PENDING: 'Approved by Executive',
-  PENDING_REVIEW: 'Approved by Executive',
-  PENDING_APPROVAL: 'Awaiting Chairman',
+  /** PO / WO: previous step done, waiting on Chairman */
+  CHAIRMAN_PENDING: 'Coordinator approved — awaiting Chairman',
+  /** PO: waiting on Coordinator (Executive already created the PO) */
+  COORDINATOR_PENDING: 'Awaiting Coordinator',
+  PENDING_REVIEW: 'Awaiting Coordinator',
+  PENDING_APPROVAL: 'Coordinator approved — awaiting Chairman',
   PENDING_ACCEPTANCE: 'Awaiting contractor',
   ACCEPTED: 'Accepted',
   IN_PROGRESS: 'In progress',

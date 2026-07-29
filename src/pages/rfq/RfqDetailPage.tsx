@@ -30,7 +30,8 @@ export function RfqDetailPage() {
   });
 
   const quotesObtained = rfq?.status === 'FINALIZED' || Boolean(rfq?.quotesObtainedAt);
-  const showProceed = quotesObtained || rfqsObtainedChecked;
+  const hasPo = Boolean(rfq?.poId);
+  const showProceed = !hasPo && (quotesObtained || rfqsObtainedChecked);
 
   useEffect(() => {
     if (quotesObtained) {
@@ -164,51 +165,78 @@ export function RfqDetailPage() {
                 </ul>
               )}
               <p className="text-xs text-ink-muted">
-                Share this RFQ with vendors. When they reply, mark RFQs Obtained below. Vendor
-                selection, L1 / Non-L1, and remarks are filled on Create PO.
+                {hasPo
+                  ? 'This RFQ already has a purchase order. Use View PO below to open it.'
+                  : 'Share this RFQ with vendors. When they reply, mark RFQs Obtained below. Vendor selection, L1 / Non-L1, and remarks are filled on Create PO.'}
               </p>
             </div>
 
             <div className="panel p-3 space-y-3">
               {canProceedToPo ? (
                 <>
-                  <label className="flex items-start gap-2.5 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      className="mt-0.5 h-4 w-4"
-                      checked={quotesObtained || rfqsObtainedChecked}
-                      disabled={quotesObtained || markObtained.isPending}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        setRfqsObtainedChecked(checked);
-                        if (checked && !quotesObtained) {
-                          void markObtained.mutateAsync();
-                        }
-                      }}
-                    />
-                    <span>
-                      <span className="block text-sm font-semibold text-ink">RFQs Obtained</span>
-                      <span className="block text-xs text-ink-secondary mt-0.5">
-                        Check this after vendors have shared their quotations.
-                      </span>
-                    </span>
-                  </label>
+                  {hasPo ? (
+                    <div className="space-y-3">
+                      <p className="text-sm text-ink">
+                        Purchase order created
+                        {rfq.poNumber ? (
+                          <>
+                            : <span className="font-semibold">{rfq.poNumber}</span>
+                          </>
+                        ) : null}
+                      </p>
+                      <p className="text-xs text-ink-secondary">
+                        RFQs Obtained is complete. Open the PO to track or edit further steps.
+                      </p>
+                      <Button
+                        variant="primary"
+                        onClick={() => navigate(`/purchase-orders/${rfq.poId}`)}
+                      >
+                        View PO
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5 h-4 w-4"
+                          checked={quotesObtained || rfqsObtainedChecked}
+                          disabled={quotesObtained || markObtained.isPending}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setRfqsObtainedChecked(checked);
+                            if (checked && !quotesObtained) {
+                              void markObtained.mutateAsync();
+                            }
+                          }}
+                        />
+                        <span>
+                          <span className="block text-sm font-semibold text-ink">RFQs Obtained</span>
+                          <span className="block text-xs text-ink-secondary mt-0.5">
+                            Check this after vendors have shared their quotations.
+                          </span>
+                        </span>
+                      </label>
 
-                  {showProceed && (
-                    <Button
-                      variant="primary"
-                      disabled={markObtained.isPending || !rfq.purchaseRequestId}
-                      onClick={() => void proceedToPo()}
-                    >
-                      {markObtained.isPending ? 'Saving…' : 'Open PO creation'}
-                    </Button>
+                      {showProceed && (
+                        <Button
+                          variant="primary"
+                          disabled={markObtained.isPending || !rfq.purchaseRequestId}
+                          onClick={() => void proceedToPo()}
+                        >
+                          {markObtained.isPending ? 'Saving…' : 'Open PO creation'}
+                        </Button>
+                      )}
+                    </>
                   )}
                 </>
               ) : (
                 <p className="text-xs text-ink-secondary">
-                  {quotesObtained
-                    ? 'Vendor quotations obtained — Executive can proceed with PO creation.'
-                    : 'Waiting for Executive to obtain vendor quotations and create PO.'}
+                  {hasPo
+                    ? `Purchase order created${rfq.poNumber ? ` (${rfq.poNumber})` : ''}.`
+                    : quotesObtained
+                      ? 'Vendor quotations obtained — Executive can proceed with PO creation.'
+                      : 'Waiting for Executive to obtain vendor quotations and create PO.'}
                 </p>
               )}
             </div>

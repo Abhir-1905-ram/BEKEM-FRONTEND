@@ -39,7 +39,7 @@ function subtitleForRole(role: UserRole): string {
     case UserRole.STORE_INCHARGE:
       return 'Material indents for your store and project';
     case UserRole.EXECUTIVE:
-      return 'Company-wide material indents from all sites';
+      return 'One place for each indent: decide → create RFQ → collect quotes → create PO';
     case UserRole.COORDINATOR:
       return 'All site material indents — head office view';
     case UserRole.CHAIRMAN:
@@ -50,7 +50,7 @@ function subtitleForRole(role: UserRole): string {
 }
 
 function titleForRole(role: UserRole): string {
-  if (role === UserRole.PROJECT_MANAGER) return 'Indents';
+  if ([UserRole.PROJECT_MANAGER, UserRole.EXECUTIVE].includes(role)) return 'Indents';
   return 'Material indents';
 }
 
@@ -157,6 +157,120 @@ export function IncidentsPage() {
     patchParams({ q: value.trim() || undefined });
   };
 
+  const renderExecutiveAction = (request: MaterialRequestDto) => {
+    if (['PENDING_HO', 'PENDING_EXECUTIVE_DECISION'].includes(request.status)) {
+      return (
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={() => navigate(`/executive/procurement-decisions/${request.id}`)}
+        >
+          Review & decide
+        </Button>
+      );
+    }
+    if (request.status === 'EXECUTIVE_DECISION_BRANCH_TRANSFER') {
+      return (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => navigate(`/executive/procurement-decisions/${request.id}`)}
+        >
+          View branch transfer
+        </Button>
+      );
+    }
+    if (request.poId) {
+      return (
+        <div className="flex flex-col items-start gap-1">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate(`/purchase-orders/${request.poId}`)}
+          >
+            View PO{request.poNumber ? ` ${request.poNumber}` : ''}
+          </Button>
+          {request.rfqId && (
+            <button
+              type="button"
+              className="text-[11px] font-semibold text-bekem-accent hover:underline"
+              onClick={() => navigate(`/rfqs/${request.rfqId}`)}
+            >
+              View RFQ {request.rfqNumber || ''}
+            </button>
+          )}
+        </div>
+      );
+    }
+    if (request.rfqId && request.rfqStatus === 'FINALIZED' && request.purchaseRequestId) {
+      return (
+        <div className="flex flex-col items-start gap-1">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() =>
+              navigate(`/executive/po/new?purchaseRequestId=${request.purchaseRequestId}`)
+            }
+          >
+            Create PO from RFQ
+          </Button>
+          <button
+            type="button"
+            className="text-[11px] font-semibold text-bekem-accent hover:underline"
+            onClick={() => navigate(`/rfqs/${request.rfqId}`)}
+          >
+            Open RFQ {request.rfqNumber}
+          </button>
+        </div>
+      );
+    }
+    if (request.rfqId) {
+      return (
+        <div className="flex flex-col items-start gap-1">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => navigate(`/rfqs/${request.rfqId}`)}
+          >
+            {request.rfqStatus === 'OPEN' ? 'Open RFQ — add quotes' : 'Open RFQ'}
+          </Button>
+          {request.rfqNumber && (
+            <span className="text-[10px] text-ink-muted">{request.rfqNumber}</span>
+          )}
+        </div>
+      );
+    }
+    if (request.purchaseRequestId) {
+      return (
+        <div className="flex flex-col items-start gap-1">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() =>
+              navigate(
+                `/executive/rfq/new?purchaseRequestId=${request.purchaseRequestId}`
+              )
+            }
+          >
+            Create RFQ
+          </Button>
+          {request.prNumber && (
+            <span className="text-[10px] text-ink-muted">From {request.prNumber}</span>
+          )}
+        </div>
+      );
+    }
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => navigate(`/requests/${request.id}`)}
+      >
+        View indent
+      </Button>
+    );
+  };
+
   return (
     <div className="page-container max-w-full">
       <div className="flex flex-col gap-2 mb-2 lg:mb-3">
@@ -171,6 +285,10 @@ export function IncidentsPage() {
                 options={queueOptions}
                 counts={queueCounts}
                 onChange={(next) => {
+                  if (next === 'all') {
+                    patchParams({ queue: undefined, tab: 'all' });
+                    return;
+                  }
                   patchParams({
                     queue: next || undefined,
                     tab: next ? 'pending' : tab === 'all' ? undefined : tab,
@@ -284,6 +402,10 @@ export function IncidentsPage() {
       ) : (
         <MaterialIndentsTable
           requests={filtered}
+          showProcurementTrace={role === UserRole.EXECUTIVE}
+          renderAction={
+            role === UserRole.EXECUTIVE ? renderExecutiveAction : undefined
+          }
           onRowClick={(id) => {
             const row = filtered.find((r) => r.id === id);
             if (role === UserRole.STORE_INCHARGE && row?.status === 'PENDING_STORE') {

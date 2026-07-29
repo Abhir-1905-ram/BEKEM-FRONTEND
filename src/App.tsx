@@ -126,12 +126,6 @@ const CreateWorkOrderPage = lazy(() =>
 const WorkOrderDetailPage = lazy(() =>
   import('@/pages/workOrders/WorkOrderDetail').then((m) => ({ default: m.WorkOrderDetailPage }))
 );
-const PMApproveWOsPage = lazy(() =>
-  import('@/pages/pm/PMApproveWOs').then((m) => ({ default: m.PMApproveWOsPage }))
-);
-const ExecutiveReviewWOsPage = lazy(() =>
-  import('@/pages/executive/ExecutiveReviewWOs').then((m) => ({ default: m.ExecutiveReviewWOsPage }))
-);
 const UserProvisioningPage = lazy(() =>
   import('@/pages/admin/UserProvisioning').then((m) => ({ default: m.UserProvisioningPage }))
 );
@@ -164,11 +158,6 @@ const MiscPurchasesPage = lazy(() =>
 );
 const CategoryReportPage = lazy(() =>
   import('@/pages/materials/CategoryReportPage').then((m) => ({ default: m.CategoryReportPage }))
-);
-const ExecutivePurchaseRequestsPage = lazy(() =>
-  import('@/pages/executive/ExecutivePurchaseRequests').then((m) => ({
-    default: m.ExecutivePurchaseRequestsPage,
-  }))
 );
 const ExecutivePurchaseRequestDetailPage = lazy(() =>
   import('@/pages/executive/ExecutivePurchaseRequestDetail').then((m) => ({
@@ -587,16 +576,12 @@ export default function App() {
                 }
               />
 
-              <Route path="/executive/rfq" element={<Navigate to="/executive/rfq/inbox" replace />} />
-              <Route path="/executive/rfqs" element={<Navigate to="/executive/rfq/inbox" replace />} />
+              <Route path="/executive/rfq" element={<Navigate to="/executive/material-indents" replace />} />
+              <Route path="/executive/rfqs" element={<Navigate to="/executive/material-indents" replace />} />
 
               <Route
                 path="/executive/rfq/inbox"
-                element={
-                  <RoleGuard roles={[UserRole.EXECUTIVE]}>
-                    <ExecutiveRfqListPage />
-                  </RoleGuard>
-                }
+                element={<Navigate to="/executive/material-indents" replace />}
               />
 
               <Route
@@ -633,24 +618,14 @@ export default function App() {
 
               <Route
                 path="/executive/procurement-decisions"
-                element={
-                  <RoleGuard roles={[UserRole.EXECUTIVE]}>
-                    <ProcurementDecisionsListPage
-                      basePath="/executive/procurement-decisions"
-                      title="Procurement Decisions"
-                      subtitle="Review PM-forwarded requests — proceed with RFQ, then create PO"
-                      emptyTitle="No pending procurement decisions"
-                      emptyDescription="Indents forwarded to Head Office will appear here."
-                    />
-                  </RoleGuard>
-                }
+                element={<Navigate to="/executive/material-indents" replace />}
               />
 
               <Route
                 path="/executive/procurement-decisions/:id"
                 element={
                   <RoleGuard roles={[UserRole.EXECUTIVE]}>
-                    <ProcurementDecisionDetailPage listPath="/executive/procurement-decisions" />
+                    <ProcurementDecisionDetailPage listPath="/executive/material-indents" />
                   </RoleGuard>
                 }
               />
@@ -764,11 +739,7 @@ export default function App() {
 
               <Route
                 path="/executive/purchase-requests"
-                element={
-                  <RoleGuard roles={[UserRole.EXECUTIVE]}>
-                    <ExecutivePurchaseRequestsPage />
-                  </RoleGuard>
-                }
+                element={<Navigate to="/executive/material-indents" replace />}
               />
 
               <Route
@@ -885,7 +856,7 @@ export default function App() {
                 element={
                   <RoleGuard roles={[UserRole.STORE_INCHARGE]}>
                     <PurchaseOrdersBrowsePage
-                      subtitle="POs from procurement requests you raised (view only)"
+                      subtitle="All purchase orders for your assigned projects (view only)"
                       detailPath={(id) => `/purchase-orders/${id}`}
                     />
                   </RoleGuard>
@@ -894,18 +865,7 @@ export default function App() {
 
               <Route
                 path="/store/procurement-requests"
-                element={
-                  <RoleGuard roles={[UserRole.STORE_INCHARGE]}>
-                    <ProcurementRequestsBrowsePage
-                      subtitle="Only procurement requests you raised — view only"
-                      mineOnly
-                      detailPath={(pr) => {
-                        const mid = pr.materialRequest?.id || (typeof pr.materialRequestId === 'string' ? pr.materialRequestId : undefined);
-                        return mid ? `/requests/${mid}` : '/store/procurement-requests';
-                      }}
-                    />
-                  </RoleGuard>
-                }
+                element={<Navigate to="/store/purchase-orders" replace />}
               />
 
               <Route
@@ -1005,7 +965,7 @@ export default function App() {
                 element={
                   <RoleGuard roles={[UserRole.PROJECT_MANAGER]}>
                     <PurchaseOrdersBrowsePage
-                      subtitle="POs from procurement requests you raised (view only)"
+                      subtitle="All purchase orders for your assigned projects (view only)"
                       detailPath={(id) => `/pm/po/${id}`}
                     />
                   </RoleGuard>
@@ -1014,23 +974,7 @@ export default function App() {
 
               <Route
                 path="/pm/procurement-requests"
-                element={
-                  <RoleGuard roles={[UserRole.PROJECT_MANAGER]}>
-                    <ProcurementRequestsBrowsePage
-                      subtitle="Only procurement requests you raised — view only"
-                      mineOnly
-                      detailPath={(pr) => {
-                        const mid = pr.materialRequest?.id || (typeof pr.materialRequestId === 'string' ? pr.materialRequestId : undefined);
-                        return mid ? `/requests/${mid}` : '/pm/procurement-requests';
-                      }}
-                    />
-                  </RoleGuard>
-                }
-              />
-
-              <Route
-                path="/pm/purchase-requests"
-                element={<Navigate to="/pm/procurement-requests" replace />}
+                element={<Navigate to="/pm/material-indents" replace />}
               />
 
               <Route
@@ -1130,20 +1074,12 @@ export default function App() {
 
               <Route
                 path="/pm/approve-wos"
-                element={
-                  <RoleGuard roles={[UserRole.PROJECT_MANAGER]}>
-                    <PMApproveWOsPage />
-                  </RoleGuard>
-                }
+                element={<Navigate to="/pm" replace />}
               />
 
               <Route
                 path="/executive/review-wos"
-                element={
-                  <RoleGuard roles={[UserRole.EXECUTIVE]}>
-                    <ExecutiveReviewWOsPage />
-                  </RoleGuard>
-                }
+                element={<Navigate to="/executive" replace />}
               />
 
               <Route
@@ -1171,7 +1107,6 @@ export default function App() {
                   <RoleGuard
 
                     roles={[
-
                       UserRole.EXECUTIVE,
 
                       UserRole.COORDINATOR,
@@ -1277,7 +1212,8 @@ export default function App() {
                   <RoleGuard
 
                     roles={[
-
+                      UserRole.STORE_INCHARGE,
+                      UserRole.PROJECT_MANAGER,
                       UserRole.EXECUTIVE,
 
                       UserRole.COORDINATOR,

@@ -81,14 +81,7 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
         { id: 'stock-aging', label: 'Stock aging', href: '/store/stock-aging', icon: Package, section: 'workspace' },
         { id: 'add-material', label: 'Product catalog', href: '/materials/new', icon: Package, section: 'workspace' },
         { id: 'finance', label: 'Finance & Tally', href: '/store/finance', icon: BarChart3, section: 'workspace' },
-        // PO column — view only procurement they raised
-        {
-          id: 'procurement-requests',
-          label: 'Procurement requests',
-          href: '/store/procurement-requests',
-          icon: FilePlus,
-          section: 'po',
-        },
+        // PO column — browse all POs for assigned projects
         {
           id: 'purchase-orders',
           label: 'Purchase orders',
@@ -102,13 +95,7 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
     case UserRole.PROJECT_MANAGER:
       return [
         ...common,
-        {
-          id: 'procurement-requests',
-          label: 'Procurement requests',
-          href: '/pm/procurement-requests',
-          icon: FilePlus,
-          section: 'po',
-        },
+        { id: 'indents', label: 'Indents', href: '/pm/material-indents', icon: FileText, section: 'workspace' },
         {
           id: 'purchase-orders',
           label: 'Purchase orders',
@@ -118,9 +105,7 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
         },
         { id: 'add-material', label: 'Product catalog', href: '/materials/new', icon: Package, section: 'workspace' },
         { id: 'material-lookup', label: 'Material search', href: '/pm/material-lookup', icon: Package, section: 'workspace' },
-        { id: 'indents', label: 'Indents', href: '/pm/material-indents', icon: FileText, section: 'workspace' },
         { id: 'branch-transfer', label: 'Branch transfer requests', href: '/pm/branch-transfer-requests', icon: Truck, section: 'workspace' },
-        { id: 'approve-wos', label: 'Approve work orders', href: '/pm/approve-wos', icon: HardHat, section: 'workspace' },
         { id: 'stock', label: 'Live stock balance', href: '/store/stock', icon: Package, section: 'workspace' },
         { id: 'finance', label: 'Finance & Tally', href: '/pm/finance', icon: BarChart3, section: 'workspace' },
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },
@@ -129,16 +114,7 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
     case UserRole.EXECUTIVE:
       return [
         ...common,
-        { id: 'incidents', label: 'Material indents', href: '/executive/material-indents', icon: FileText, section: 'workspace' },
-        { id: 'procurement-decisions', label: 'Procurement decisions', href: '/executive/procurement-decisions', icon: ClipboardCheck, section: 'po' },
-        {
-          id: 'purchase-requests',
-          label: 'Procurement requests',
-          href: '/executive/purchase-requests',
-          icon: FilePlus,
-          section: 'po',
-        },
-        { id: 'rfq-inbox', label: 'RFQs', href: '/executive/rfq/inbox', icon: FileStack, section: 'po' },
+        { id: 'incidents', label: 'Indents', href: '/executive/material-indents', icon: FileText, section: 'po' },
         {
           id: 'purchase-orders',
           label: 'Purchase orders',
@@ -146,8 +122,7 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
           icon: ShoppingCart,
           section: 'po',
         },
-        { id: 'review-wos', label: 'Review work orders', href: '/executive/review-wos', icon: HardHat, section: 'workspace' },
-        { id: 'vendors', label: 'Vendors', href: '/vendors', icon: Users, section: 'workspace' },
+        { id: 'vendors', label: 'Vendors master list', href: '/vendors', icon: Users, section: 'workspace' },
         { id: 'finance', label: 'Finance & Tally', href: '/executive/finance', icon: BarChart3, section: 'workspace' },
         { id: 'stock', label: 'Live stock balance', href: '/store/stock', icon: Package, section: 'workspace' },
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },
