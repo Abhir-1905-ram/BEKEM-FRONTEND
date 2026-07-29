@@ -28,6 +28,12 @@ const QUEUE_CHIP_STYLES: Record<
   IndentQueueQuickFilter,
   { idle: string; active: string; badge: string; badgeActive: string }
 > = {
+  all: {
+    idle: 'bg-slate-100 text-slate-700 border-slate-200 hover:border-slate-300',
+    active: 'bg-slate-700 text-white border-slate-700',
+    badge: 'bg-white/80 text-slate-700',
+    badgeActive: 'bg-white/25 text-white',
+  },
   'awaiting-store': {
     idle: 'bg-warning-light text-warning-dark border-warning/30 hover:border-warning/60',
     active: 'bg-warning text-white border-warning',
@@ -94,7 +100,7 @@ export function IndentListFilters({
   totalCount,
   className,
 }: Props) {
-  const hasActive = Boolean(search.trim() || queue || category || days);
+  const hasActive = Boolean(search.trim() || (queue && queue !== 'all') || category || days);
 
   return (
     <div className={cn('space-y-2 mb-3', className)}>
@@ -123,19 +129,21 @@ export function IndentListFilters({
               </option>
             ))}
           </select>
-          {queueOptions.length > 0 && (
+          {queueOptions.some((f) => f.id !== 'all') && (
             <select
-              value={queue}
+              value={queue === 'all' ? '' : queue}
               onChange={(e) => onQueueChange(e.target.value as IndentQueueQuickFilter | '')}
               className="h-9 rounded border border-surface-border bg-white px-2 text-xs text-ink min-w-[11rem]"
               aria-label="Filter by pending status"
             >
               <option value="">All statuses</option>
-              {queueOptions.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.label}
-                </option>
-              ))}
+              {queueOptions
+                .filter((f) => f.id !== 'all')
+                .map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.label}
+                  </option>
+                ))}
             </select>
           )}
           <select
@@ -194,14 +202,20 @@ export function IndentQueueQuickButtons({
   return (
     <div className={cn('flex flex-wrap gap-1.5', className)}>
       {options.map((f) => {
-        const active = value === f.id;
+        const active = f.id === 'all' ? !value || value === 'all' : value === f.id;
         const count = counts?.[f.id] ?? 0;
         const styles = QUEUE_CHIP_STYLES[f.id] ?? DEFAULT_QUEUE_CHIP_STYLE;
         return (
           <button
             key={f.id}
             type="button"
-            onClick={() => onChange(active ? '' : f.id)}
+            onClick={() => {
+              if (f.id === 'all') {
+                onChange('');
+                return;
+              }
+              onChange(active ? '' : f.id);
+            }}
             className={cn(
               'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition-colors whitespace-nowrap',
               active ? styles.active : styles.idle

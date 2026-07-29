@@ -4,6 +4,7 @@ import { formatIndentQueueStatus } from '@/components/MaterialIndentsTable';
 
 /** Title-side / dropdown queue filters. Labels vary by role. */
 export type IndentQueueQuickFilter =
+  | 'all'
   | 'awaiting-store'
   | 'approved-store'
   | 'pm'
@@ -50,6 +51,7 @@ const HO_STATUSES = new Set([
 
 /** Shared pending-queue chips — one per status color, with counts on every role. */
 const ALL_PENDING_QUEUE_CHIPS: IndentQueueFilterOption[] = [
+  { id: 'all', label: 'All' },
   { id: 'awaiting-store', label: 'Awaiting Store Incharge' },
   { id: 'approved-store', label: 'Approved by Store Incharge' },
   { id: 'pm', label: 'Approved by PM' },
@@ -78,7 +80,7 @@ export function matchesIndentQueueQuickFilter(
   request: MaterialRequestDto,
   filter: IndentQueueQuickFilter | ''
 ): boolean {
-  if (!filter) return true;
+  if (!filter || filter === 'all') return true;
   const status = request.status;
   const pending = request.pendingWith;
 
@@ -208,6 +210,7 @@ export function uniqueIndentCategories(requests: MaterialRequestDto[]): string[]
 
 export function isIndentQueueFilterId(value: string): value is IndentQueueQuickFilter {
   return [
+    'all',
     'awaiting-store',
     'approved-store',
     'pm',
