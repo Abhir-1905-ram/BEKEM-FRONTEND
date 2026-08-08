@@ -52,7 +52,10 @@ export interface NavShortcut {
   section?: NavSection;
 }
 
-export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
+export function getRoleNavShortcuts(
+  role: UserRole,
+  options?: { isSystemAdmin?: boolean }
+): NavShortcut[] {
   const home = '/';
   const common: NavShortcut[] = [
     { id: 'home', label: 'Dashboard', sublabel: 'Role home', href: home, icon: LayoutDashboard, section: 'core' },
@@ -60,17 +63,20 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
     { id: 'profile', label: 'Profile', href: '/profile', icon: User, section: 'core' },
   ];
 
+  let shortcuts: NavShortcut[];
+
   switch (role) {
     case UserRole.SITE_INCHARGE:
-      return [
+      shortcuts = [
         ...common,
         { id: 'new-request', label: 'New indent', href: '/request/new', icon: FilePlus, section: 'workspace' },
         { id: 'my-requests', label: 'My indents', href: '/incidents', icon: FileText, section: 'workspace' },
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },
       ];
+      break;
 
     case UserRole.STORE_INCHARGE:
-      return [
+      shortcuts = [
         ...common,
         { id: 'new-request', label: 'New indent', href: '/request/new', icon: FilePlus, section: 'workspace' },
         { id: 'my-indents', label: 'My indents', href: '/store/requests', icon: FileText, section: 'workspace' },
@@ -91,9 +97,10 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
         },
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },
       ];
+      break;
 
     case UserRole.PROJECT_MANAGER:
-      return [
+      shortcuts = [
         ...common,
         { id: 'indents', label: 'Indents', href: '/pm/material-indents', icon: FileText, section: 'workspace' },
         {
@@ -110,9 +117,10 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
         { id: 'finance', label: 'Finance & Tally', href: '/pm/finance', icon: BarChart3, section: 'workspace' },
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },
       ];
+      break;
 
     case UserRole.EXECUTIVE:
-      return [
+      shortcuts = [
         ...common,
         { id: 'incidents', label: 'Indents', href: '/executive/material-indents', icon: FileText, section: 'po' },
         {
@@ -127,9 +135,10 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
         { id: 'stock', label: 'Live stock balance', href: '/store/stock', icon: Package, section: 'workspace' },
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },
       ];
+      break;
 
     case UserRole.COORDINATOR:
-      return [
+      shortcuts = [
         ...common,
         {
           id: 'procurement-requests',
@@ -164,9 +173,10 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
         { id: 'audit', label: 'Audit log', href: '/audit-logs', icon: FileStack, section: 'workspace' },
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },
       ];
+      break;
 
     case UserRole.CHAIRMAN:
-      return [
+      shortcuts = [
         ...common,
         {
           id: 'procurement-requests',
@@ -194,8 +204,31 @@ export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },
         { id: 'audit', label: 'Audit log', href: '/audit-logs', icon: FileStack, section: 'workspace' },
       ];
+      break;
 
     default:
-      return common;
+      shortcuts = common;
   }
+
+  if (options?.isSystemAdmin) {
+    const projectsIdx = shortcuts.findIndex((s) => s.id === 'projects');
+    const manageUsers: NavShortcut = {
+      id: 'manage-users',
+      label: 'Manage users',
+      href: '/admin/users',
+      icon: Users,
+      section: 'workspace',
+    };
+    if (projectsIdx >= 0) {
+      shortcuts = [
+        ...shortcuts.slice(0, projectsIdx + 1),
+        manageUsers,
+        ...shortcuts.slice(projectsIdx + 1),
+      ];
+    } else {
+      shortcuts = [...shortcuts, manageUsers];
+    }
+  }
+
+  return shortcuts;
 }

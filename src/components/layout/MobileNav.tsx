@@ -11,11 +11,12 @@ interface MobileNavProps {
   role: UserRole;
   homePath: string;
   unread: number;
+  isSystemAdmin?: boolean;
 }
 
-export function MobileNav({ role, homePath, unread }: MobileNavProps) {
+export function MobileNav({ role, homePath, unread, isSystemAdmin }: MobileNavProps) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const shortcuts = getRoleNavShortcuts(role);
+  const shortcuts = getRoleNavShortcuts(role, { isSystemAdmin });
   const workspaceNav = shortcuts.filter((s) => !CORE_IDS.has(s.id));
   const primaryAction = workspaceNav.find((s) =>
     ['new-request', 'create-po', 'pending', 'approvals', 'verify-po'].includes(s.id)

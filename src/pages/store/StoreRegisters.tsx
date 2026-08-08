@@ -1,14 +1,29 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { api } from '@/lib/api';
-import { formatDate } from '@afios/shared';
+import { formatCurrency, formatDate } from '@afios/shared';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
-import { StatusBadge } from '@/components/ui/StatusBadge';
 import { ListQueryBoundary } from '@/components/ListQueryBoundary';
 import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 import { cn } from '@/lib/utils';
 
 type RegisterTab = 'inward' | 'outward' | 'stock';
+
+interface InwardLineItem {
+  materialId?: string;
+  materialName?: string;
+  hsnCode?: string;
+  unit?: string;
+  quantity?: number;
+  rate?: number;
+  basicAmount?: number;
+  others?: number;
+  totalBasic?: number;
+  igst?: number;
+  cgst?: number;
+  sgst?: number;
+  grossAmount?: number;
+}
 
 interface GrnRow {
   id: string;
@@ -18,6 +33,43 @@ interface GrnRow {
   vendorName: string;
   status: string;
   receivedAt: string | null;
+  invoiceNo?: string;
+  invoiceDate?: string | null;
+  ewayBillNumber?: string;
+  items?: InwardLineItem[];
+}
+
+interface InwardRegisterRow {
+  key: string;
+  slNo: number;
+  mrnNo: string;
+  mrnDate: string | null;
+  billNo: string;
+  billDate: string | null;
+  supplierName: string;
+  materialName: string;
+  hsnCode: string;
+  units: string;
+  qty: number;
+  rate: number;
+  basicAmount: number;
+  others: number;
+  totalBasic: number;
+  igst: number;
+  cgst: number;
+  sgst: number;
+  grossAmount: number;
+  wayBillNo: string;
+}
+
+interface IssueLineItem {
+  materialId?: string;
+  quantity?: number;
+  rate?: number;
+  amount?: number;
+  unit?: string;
+  materialName?: string;
+  material?: { name?: string; unit?: string };
 }
 
 interface IssueRow {
@@ -25,10 +77,25 @@ interface IssueRow {
   issueNumber: string;
   materialRequest?: { indentNumber?: string };
   issuedToName?: string;
+  contractorName?: string;
   issueType?: string;
   issuedAt?: string;
   createdAt?: string;
-  items: Array<{ quantity: number; material?: { name?: string } }>;
+  items: IssueLineItem[];
+}
+
+interface OutwardRegisterRow {
+  key: string;
+  slNo: number;
+  minNo: string;
+  minDate: string | null;
+  issuedTo: string;
+  contractorName: string;
+  materialName: string;
+  units: string;
+  qty: number;
+  rate: number;
+  amount: number;
 }
 
 interface BalanceRow {
@@ -46,6 +113,11 @@ const TABS: Array<{ key: RegisterTab; label: string }> = [
   { key: 'outward', label: 'Outward Register' },
   { key: 'stock', label: 'Stock Register' },
 ];
+
+function money(n: number | null | undefined) {
+  if (n == null || Number.isNaN(n)) return '—';
+  return formatCurrency(n);
+}
 
 export function StoreRegistersPage() {
   const [tab, setTab] = useState<RegisterTab>('inward');
@@ -77,6 +149,100 @@ export function StoreRegistersPage() {
     enabled: tab === 'stock',
   });
 
+  const inwardRows = useMemo(() => {
+    const rows: InwardRegisterRow[] = [];
+    let slNo = 1;
+    for (const g of inward.data ?? []) {
+      const lines = g.items?.length
+        ? g.items
+        : [
+            {
+              materialName: '—',
+              hsnCode: '',
+              unit: '',
+              quantity: 0,
+              rate: 0,
+              basicAmount: 0,
+              others: 0,
+              totalBasic: 0,
+              igst: 0,
+              cgst: 0,
+              sgst: 0,
+              grossAmount: 0,
+            },
+          ];
+      lines.forEach((line, idx) => {
+        const qty = Number(line.quantity) || 0;
+        const rate = Number(line.rate) || 0;
+        const basicAmount = Number(line.basicAmount ?? qty * rate) || 0;
+        const others = Number(line.others) || 0;
+        const totalBasic = Number(line.totalBasic ?? basicAmount + others) || 0;
+        rows.push({
+          key: `${g.id}-${line.materialId || idx}`,
+          slNo: slNo++,
+          mrnNo: g.grnNumber || '—',
+          mrnDate: g.receivedAt,
+          billNo: g.invoiceNo || '—',
+          billDate: g.invoiceDate || null,
+          supplierName: g.vendorName || '—',
+          materialName: line.materialName || '—',
+          hsnCode: line.hsnCode || '—',
+          units: line.unit || '—',
+          qty,
+          rate,
+          basicAmount,
+          others,
+          totalBasic,
+          igst: Number(line.igst) || 0,
+          cgst: Number(line.cgst) || 0,
+          sgst: Number(line.sgst) || 0,
+          grossAmount: Number(line.grossAmount) || 0,
+          wayBillNo: g.ewayBillNumber || '—',
+        });
+      });
+    }
+    return rows;
+  }, [inward.data]);
+
+  const outwardRows = useMemo(() => {
+    const rows: OutwardRegisterRow[] = [];
+    let slNo = 1;
+    for (const issue of outward.data ?? []) {
+      const lines = issue.items?.length
+        ? issue.items
+        : [
+            {
+              materialName: '—',
+              unit: '',
+              quantity: 0,
+              rate: 0,
+              amount: 0,
+            },
+          ];
+      lines.forEach((line, idx) => {
+        const qty = Number(line.quantity) || 0;
+        const rate = Number(line.rate) || 0;
+        const amount = Number(line.amount ?? qty * rate) || 0;
+        rows.push({
+          key: `${issue.id}-${line.materialId || idx}`,
+          slNo: slNo++,
+          minNo: issue.issueNumber || '—',
+          minDate: issue.issuedAt || issue.createdAt || null,
+          issuedTo: issue.issuedToName || '—',
+          contractorName:
+            issue.contractorName ||
+            (issue.issueType === 'CONTRACT_ISSUE' ? issue.issuedToName || '—' : '—'),
+          materialName: line.materialName || line.material?.name || '—',
+          units: line.unit || line.material?.unit || '—',
+          qty,
+          rate,
+          amount,
+        });
+      });
+    }
+    return rows;
+  }, [outward.data]);
+
   return (
     <div className="page-container max-w-full">
       <PageHeader
@@ -106,32 +272,58 @@ export function StoreRegistersPage() {
           isError={inward.list.isError}
           onRetry={inward.list.onRetry}
           retrying={inward.list.retrying}
-          isEmpty={!inward.data?.length}
+          isEmpty={!inwardRows.length}
           empty={<EmptyState title="No inward entries" description="GRNs appear here when material is received." />}
         >
-          <div className="table-shell">
-            <table className="data-table min-w-[56rem]">
+          <div className="table-shell overflow-x-auto">
+            <table className="data-table min-w-[110rem] text-[11px]">
               <thead>
                 <tr>
-                  <th>GRN Number</th>
-                  <th>PO Number</th>
-                  <th>Indent Number</th>
-                  <th>Vendor</th>
-                  <th>Material Receipt Date</th>
-                  <th>Status</th>
+                  <th className="whitespace-nowrap">Sl. No.</th>
+                  <th className="whitespace-nowrap">MRN No</th>
+                  <th className="whitespace-nowrap">MRN Date</th>
+                  <th className="whitespace-nowrap">Bill No.</th>
+                  <th className="whitespace-nowrap">Bill Date</th>
+                  <th className="whitespace-nowrap">Supplier Name</th>
+                  <th className="whitespace-nowrap">Material Name</th>
+                  <th className="whitespace-nowrap">HSN Code</th>
+                  <th className="whitespace-nowrap">Units</th>
+                  <th className="num whitespace-nowrap">Qty</th>
+                  <th className="num whitespace-nowrap">Rate</th>
+                  <th className="num whitespace-nowrap">Basic Amount</th>
+                  <th className="num whitespace-nowrap">Others</th>
+                  <th className="num whitespace-nowrap">Total Basic</th>
+                  <th className="num whitespace-nowrap">IGST</th>
+                  <th className="num whitespace-nowrap">CGST</th>
+                  <th className="num whitespace-nowrap">SGST</th>
+                  <th className="num whitespace-nowrap">Gross Amount</th>
+                  <th className="whitespace-nowrap">Way Bill No.</th>
                 </tr>
               </thead>
               <tbody>
-                {(inward.data ?? []).map((g) => (
-                  <tr key={g.id}>
-                    <td className="cell-code">{g.grnNumber}</td>
-                    <td className="cell-code">{g.poNumber || '—'}</td>
-                    <td className="cell-code">{g.indentNumber || '—'}</td>
-                    <td className="cell-text">{g.vendorName || '—'}</td>
-                    <td className="whitespace-nowrap">{g.receivedAt ? formatDate(g.receivedAt) : '—'}</td>
-                    <td>
-                      <StatusBadge status={g.status} />
+                {inwardRows.map((row) => (
+                  <tr key={row.key}>
+                    <td className="num tabular-nums">{row.slNo}</td>
+                    <td className="cell-code whitespace-nowrap">{row.mrnNo}</td>
+                    <td className="whitespace-nowrap">{formatDate(row.mrnDate)}</td>
+                    <td className="cell-code whitespace-nowrap">{row.billNo}</td>
+                    <td className="whitespace-nowrap">{formatDate(row.billDate)}</td>
+                    <td className="cell-text">{row.supplierName}</td>
+                    <td className="cell-text">{row.materialName}</td>
+                    <td className="cell-code whitespace-nowrap">{row.hsnCode}</td>
+                    <td className="whitespace-nowrap">{row.units}</td>
+                    <td className="num tabular-nums">{row.qty.toLocaleString('en-IN')}</td>
+                    <td className="num tabular-nums whitespace-nowrap">{money(row.rate)}</td>
+                    <td className="num tabular-nums whitespace-nowrap">{money(row.basicAmount)}</td>
+                    <td className="num tabular-nums whitespace-nowrap">{money(row.others)}</td>
+                    <td className="num tabular-nums whitespace-nowrap">{money(row.totalBasic)}</td>
+                    <td className="num tabular-nums whitespace-nowrap">{money(row.igst)}</td>
+                    <td className="num tabular-nums whitespace-nowrap">{money(row.cgst)}</td>
+                    <td className="num tabular-nums whitespace-nowrap">{money(row.sgst)}</td>
+                    <td className="num tabular-nums font-semibold whitespace-nowrap">
+                      {money(row.grossAmount)}
                     </td>
+                    <td className="cell-code whitespace-nowrap">{row.wayBillNo}</td>
                   </tr>
                 ))}
               </tbody>
@@ -146,31 +338,39 @@ export function StoreRegistersPage() {
           isError={outward.list.isError}
           onRetry={outward.list.onRetry}
           retrying={outward.list.retrying}
-          isEmpty={!outward.data?.length}
+          isEmpty={!outwardRows.length}
           empty={<EmptyState title="No outward entries" description="Material issues appear here after store issue." />}
         >
-          <div className="table-shell">
-            <table className="data-table min-w-[56rem]">
+          <div className="table-shell overflow-x-auto">
+            <table className="data-table min-w-[72rem] text-[11px]">
               <thead>
                 <tr>
-                  <th>Issue Number</th>
-                  <th>Indent Number</th>
-                  <th>Issue Type</th>
-                  <th>Issued To</th>
-                  <th className="num">Lines</th>
-                  <th>Material Issue Date</th>
+                  <th className="whitespace-nowrap">Sl. No.</th>
+                  <th className="whitespace-nowrap">MIN No</th>
+                  <th className="whitespace-nowrap">MIN Date</th>
+                  <th className="whitespace-nowrap">Issued To</th>
+                  <th className="whitespace-nowrap">Contractor Name</th>
+                  <th className="whitespace-nowrap">Material Name</th>
+                  <th className="whitespace-nowrap">Units</th>
+                  <th className="num whitespace-nowrap">Qty</th>
+                  <th className="num whitespace-nowrap">Rate</th>
+                  <th className="num whitespace-nowrap">Amount</th>
                 </tr>
               </thead>
               <tbody>
-                {(outward.data ?? []).map((row) => (
-                  <tr key={row.id}>
-                    <td className="cell-code">{row.issueNumber}</td>
-                    <td className="cell-code">{row.materialRequest?.indentNumber || '—'}</td>
-                    <td>{row.issueType === 'CONTRACT_ISSUE' ? 'Contract Issue' : 'Work Issue'}</td>
-                    <td className="cell-text">{row.issuedToName || '—'}</td>
-                    <td className="num">{row.items?.length || 0}</td>
-                    <td className="whitespace-nowrap">
-                      {formatDate(row.issuedAt || row.createdAt || '')}
+                {outwardRows.map((row) => (
+                  <tr key={row.key}>
+                    <td className="num tabular-nums">{row.slNo}</td>
+                    <td className="cell-code whitespace-nowrap">{row.minNo}</td>
+                    <td className="whitespace-nowrap">{formatDate(row.minDate)}</td>
+                    <td className="cell-text">{row.issuedTo}</td>
+                    <td className="cell-text">{row.contractorName}</td>
+                    <td className="cell-text">{row.materialName}</td>
+                    <td className="whitespace-nowrap">{row.units}</td>
+                    <td className="num tabular-nums">{row.qty.toLocaleString('en-IN')}</td>
+                    <td className="num tabular-nums whitespace-nowrap">{money(row.rate)}</td>
+                    <td className="num tabular-nums font-semibold whitespace-nowrap">
+                      {money(row.amount)}
                     </td>
                   </tr>
                 ))}

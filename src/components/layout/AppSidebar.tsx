@@ -18,7 +18,9 @@ export function AppSidebar({ unread }: AppSidebarProps) {
   const { signOut, signingOut } = useSignOut();
   const { t } = useI18n();
   const role = user?.role as UserRole;
-  const shortcuts = role ? getRoleNavShortcuts(role) : [];
+  const shortcuts = role
+    ? getRoleNavShortcuts(role, { isSystemAdmin: !!user?.isSystemAdmin })
+    : [];
   const homeNav = shortcuts.filter((s) => s.id === 'home');
   const accountNav = shortcuts.filter((s) => s.id === 'notifications' || s.id === 'profile');
   const poNav = shortcuts.filter((s) => s.section === 'po');
@@ -32,6 +34,7 @@ export function AppSidebar({ unread }: AppSidebarProps) {
     if (id === 'home') return t('nav.dashboard');
     if (id === 'notifications') return t('nav.notifications');
     if (id === 'profile') return t('nav.profile');
+    if (id === 'manage-users') return t('profile.manageUsers');
     return fallback;
   };
 
