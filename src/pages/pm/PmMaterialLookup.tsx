@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeftRight, ShoppingCart } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -7,16 +7,26 @@ import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { MaterialSearch } from '@/components/layout/MaterialSearch';
 import { MaterialAvailabilityPanel } from '@/components/MaterialAvailabilityPanel';
+import { IndentCategorySelect } from '@/components/IndentCategorySelect';
 import { toast } from 'sonner';
+import axios from 'axios';
+
+function showActionError(err: unknown, fallback: string) {
+  // Axios errors are already toasted by the API interceptor.
+  if (axios.isAxiosError(err)) return;
+  toast.error(err instanceof Error ? err.message : fallback);
+}
 
 export function PmMaterialLookupPage() {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<MaterialDto | null>(null);
   const [fromProjectId, setFromProjectId] = useState('');
   const [toProjectId, setToProjectId] = useState('');
-  const [quantity, setQuantity] = useState('');
+  const [transferQty, setTransferQty] = useState('');
+  const [procurementQty, setProcurementQty] = useState('');
   const [purpose, setPurpose] = useState('');
   const [procurementProjectId, setProcurementProjectId] = useState('');
+  const [indentCategoryId, setIndentCategoryId] = useState('');
 
   const { data: projects } = useQuery({
     queryKey: ['pm-projects'],
@@ -37,50 +47,85 @@ export function PmMaterialLookupPage() {
     enabled: !!selected?.id,
   });
 
+  /** Company projects that currently hold stock — valid BT sources. */
   const projectsWithStock = useMemo(() => {
     if (!availability) return [];
     return availability.projectWise.filter((p) => p.availableQty > 0);
   }, [availability]);
 
+  /** Destination must be a project this PM manages. */
+  const destinationProjects = useMemo(() => {
+    return (projects ?? []).filter((p) => p.id !== fromProjectId);
+  }, [projects, fromProjectId]);
+
+  useEffect(() => {
+    if (!toProjectId && destinationProjects.length === 1) {
+      setToProjectId(destinationProjects[0].id);
+    }
+  }, [destinationProjects, toProjectId]);
+
+  useEffect(() => {
+    if (!procurementProjectId && (projects?.length ?? 0) === 1) {
+      setProcurementProjectId(projects![0].id);
+    }
+  }, [projects, procurementProjectId]);
+
   const branchTransferMutation = useMutation({
     mutationFn: async () => {
-      if (!selected || !fromProjectId || !toProjectId || !quantity) {
+      if (!selected || !fromProjectId || !toProjectId || !transferQty) {
         throw new Error('Complete branch transfer details');
+      }
+      if (fromProjectId === toProjectId) {
+        throw new Error('Source and destination projects must differ');
+      }
+      const qty = parseFloat(transferQty);
+      if (!(qty > 0)) {
+        throw new Error('Enter a valid quantity');
+      }
+      const source = projectsWithStock.find((p) => p.projectId === fromProjectId);
+      if (source && qty > source.availableQty) {
+        throw new Error(`Only ${source.availableQty} available at source project`);
       }
       await api.post('/branch-transfers', {
         fromProjectId,
         toProjectId,
-        items: [{ materialId: selected.id, quantity: parseFloat(quantity) }],
+        items: [{ materialId: selected.id, quantity: qty }],
         note: `PM stock transfer request for ${selected.name}`,
       });
     },
     onSuccess: () => {
       toast.success('Branch transfer submitted to Head Office');
       queryClient.invalidateQueries({ queryKey: ['pm-branch-transfer-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['material-availability', selected?.id] });
       setFromProjectId('');
-      setToProjectId('');
-      setQuantity('');
+      setTransferQty('');
     },
-    onError: (err: Error) => toast.error(err.message || 'Could not submit branch transfer'),
+    onError: (err: Error) => showActionError(err, 'Could not submit branch transfer'),
   });
 
   const procurementMutation = useMutation({
     mutationFn: async () => {
-      if (!selected || !procurementProjectId || !quantity || !purpose.trim()) {
-        throw new Error('Complete procurement details');
+      if (!selected || !procurementProjectId || !procurementQty || !purpose.trim() || !indentCategoryId) {
+        throw new Error('Complete procurement details including indent category');
+      }
+      const qty = parseFloat(procurementQty);
+      if (!(qty > 0)) {
+        throw new Error('Enter a valid quantity');
       }
       await api.post('/material-requests/pm-procurement', {
         projectId: procurementProjectId,
-        items: [{ materialId: selected.id, quantityRequested: parseFloat(quantity) }],
+        items: [{ materialId: selected.id, quantityRequested: qty }],
         purpose: purpose.trim(),
+        indentCategoryId,
       });
     },
     onSuccess: () => {
       toast.success('Procurement request sent to Executive');
       setPurpose('');
-      setQuantity('');
+      setProcurementQty('');
+      setIndentCategoryId('');
     },
-    onError: (err: Error) => toast.error(err.message || 'Could not submit procurement request'),
+    onError: (err: Error) => showActionError(err, 'Could not submit procurement request'),
   });
 
   return (
@@ -96,6 +141,9 @@ export function PmMaterialLookupPage() {
           setFromProjectId('');
           setToProjectId('');
           setProcurementProjectId('');
+          setTransferQty('');
+          setProcurementQty('');
+          setIndentCategoryId('');
         }}
       />
 
@@ -120,9 +168,20 @@ export function PmMaterialLookupPage() {
                 <ArrowLeftRight className="h-4 w-4 text-bekem-accent" />
                 <h3 className="font-semibold text-ink">Branch transfer</h3>
               </div>
+              <p className="text-xs text-ink-muted">
+                Pull stock from any company project into one of your projects. Head Office approves.
+              </p>
+              {availability && projectsWithStock.length === 0 ? (
+                <p className="text-sm text-warning-dark rounded-lg border border-warning/30 bg-warning/10 px-3 py-2">
+                  No company stock available for this material. Use New procurement instead.
+                </p>
+              ) : null}
               <select
                 value={fromProjectId}
-                onChange={(e) => setFromProjectId(e.target.value)}
+                onChange={(e) => {
+                  setFromProjectId(e.target.value);
+                  if (e.target.value === toProjectId) setToProjectId('');
+                }}
                 className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
               >
                 <option value="">From project (with stock)</option>
@@ -137,8 +196,8 @@ export function PmMaterialLookupPage() {
                 onChange={(e) => setToProjectId(e.target.value)}
                 className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
               >
-                <option value="">To project</option>
-                {(projects ?? []).map((p) => (
+                <option value="">To your project</option>
+                {destinationProjects.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.code} — {p.name}
                   </option>
@@ -149,14 +208,20 @@ export function PmMaterialLookupPage() {
                 min="0.01"
                 step="any"
                 placeholder="Quantity"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
+                value={transferQty}
+                onChange={(e) => setTransferQty(e.target.value)}
                 className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
               />
               <Button
                 variant="secondary"
                 className="w-full"
-                disabled={branchTransferMutation.isPending}
+                disabled={
+                  branchTransferMutation.isPending ||
+                  !fromProjectId ||
+                  !toProjectId ||
+                  !transferQty ||
+                  projectsWithStock.length === 0
+                }
                 onClick={() => branchTransferMutation.mutate()}
               >
                 Request branch transfer
@@ -180,13 +245,18 @@ export function PmMaterialLookupPage() {
                   </option>
                 ))}
               </select>
+              <IndentCategorySelect
+                value={indentCategoryId}
+                onChange={setIndentCategoryId}
+                className="h-auto rounded-lg border border-surface-border px-3 py-2 text-sm"
+              />
               <input
                 type="number"
                 min="0.01"
                 step="any"
                 placeholder="Quantity required"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
+                value={procurementQty}
+                onChange={(e) => setProcurementQty(e.target.value)}
                 className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
               />
               <textarea
@@ -199,7 +269,13 @@ export function PmMaterialLookupPage() {
               <Button
                 variant="primary"
                 className="w-full"
-                disabled={procurementMutation.isPending}
+                disabled={
+                  procurementMutation.isPending ||
+                  !procurementProjectId ||
+                  !indentCategoryId ||
+                  !procurementQty ||
+                  !purpose.trim()
+                }
                 onClick={() => procurementMutation.mutate()}
               >
                 New procurement

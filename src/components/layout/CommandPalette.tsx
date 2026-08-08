@@ -31,9 +31,10 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
   const [q, setQ] = useState('');
   const navigate = useNavigate();
   const role = useAuthStore((s) => s.user?.role) as UserRole | undefined;
+  const isSystemAdmin = useAuthStore((s) => !!s.user?.isSystemAdmin);
   const shortcuts = useMemo(
-    () => (role ? getRoleNavShortcuts(role) : []),
-    [role]
+    () => (role ? getRoleNavShortcuts(role, { isSystemAdmin }) : []),
+    [role, isSystemAdmin]
   );
 
   useEffect(() => {

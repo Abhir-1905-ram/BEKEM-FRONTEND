@@ -153,7 +153,12 @@ export function AppShell() {
         </main>
 
         {!hideNav && role && (
-          <MobileNav role={role} homePath={homePath} unread={unread} />
+          <MobileNav
+            role={role}
+            homePath={homePath}
+            unread={unread}
+            isSystemAdmin={!!user?.isSystemAdmin}
+          />
         )}
       </div>
     </div>

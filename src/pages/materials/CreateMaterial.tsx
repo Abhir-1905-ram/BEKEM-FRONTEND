@@ -20,7 +20,14 @@ import type {
   UpdateMaterialDto,
 } from '@afios/shared';
 import { MaterialCategorySelect } from '@/components/MaterialCategorySelect';
-import { MATERIAL_CATEGORY_NAMES, DEFAULT_GST_PERCENT, snapGstPercent } from '@afios/shared';
+import {
+  MATERIAL_CATEGORY_NAMES,
+  DEFAULT_GST_PERCENT,
+  snapGstPercent,
+  formatCurrency,
+  resolveMaterialUnitPrice,
+  hasMaterialUnitPrice,
+} from '@afios/shared';
 import { useAuthStore } from '@/stores/authStore';
 import { UserRole, PERMISSION_MATRIX } from '@afios/shared';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -65,6 +72,7 @@ export function CreateMaterialPage() {
     categoryRemarks: '',
     hsnCode: '',
     gstRate: DEFAULT_GST_PERCENT,
+    referenceUnitPrice: null,
     initialQuantity: 0,
     lowStockThreshold: 20,
   });
@@ -87,6 +95,7 @@ export function CreateMaterialPage() {
     categoryRemarks: '',
     hsnCode: '',
     gstRate: DEFAULT_GST_PERCENT,
+    referenceUnitPrice: null,
   });
 
   const { data: categories } = useQuery({
@@ -193,6 +202,8 @@ export function CreateMaterialPage() {
         categoryId: '',
         categoryRemarks: '',
         hsnCode: '',
+        gstRate: DEFAULT_GST_PERCENT,
+        referenceUnitPrice: null,
         initialQuantity: 0,
         lowStockThreshold: 20,
       });
@@ -272,6 +283,7 @@ export function CreateMaterialPage() {
       categoryRemarks: item.categoryRemarks || '',
       hsnCode: item.hsnCode || '',
       gstRate: snapGstPercent(item.gstRate),
+      referenceUnitPrice: item.referenceUnitPrice ?? null,
     });
   };
 
@@ -283,7 +295,7 @@ export function CreateMaterialPage() {
     <div className="page-container max-w-[1600px]">
       <PageHeader
         title="Product catalog"
-        subtitle="Manage materials, descriptions, and site stock"
+        subtitle="Manage materials, prices, descriptions, and site stock"
         action={
           <Button variant="primary" size="sm" onClick={() => setShowCreateModal(true)}>
             <Plus className="h-4 w-4" />
@@ -364,13 +376,14 @@ export function CreateMaterialPage() {
             />
           </div>
         ) : (
-          <table className="data-table min-w-[900px]">
+          <table className="data-table min-w-[980px]">
             <thead>
               <tr>
                 <th className="w-28">Item code</th>
                 <th>Description</th>
                 <th className="w-24">Category</th>
                 <th className="w-14">Unit</th>
+                <th className="w-24 text-right">Unit price</th>
                 <th className="w-16">HSN</th>
                 <th className="w-12 text-right">GST</th>
                 <th className="w-20 text-right">Stock</th>
@@ -392,6 +405,7 @@ export function CreateMaterialPage() {
                   item.description && item.description !== item.name
                     ? `${item.name} — ${item.description}`
                     : item.name;
+                const price = hasMaterialUnitPrice(item) ? resolveMaterialUnitPrice(item) : null;
                 return (
                   <tr key={item.id}>
                     <td className="cell-code" title={item.code}>
@@ -404,6 +418,9 @@ export function CreateMaterialPage() {
                       {item.category || 'General'}
                     </td>
                     <td>{item.unit}</td>
+                    <td className="text-right tabular-nums">
+                      {price != null ? formatCurrency(price) : '—'}
+                    </td>
                     <td className="text-ink-muted">{item.hsnCode || '—'}</td>
                     <td className="text-right">{item.gstRate != null ? `${item.gstRate}%` : '—'}</td>
                     <td
@@ -562,6 +579,24 @@ export function CreateMaterialPage() {
               })
             }
           />
+          <div>
+            <label className="text-xs font-semibold text-ink-muted mb-1 block">
+              Unit price (₹)
+            </label>
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              value={createForm.referenceUnitPrice ?? ''}
+              onChange={(e) =>
+                setCreateForm({
+                  ...createForm,
+                  referenceUnitPrice: e.target.value === '' ? null : Number(e.target.value),
+                })
+              }
+              placeholder="Reference rate per unit"
+            />
+          </div>
           <div>
             <label className="text-xs font-semibold text-ink-muted mb-1 block">HSN code</label>
             <Input
@@ -766,6 +801,33 @@ export function CreateMaterialPage() {
                 }
               />
             </div>
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-ink-muted mb-1 block">
+              Unit price (₹)
+            </label>
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              value={editForm.referenceUnitPrice ?? ''}
+              onChange={(e) =>
+                setEditForm({
+                  ...editForm,
+                  referenceUnitPrice: e.target.value === '' ? null : Number(e.target.value),
+                })
+              }
+              placeholder="Reference rate per unit"
+            />
+            {editTarget &&
+              editTarget.unitPrice != null &&
+              editTarget.referenceUnitPrice != null &&
+              editTarget.unitPrice !== editTarget.referenceUnitPrice && (
+                <p className="mt-1 text-[11px] text-ink-muted">
+                  Latest approved PO rate: {formatCurrency(editTarget.unitPrice)} (shown in list when
+                  available)
+                </p>
+              )}
           </div>
           <div>
             <label className="text-xs font-semibold text-ink-muted mb-1 block">HSN code</label>
