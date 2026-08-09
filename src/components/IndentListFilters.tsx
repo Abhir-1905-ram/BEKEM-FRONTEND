@@ -34,6 +34,12 @@ const QUEUE_CHIP_STYLES: Record<
     badge: 'bg-white/80 text-slate-700',
     badgeActive: 'bg-white/25 text-white',
   },
+  'material-available': {
+    idle: 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:border-emerald-400',
+    active: 'bg-emerald-700 text-white border-emerald-700',
+    badge: 'bg-white/80 text-emerald-800',
+    badgeActive: 'bg-white/25 text-white',
+  },
   'awaiting-store': {
     idle: 'bg-warning-light text-warning-dark border-warning/30 hover:border-warning/60',
     active: 'bg-warning text-white border-warning',
@@ -211,7 +217,7 @@ export function IndentQueueQuickButtons({
             type="button"
             onClick={() => {
               if (f.id === 'all') {
-                onChange('');
+                onChange('all');
                 return;
               }
               onChange(active ? '' : f.id);

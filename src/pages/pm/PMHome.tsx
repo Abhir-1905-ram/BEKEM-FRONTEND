@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ClipboardCheck, FileText, Bell, ChevronRight, ShoppingCart, ArrowLeftRight, Search } from 'lucide-react';
+import { ClipboardCheck, FileText, Bell, ChevronRight, ShoppingCart, ArrowLeftRight, Search, FileBarChart2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
 import { getGreeting, getFirstName } from '@afios/shared';
@@ -32,17 +32,8 @@ export function PMHomePage() {
     },
   });
 
-  const { data: poBrowse } = useQuery({
-    queryKey: ['purchase-orders-browse', 'pm-home-count'],
-    queryFn: async () => {
-      const res = await api.get<{ data: unknown[] }>('/purchase-orders');
-      return res.data.data ?? [];
-    },
-  });
-
   const approvalCount = dashboard?.approveQueue.length ?? 0;
   const purchaseCount = dashboard?.purchaseRequests.length ?? 0;
-  const poCount = poBrowse?.length ?? 0;
   const pendingCount = dashboard?.pendingRequests.length ?? 0;
   const unread = dashboard?.notifications.filter((n) => !n.isRead).length ?? 0;
 
@@ -112,18 +103,10 @@ export function PMHomePage() {
           onClick={() => navigate('/pm/material-indents?tab=pending&queue=pm')}
         />
         <ActionCard
-          title="Procurement requests"
-          count={poCount}
-          subtitle="Requests you raised — view only"
-          icon={ShoppingCart}
-          tone="info"
-          onClick={() => navigate('/pm/procurement-requests')}
-        />
-        <ActionCard
           title="Purchase orders"
           count={purchaseCount}
-          subtitle="POs from your raised requests"
-          icon={FileText}
+          subtitle="All POs for your projects"
+          icon={ShoppingCart}
           tone="success"
           onClick={() => navigate('/pm/purchase-orders')}
         />
@@ -134,6 +117,13 @@ export function PMHomePage() {
           icon={Bell}
           tone="primary"
           onClick={() => navigate('/notifications')}
+        />
+        <ActionCard
+          title="Reports"
+          subtitle="Indent aging, stock, project cost"
+          icon={FileBarChart2}
+          tone="info"
+          onClick={() => navigate('/pm/reports')}
         />
       </div>
 

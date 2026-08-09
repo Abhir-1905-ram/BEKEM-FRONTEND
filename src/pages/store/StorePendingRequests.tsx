@@ -122,6 +122,10 @@ export function StorePendingRequestsPage() {
                 options={queueOptions}
                 counts={queueCounts}
                 onChange={(next) => {
+                  if (next === 'all') {
+                    patchParams({ queue: undefined, tab: 'all' });
+                    return;
+                  }
                   // Queue chips span Pending + Approved for store — switch to All so list matches badge.
                   patchParams({
                     queue: next || undefined,

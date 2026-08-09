@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, ChevronRight, AlertTriangle, FileText } from 'lucide-react';
+import { ShoppingCart, ChevronRight, AlertTriangle, FileText, FileBarChart2 } from 'lucide-react';
 import { getGreeting, formatCurrency } from '@afios/shared';
 import type { DeliveryAlertDto, ExecutiveDashboardDto, PurchaseOrderDto } from '@afios/shared';
 import { api } from '@/lib/api';
@@ -121,7 +121,7 @@ export function ExecutiveHomePage() {
 
       <section className="section-gap">
         <h2 className="section-label mb-3">Process</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <ActionCard
             title="Indents workflow"
             subtitle="Review, decide, create RFQ, create PO, and track fulfillment"
@@ -137,6 +137,13 @@ export function ExecutiveHomePage() {
             icon={ShoppingCart}
             tone="success"
             onClick={() => navigate('/executive/purchase-orders')}
+          />
+          <ActionCard
+            title="Reports"
+            subtitle="Pipeline, open PO, GRN, AP aging"
+            icon={FileBarChart2}
+            tone="info"
+            onClick={() => navigate('/executive/reports')}
           />
         </div>
       </section>

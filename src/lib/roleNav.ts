@@ -1,44 +1,27 @@
 import {
-
   LayoutDashboard,
-
   Bell,
-
   User,
-
   FilePlus,
-
   FileText,
-
   Package,
-
   CheckSquare,
-
   ShoppingCart,
-
   Compass,
-
   FileStack,
-
   Users,
-
   HardHat,
-
   Building2,
-
   Truck,
-
   BarChart3,
-
   Shield,
-
   ClipboardCheck,
-
+  FileBarChart2,
   type LucideIcon,
-
 } from 'lucide-react';
 
 import { UserRole } from '@afios/shared';
+import { reportsHubPath } from '@/lib/reportCatalog';
 
 /** Sidebar grouping — `po` renders under a dedicated "PO" Workspace column. */
 export type NavSection = 'core' | 'po' | 'workspace';
@@ -52,10 +35,18 @@ export interface NavShortcut {
   section?: NavSection;
 }
 
-export function getRoleNavShortcuts(
-  role: UserRole,
-  options?: { isSystemAdmin?: boolean }
-): NavShortcut[] {
+function reportsNav(role: UserRole): NavShortcut {
+  return {
+    id: 'reports',
+    label: 'Reports',
+    sublabel: 'MIS & registers',
+    href: reportsHubPath(role),
+    icon: FileBarChart2,
+    section: 'workspace',
+  };
+}
+
+export function getRoleNavShortcuts(role: UserRole): NavShortcut[] {
   const home = '/';
   const common: NavShortcut[] = [
     { id: 'home', label: 'Dashboard', sublabel: 'Role home', href: home, icon: LayoutDashboard, section: 'core' },
@@ -63,20 +54,18 @@ export function getRoleNavShortcuts(
     { id: 'profile', label: 'Profile', href: '/profile', icon: User, section: 'core' },
   ];
 
-  let shortcuts: NavShortcut[];
-
   switch (role) {
     case UserRole.SITE_INCHARGE:
-      shortcuts = [
+      return [
         ...common,
         { id: 'new-request', label: 'New indent', href: '/request/new', icon: FilePlus, section: 'workspace' },
         { id: 'my-requests', label: 'My indents', href: '/incidents', icon: FileText, section: 'workspace' },
+        reportsNav(role),
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },
       ];
-      break;
 
     case UserRole.STORE_INCHARGE:
-      shortcuts = [
+      return [
         ...common,
         { id: 'new-request', label: 'New indent', href: '/request/new', icon: FilePlus, section: 'workspace' },
         { id: 'my-indents', label: 'My indents', href: '/store/requests', icon: FileText, section: 'workspace' },
@@ -87,7 +76,6 @@ export function getRoleNavShortcuts(
         { id: 'stock-aging', label: 'Stock aging', href: '/store/stock-aging', icon: Package, section: 'workspace' },
         { id: 'add-material', label: 'Product catalog', href: '/materials/new', icon: Package, section: 'workspace' },
         { id: 'finance', label: 'Finance & Tally', href: '/store/finance', icon: BarChart3, section: 'workspace' },
-        // PO column — browse all POs for assigned projects
         {
           id: 'purchase-orders',
           label: 'Purchase orders',
@@ -95,12 +83,12 @@ export function getRoleNavShortcuts(
           icon: ShoppingCart,
           section: 'po',
         },
+        reportsNav(role),
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },
       ];
-      break;
 
     case UserRole.PROJECT_MANAGER:
-      shortcuts = [
+      return [
         ...common,
         { id: 'indents', label: 'Indents', href: '/pm/material-indents', icon: FileText, section: 'workspace' },
         {
@@ -115,12 +103,12 @@ export function getRoleNavShortcuts(
         { id: 'branch-transfer', label: 'Branch transfer requests', href: '/pm/branch-transfer-requests', icon: Truck, section: 'workspace' },
         { id: 'stock', label: 'Live stock balance', href: '/store/stock', icon: Package, section: 'workspace' },
         { id: 'finance', label: 'Finance & Tally', href: '/pm/finance', icon: BarChart3, section: 'workspace' },
+        reportsNav(role),
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },
       ];
-      break;
 
     case UserRole.EXECUTIVE:
-      shortcuts = [
+      return [
         ...common,
         { id: 'incidents', label: 'Indents', href: '/executive/material-indents', icon: FileText, section: 'po' },
         {
@@ -133,12 +121,12 @@ export function getRoleNavShortcuts(
         { id: 'vendors', label: 'Vendors master list', href: '/vendors', icon: Users, section: 'workspace' },
         { id: 'finance', label: 'Finance & Tally', href: '/executive/finance', icon: BarChart3, section: 'workspace' },
         { id: 'stock', label: 'Live stock balance', href: '/store/stock', icon: Package, section: 'workspace' },
+        reportsNav(role),
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },
       ];
-      break;
 
     case UserRole.COORDINATOR:
-      shortcuts = [
+      return [
         ...common,
         {
           id: 'procurement-requests',
@@ -170,13 +158,13 @@ export function getRoleNavShortcuts(
         { id: 'incidents', label: 'Material indents', href: '/coordinator/material-indents', icon: FileText, section: 'workspace' },
         { id: 'add-material', label: 'Product catalog', href: '/materials/new', icon: Package, section: 'workspace' },
         { id: 'stock', label: 'Live stock balance', href: '/store/stock', icon: Package, section: 'workspace' },
+        reportsNav(role),
         { id: 'audit', label: 'Audit log', href: '/audit-logs', icon: FileStack, section: 'workspace' },
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },
       ];
-      break;
 
     case UserRole.CHAIRMAN:
-      shortcuts = [
+      return [
         ...common,
         {
           id: 'procurement-requests',
@@ -201,34 +189,12 @@ export function getRoleNavShortcuts(
         { id: 'settings', label: 'Admin settings', href: '/admin/settings', icon: Shield, section: 'workspace' },
         { id: 'indent-categories', label: 'Indent categories', href: '/admin/indent-categories', icon: ClipboardCheck, section: 'workspace' },
         { id: 'finance', label: 'Finance & Tally', href: '/chairman/finance', icon: BarChart3, section: 'workspace' },
+        reportsNav(role),
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },
         { id: 'audit', label: 'Audit log', href: '/audit-logs', icon: FileStack, section: 'workspace' },
       ];
-      break;
 
     default:
-      shortcuts = common;
+      return common;
   }
-
-  if (options?.isSystemAdmin) {
-    const projectsIdx = shortcuts.findIndex((s) => s.id === 'projects');
-    const manageUsers: NavShortcut = {
-      id: 'manage-users',
-      label: 'Manage users',
-      href: '/admin/users',
-      icon: Users,
-      section: 'workspace',
-    };
-    if (projectsIdx >= 0) {
-      shortcuts = [
-        ...shortcuts.slice(0, projectsIdx + 1),
-        manageUsers,
-        ...shortcuts.slice(projectsIdx + 1),
-      ];
-    } else {
-      shortcuts = [...shortcuts, manageUsers];
-    }
-  }
-
-  return shortcuts;
 }

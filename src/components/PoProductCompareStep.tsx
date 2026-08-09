@@ -1,5 +1,6 @@
 import { formatCurrency, type PoLineItemDto } from '@afios/shared';
 import { cn } from '@/lib/utils';
+import { Textarea } from '@/components/ui/Input';
 import {
   bestOfferForQuantity,
   effectiveBreakdown,
@@ -16,6 +17,8 @@ interface PoProductCompareStepProps {
   vendorQuotesByLineIndex: Record<number, LineVendorQuoteMap>;
   lineVendorsByIndex: Record<number, string[]>;
   onSelectVendor: (lineIndex: number, vendorId: string) => void;
+  vendorReasons: Record<string, string>;
+  onVendorReasonChange: (vendorId: string, reason: string) => void;
 }
 
 function comparedOffers(
@@ -48,6 +51,8 @@ export function PoProductCompareStep({
   vendorQuotesByLineIndex,
   lineVendorsByIndex,
   onSelectVendor,
+  vendorReasons,
+  onVendorReasonChange,
 }: PoProductCompareStepProps) {
   return (
     <div className="space-y-3">
@@ -62,6 +67,8 @@ export function PoProductCompareStep({
         const rows = comparedOffers(offers, row.quantity, vendorQuotes);
         const suggested = bestOfferForQuantity(offers, row.quantity, vendorQuotes);
         const selectedId = lineVendorsByIndex[lineIndex]?.[0] || '';
+        const selectedOffer = rows.find((offer) => offer.vendorId === selectedId);
+        const selectedIsL1 = Boolean(selectedId && selectedId === suggested?.vendorId);
 
         if (!rows.length) {
           return (
@@ -139,6 +146,39 @@ export function PoProductCompareStep({
                 </tbody>
               </table>
             </div>
+            {selectedOffer && (
+              <div className="border-t border-surface-border bg-white px-3 py-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <span
+                    className={cn(
+                      'rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+                      selectedIsL1
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-amber-100 text-amber-800'
+                    )}
+                  >
+                    {selectedIsL1 ? 'L1 selected' : 'Non-L1 selected'}
+                  </span>
+                  <span className="text-xs font-medium text-ink">{selectedOffer.vendorName}</span>
+                </div>
+                <label className="text-xs font-medium text-ink-secondary mb-1 block">
+                  {selectedIsL1
+                    ? 'Why did you choose this L1 vendor?'
+                    : 'Why did you choose this Non-L1 vendor?'}{' '}
+                  <span className="text-danger">*</span>
+                </label>
+                <Textarea
+                  value={vendorReasons[selectedId] || ''}
+                  onChange={(event) => onVendorReasonChange(selectedId, event.target.value)}
+                  rows={2}
+                  placeholder={
+                    selectedIsL1
+                      ? 'e.g. Lowest total cost and acceptable delivery'
+                      : 'e.g. Faster delivery, preferred brand, quality, or site urgency'
+                  }
+                />
+              </div>
+            )}
           </div>
         );
       })}

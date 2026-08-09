@@ -7,6 +7,7 @@ import {
   XCircle,
   CheckCircle2,
   ClipboardCheck,
+  FileBarChart2,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatDate, getGreeting } from '@afios/shared';
@@ -110,7 +111,7 @@ export function SiteHomePage() {
         </section>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 section-gap">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 section-gap">
         <ActionCard
           title="Pending"
           count={pending}
@@ -138,6 +139,13 @@ export function SiteHomePage() {
           icon={Package}
           tone="info"
           onClick={() => navigate('/incidents?tab=all')}
+        />
+        <ActionCard
+          title="Reports"
+          subtitle="Indent aging & MIS"
+          icon={FileBarChart2}
+          tone="neutral"
+          onClick={() => navigate('/site/reports')}
         />
       </div>
 

@@ -39,7 +39,6 @@ import { PoWizardStockPanel } from '@/components/PoWizardStockPanel';
 import { GstPercentSelect } from '@/components/GstPercentSelect';
 import { PoMaterialVendorAssign } from '@/components/PoMaterialVendorAssign';
 import { PoProductCompareStep } from '@/components/PoProductCompareStep';
-import { pickL1VendorId } from '@/lib/quotationTotals';
 import {
   bestOfferForQuantity,
   effectiveBreakdown,
@@ -130,12 +129,8 @@ export function POWizardPage() {
   const [paymentTerms, setPaymentTerms] = useState('Net 30 days');
   const [additionalTerms, setAdditionalTerms] = useState('');
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState('');
-  const [comparison, setComparison] = useState<QuotationComparisonDto | null>(null);
   const [purchaseHistory, setPurchaseHistory] = useState<MaterialPurchaseHistoryDto[]>([]);
-  const [whyWeChoseThisVendor, setWhyWeChoseThisVendor] = useState('');
-  const [vendorSelectionReason, setVendorSelectionReason] = useState('');
-  /** Explicit: Chose L1 vs Chose Non-L1 — only matching remark is shown. */
-  const [vendorChoiceKind, setVendorChoiceKind] = useState<'L1' | 'NON_L1' | ''>('');
+  const [vendorSelectionReasons, setVendorSelectionReasons] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState(false);
   const [createdPoCount, setCreatedPoCount] = useState(0);
   const [selectingPr, setSelectingPr] = useState(false);
@@ -236,18 +231,14 @@ export function POWizardPage() {
         expectedDeliveryDate: expectedDeliveryDate || undefined,
         referenceNote:
           referenceNote || (selectedMr?.indentNumber ? `Indent ${selectedMr.indentNumber}` : ''),
-        whyWeChoseThisVendor:
-          vendorChoiceKind === 'L1'
-            ? whyWeChoseThisVendor.trim()
-            : '',
+        whyWeChoseThisVendor: assignedVendorIds
+          .map((vendorId) => vendorSelectionReasons[vendorId]?.trim())
+          .filter(Boolean)
+          .join(' • '),
         vendorSelectionReasons: Object.fromEntries(
-          (vendorChoiceKind === 'NON_L1' ? assignedVendorIds : [])
-            .filter((vid) => String(vid) !== String(l1VendorId || ''))
-            .map((vid) => [
-              vid,
-              vendorSelectionReason.trim(),
-            ])
-            .filter(([, reason]) => !!reason)
+          assignedVendorIds
+            .map((vendorId) => [vendorId, vendorSelectionReasons[vendorId]?.trim()])
+            .filter((entry): entry is [string, string] => Boolean(entry[1]))
         ),
         orders,
       });
@@ -277,7 +268,6 @@ export function POWizardPage() {
     },
     onSuccess: (data) => {
       setQuotations(data.data);
-      if (data.comparison) setComparison(data.comparison);
       if (data.purchaseHistory) setPurchaseHistory(data.purchaseHistory);
       if (data.lineItems?.length) setLineItems(data.lineItems);
       if (data.billingAddress) {
@@ -426,6 +416,11 @@ export function POWizardPage() {
         .filter(Boolean)
     ),
   ];
+  const allSelectedVendorsHaveReasons =
+    assignedVendorIds.length > 0 &&
+    assignedVendorIds.every(
+      (vendorId) => (vendorSelectionReasons[vendorId] || '').trim().length > 0
+    );
   const allActiveLinesHaveVendor =
     activeLineIndexes.length > 0 &&
     activeLineIndexes.every((i) => !!lineVendorByIndex[i]);
@@ -451,7 +446,6 @@ export function POWizardPage() {
         setSelectedMr(null);
       }
       const preview = await loadQuotations.mutateAsync(pr.id);
-      if (preview.comparison) setComparison(preview.comparison);
       if (preview.data?.length) setQuotations(preview.data);
       const items = preview.lineItems?.length ? preview.lineItems : [];
       setLineItems(items);
@@ -560,6 +554,10 @@ export function POWizardPage() {
       toast.error('Select a vendor for each product');
       return;
     }
+    if (!allSelectedVendorsHaveReasons) {
+      toast.error('Enter why each selected vendor was chosen');
+      return;
+    }
     for (const i of activeLineIndexes) {
       const row = lineItems[i];
       const vendorId = lineVendorsByIndex[i]?.[0];
@@ -622,50 +620,6 @@ export function POWizardPage() {
     setSkippedLines({});
     setStep(3);
   };
-
-  const l1VendorId = (() => {
-    const fromComparison = comparison?.l1VendorId ? String(comparison.l1VendorId) : '';
-    if (fromComparison) return fromComparison;
-    return pickL1VendorId(
-      (comparison?.vendors ?? quotations).map((q) => {
-        const raw = (q as { vendorId?: string | { id?: string; toString?: () => string } }).vendorId;
-        const vendorId =
-          typeof raw === 'string'
-            ? raw
-            : raw && typeof raw === 'object'
-              ? String((raw as { id?: string }).id || raw)
-              : '';
-        const finalCost =
-          'finalCost' in (q as object)
-            ? Number((q as { finalCost: number }).finalCost)
-            : Number((q as QuotationDto).amount || 0);
-        return { vendorId, finalCost };
-      })
-    );
-  })();
-
-  const assignedIsNonL1 = Boolean(
-    l1VendorId && assignedVendorIds.some((vid) => String(vid) !== String(l1VendorId))
-  );
-
-  // Suggest default once; user can freely switch L1 / Non-L1 and enter a remark.
-  useEffect(() => {
-    if (!assignedVendorIds.length) {
-      setVendorChoiceKind('');
-      return;
-    }
-    setVendorChoiceKind((prev) => {
-      if (prev) return prev;
-      if (!l1VendorId) return 'L1';
-      return assignedIsNonL1 ? 'NON_L1' : 'L1';
-    });
-  }, [assignedIsNonL1, assignedVendorIds.length, l1VendorId]);
-
-  const canSubmitPo =
-    !!vendorChoiceKind &&
-    (vendorChoiceKind === 'L1'
-      ? whyWeChoseThisVendor.trim().length > 0
-      : vendorSelectionReason.trim().length > 0);
 
   return (
     success ? (
@@ -834,13 +788,19 @@ export function POWizardPage() {
                 onSelectVendor={(lineIndex, vendorId) =>
                   setLineVendorsByIndex((prev) => ({ ...prev, [lineIndex]: [vendorId] }))
                 }
+                vendorReasons={vendorSelectionReasons}
+                onVendorReasonChange={(vendorId, reason) =>
+                  setVendorSelectionReasons((prev) => ({ ...prev, [vendorId]: reason }))
+                }
               />
               <Button
                 className="mt-4"
                 variant="accent"
                 size="lg"
                 accentColor={accent}
-                disabled={!allActiveLinesHaveVendorSelected}
+                disabled={
+                  !allActiveLinesHaveVendorSelected || !allSelectedVendorsHaveReasons
+                }
                 onClick={confirmVendorSelection}
               >
                 Continue with selected vendors
@@ -1348,77 +1308,6 @@ export function POWizardPage() {
                   );
                 })}
               </div>
-              <Card className="mt-4 space-y-3">
-                <p className="text-xs font-semibold text-ink">Vendor selection</p>
-                <p className="text-[11px] text-ink-muted">
-                  Choose L1 or Non-L1, then enter the remark.
-                  {l1VendorId && assignedIsNonL1
-                    ? ' Assigned vendor is Non-L1 — a Non-L1 reason is still required to submit.'
-                    : l1VendorId && !assignedIsNonL1
-                      ? ' Assigned vendor matches L1.'
-                      : ''}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setVendorChoiceKind('L1');
-                      setVendorSelectionReason('');
-                    }}
-                    className={cn(
-                      'px-3 py-2 rounded-lg border text-sm font-semibold transition-colors',
-                      vendorChoiceKind === 'L1'
-                        ? 'border-bekem-accent bg-bekem-accent/10 text-bekem-accent'
-                        : 'border-surface-border bg-white text-ink-secondary hover:text-ink'
-                    )}
-                  >
-                    Chose L1
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setVendorChoiceKind('NON_L1');
-                      setWhyWeChoseThisVendor('');
-                    }}
-                    className={cn(
-                      'px-3 py-2 rounded-lg border text-sm font-semibold transition-colors',
-                      vendorChoiceKind === 'NON_L1'
-                        ? 'border-amber-500 bg-amber-50 text-amber-900'
-                        : 'border-surface-border bg-white text-ink-secondary hover:text-ink'
-                    )}
-                  >
-                    Chose Non-L1
-                  </button>
-                </div>
-
-                {vendorChoiceKind === 'L1' && (
-                  <div>
-                    <p className="text-[11px] font-medium text-ink-muted mb-1">
-                      Why we chose this L1 vendor (required)
-                    </p>
-                    <Textarea
-                      value={whyWeChoseThisVendor}
-                      onChange={(e) => setWhyWeChoseThisVendor(e.target.value)}
-                      rows={3}
-                      placeholder="e.g. Lowest quote and acceptable delivery timeline"
-                    />
-                  </div>
-                )}
-
-                {vendorChoiceKind === 'NON_L1' && (
-                  <div>
-                    <p className="text-[11px] font-medium text-ink-muted mb-1">
-                      Reason for selecting Non-L1 vendor (required)
-                    </p>
-                    <Textarea
-                      value={vendorSelectionReason}
-                      onChange={(e) => setVendorSelectionReason(e.target.value)}
-                      rows={3}
-                      placeholder="e.g. Better delivery commitment / preferred brand / site urgency"
-                    />
-                  </div>
-                )}
-              </Card>
               <div className="flex flex-col sm:flex-row gap-2 mt-4">
                 <Button variant="secondary" size="lg" onClick={() => setStep(4)}>
                   Back to edit
@@ -1427,7 +1316,7 @@ export function POWizardPage() {
                   variant="accent"
                   size="lg"
                   accentColor={accent}
-                  disabled={createPo.isPending || !canSubmitPo}
+                  disabled={createPo.isPending || !allSelectedVendorsHaveReasons}
                   onClick={() => createPo.mutate()}
                 >
                   {createPo.isPending
