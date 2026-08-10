@@ -19,35 +19,47 @@ export type IndentQueueFilterOption = {
   label: string;
 };
 
-const STORE_STATUSES = new Set([
-  'PENDING_STORE',
+/**
+ * Queue chips must match `formatIndentQueueStatus` labels.
+ * Do not key off pendingWith alone — e.g. PM_APPROVED is often pending Store
+ * (below ₹5k purchase) but the row status still reads "Approved by PM".
+ */
+const AWAITING_STORE_STATUSES = new Set(['PENDING_STORE', 'MATERIAL_RECEIVED']);
+/** Store acted — includes indents forwarded to PM for approval. */
+const APPROVED_STORE_STATUSES = new Set([
   'ALLOCATED',
-  'MATERIAL_RECEIVED',
-  'CHAIRMAN_APPROVED',
+  'FORWARDED_TO_PM',
+  'BRANCH_TRANSFER_REQUESTED',
+]);
+/** PM has approved — may still be with Store (below ₹5k) or escalated to HO. */
+const APPROVED_PM_STATUSES = new Set([
   'PM_APPROVED',
-]);
-const PM_STATUSES = new Set(['FORWARDED_TO_PM', 'BRANCH_TRANSFER_REQUESTED']);
-const COORDINATOR_STATUSES = new Set([
-  'EXECUTIVE_DECISION_PO',
-  'EXECUTIVE_DECISION_BRANCH_TRANSFER',
-  'COORDINATOR_PENDING',
-  'PENDING_REVIEW',
-]);
-const CHAIRMAN_STATUSES = new Set(['CHAIRMAN_PENDING']);
-/** Executive desk only — not Coordinator / Chairman. */
-const EXECUTIVE_STATUSES = new Set([
   'PENDING_HO',
   'PENDING_EXECUTIVE_DECISION',
+]);
+const COORDINATOR_STATUSES = new Set([
+  'COORDINATOR_PENDING',
+  'PENDING_REVIEW',
+  'COORDINATOR_VERIFIED',
+]);
+const CHAIRMAN_STATUSES = new Set(['CHAIRMAN_PENDING', 'CHAIRMAN_APPROVED']);
+/** Executive desk after PM — procurement / RFQ / PO path. */
+const EXECUTIVE_STATUSES = new Set([
   'PURCHASE_REQUESTED',
   'RFQ_OPEN',
   'QUOTED',
   'VENDOR_SELECTED',
+  'PO_CREATED',
+  'EXECUTIVE_DECISION_PO',
+  'EXECUTIVE_DECISION_BRANCH_TRANSFER',
 ]);
-/** Broad HO bucket for Store / PM role chips (Exec + Coord + Chairman). */
+/** Broad HO bucket for legacy `ho` filter. */
 const HO_STATUSES = new Set([
   ...EXECUTIVE_STATUSES,
   ...COORDINATOR_STATUSES,
   ...CHAIRMAN_STATUSES,
+  'PENDING_HO',
+  'PENDING_EXECUTIVE_DECISION',
 ]);
 
 /** Shared pending-queue chips — one per status color, with counts on every role. */
@@ -84,59 +96,29 @@ export function matchesIndentQueueQuickFilter(
 ): boolean {
   if (!filter || filter === 'all') return true;
   const status = request.status;
-  const pending = request.pendingWith;
 
   if (filter === 'material-available') {
     return (request.items || []).some((item) => Number(item.availableToIssueQty || 0) > 0);
   }
   if (filter === 'awaiting-store') {
-    if (pending) return pending === UserRole.STORE_INCHARGE;
-    return status === 'PENDING_STORE';
+    return AWAITING_STORE_STATUSES.has(status);
   }
   if (filter === 'approved-store') {
-    if (pending === UserRole.STORE_INCHARGE) return status !== 'PENDING_STORE';
-    // Don't treat HO roles as store even if status is in STORE_STATUSES
-    if (
-      pending === UserRole.PROJECT_MANAGER ||
-      pending === UserRole.EXECUTIVE ||
-      pending === UserRole.COORDINATOR ||
-      pending === UserRole.CHAIRMAN
-    ) {
-      return false;
-    }
-    return STORE_STATUSES.has(status) && status !== 'PENDING_STORE';
+    return APPROVED_STORE_STATUSES.has(status);
+  }
+  if (filter === 'pm') {
+    return APPROVED_PM_STATUSES.has(status);
+  }
+  if (filter === 'executive') {
+    return EXECUTIVE_STATUSES.has(status);
   }
   if (filter === 'coordinator') {
-    if (pending) return pending === UserRole.COORDINATOR;
     return COORDINATOR_STATUSES.has(status);
   }
   if (filter === 'chairman') {
-    if (pending) return pending === UserRole.CHAIRMAN;
     return CHAIRMAN_STATUSES.has(status);
   }
-  if (filter === 'pm') {
-    if (pending) return pending === UserRole.PROJECT_MANAGER;
-    return PM_STATUSES.has(status);
-  }  if (filter === 'executive') {
-    if (pending === UserRole.EXECUTIVE) return true;
-    if (
-      pending === UserRole.COORDINATOR ||
-      pending === UserRole.CHAIRMAN ||
-      pending === UserRole.STORE_INCHARGE ||
-      pending === UserRole.PROJECT_MANAGER
-    ) {
-      return false;
-    }
-    return EXECUTIVE_STATUSES.has(status);
-  }
   // Broad Head Office bucket (Executive + Coordinator + Chairman workflows)
-  if (
-    pending === UserRole.EXECUTIVE ||
-    pending === UserRole.COORDINATOR ||
-    pending === UserRole.CHAIRMAN
-  ) {
-    return true;
-  }
   return HO_STATUSES.has(status);
 }
 

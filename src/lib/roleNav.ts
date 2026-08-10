@@ -97,7 +97,7 @@ export function getRoleNavShortcuts(
     case UserRole.PROJECT_MANAGER:
       shortcuts = [
         ...common,
-        { id: 'indents', label: 'Indents', href: '/pm/material-indents', icon: FileText, section: 'workspace' },
+        { id: 'indents', label: 'Indents', href: '/pm/material-indents?tab=all', icon: FileText, section: 'workspace' },
         {
           id: 'purchase-orders',
           label: 'Purchase orders',
