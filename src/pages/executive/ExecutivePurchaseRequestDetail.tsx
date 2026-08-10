@@ -68,6 +68,7 @@ export function ExecutivePurchaseRequestDetailPage() {
       setRemark('');
       queryClient.invalidateQueries({ queryKey: ['purchase-request', id] });
       queryClient.invalidateQueries({ queryKey: ['executive-purchase-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-requests', 'ready-for-rfq'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-widgets'] });
       queryClient.invalidateQueries({ queryKey: ['executive-rfqs'] });
       if (method === 'PURCHASE_ORDER' && data.id) {

@@ -115,6 +115,12 @@ const AuditLogViewerPage = lazy(() =>
   import('@/pages/audit/AuditLogViewer').then((m) => ({ default: m.AuditLogViewerPage }))
 );
 const ExplorerPage = lazy(() => import('@/pages/explorer/ExplorerPage').then((m) => ({ default: m.ExplorerPage })));
+const ReportsHubPage = lazy(() =>
+  import('@/pages/reports/ReportsHubPage').then((m) => ({ default: m.ReportsHubPage }))
+);
+const OperationalReportPage = lazy(() =>
+  import('@/pages/reports/OperationalReportPage').then((m) => ({ default: m.OperationalReportPage }))
+);
 const VendorsListPage = lazy(() => import('@/pages/vendors/VendorsList').then((m) => ({ default: m.VendorsListPage })));
 const VendorScorecardPage = lazy(() =>
   import('@/pages/vendors/VendorScorecard').then((m) => ({ default: m.VendorScorecardPage }))
@@ -1265,23 +1271,81 @@ export default function App() {
               />
 
               <Route
-
                 path="/explorer"
-
                 element={
-
                   <RoleGuard capabilities={['VIEW_ALL_PROJECTS', 'VIEW_OWN_SCOPE']} match="any">
-
                     <ExplorerPage />
-
                   </RoleGuard>
-
                 }
-
               />
 
               <Route
+                path="/site/reports"
+                element={
+                  <RoleGuard roles={[UserRole.SITE_INCHARGE]}>
+                    <ReportsHubPage />
+                  </RoleGuard>
+                }
+              />
+              <Route
+                path="/store/reports"
+                element={
+                  <RoleGuard roles={[UserRole.STORE_INCHARGE]}>
+                    <ReportsHubPage />
+                  </RoleGuard>
+                }
+              />
+              <Route
+                path="/pm/reports"
+                element={
+                  <RoleGuard roles={[UserRole.PROJECT_MANAGER]}>
+                    <ReportsHubPage />
+                  </RoleGuard>
+                }
+              />
+              <Route
+                path="/executive/reports"
+                element={
+                  <RoleGuard roles={[UserRole.EXECUTIVE]}>
+                    <ReportsHubPage />
+                  </RoleGuard>
+                }
+              />
+              <Route
+                path="/coordinator/reports"
+                element={
+                  <RoleGuard roles={[UserRole.COORDINATOR]}>
+                    <ReportsHubPage />
+                  </RoleGuard>
+                }
+              />
+              <Route
+                path="/chairman/reports"
+                element={
+                  <RoleGuard roles={[UserRole.CHAIRMAN]}>
+                    <ReportsHubPage />
+                  </RoleGuard>
+                }
+              />
+              <Route
+                path="/reports/:reportId"
+                element={
+                  <RoleGuard
+                    roles={[
+                      UserRole.SITE_INCHARGE,
+                      UserRole.STORE_INCHARGE,
+                      UserRole.PROJECT_MANAGER,
+                      UserRole.EXECUTIVE,
+                      UserRole.COORDINATOR,
+                      UserRole.CHAIRMAN,
+                    ]}
+                  >
+                    <OperationalReportPage />
+                  </RoleGuard>
+                }
+              />
 
+              <Route
                 path="/vendors"
 
                 element={

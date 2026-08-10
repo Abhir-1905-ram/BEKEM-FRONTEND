@@ -71,7 +71,7 @@ export function PurchaseOrdersBrowsePage({
         empty={
           <EmptyState
             title="No purchase orders"
-            description="POs created by Executive will appear here for visibility."
+            description="Purchase orders for your projects will appear here."
           />
         }
       >

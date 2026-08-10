@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ClipboardCheck, HardHat, FileText } from 'lucide-react';
+import { ClipboardCheck, HardHat, FileText, FileBarChart2 } from 'lucide-react';
 import { getGreeting } from '@afios/shared';
 import type { PurchaseOrderDto, WorkOrderDto, MaterialRequestDto } from '@afios/shared';
 import { api } from '@/lib/api';
@@ -142,6 +142,13 @@ export function CoordinatorHomePage() {
               onClick={() => navigate('/coordinator/material-indents?tab=pending&queue=coordinator')}
             />
           )}
+          <ActionCard
+            title="Reports"
+            subtitle="3-way match, AP aging, pipeline, registers"
+            icon={FileBarChart2}
+            tone="info"
+            onClick={() => navigate('/coordinator/reports')}
+          />
         </div>
 
         {totalPending === 0 && indentsNeedingCoord === 0 && (

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, Search, Package, Building2, MapPin, ChevronRight, ArrowLeft } from 'lucide-react';
@@ -53,6 +53,8 @@ function unitPriceSuffix(unit: string) {
 }
 
 export function RequestWizardPage() {
+  const submitLockRef = useRef(false);
+  const submissionKeyRef = useRef(crypto.randomUUID());
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user)!;
@@ -162,14 +164,19 @@ export function RequestWizardPage() {
 
   const mutation = useMutation({
     mutationFn: async (data: CreateIndentDto) => {
-      const res = await api.post<{ data: { indentNumber: string } }>('/material-requests', data);
+      const res = await api.post<{ data: { indentNumber: string } }>('/material-requests', data, {
+        headers: { 'Idempotency-Key': submissionKeyRef.current },
+      });
       return res.data.data;
     },
     onSuccess: (data) => {
       setIndentNumber(data.indentNumber);
       setSuccess(true);
     },
-    onError: () => toast.error('Failed to submit indent'),
+    onError: () => {
+      submitLockRef.current = false;
+      toast.error('Failed to submit indent');
+    },
   });
 
   const createSiteMaterial = useMutation({
@@ -764,8 +771,10 @@ export function RequestWizardPage() {
                   mutation.isPending
                 }
                 onClick={() => {
+                  if (submitLockRef.current || mutation.isPending) return;
                   const first = lines[0];
                   if (!first) return;
+                  submitLockRef.current = true;
                   mutation.mutate({
                     indentRequestType: indentRequestType as IndentRequestType,
                     purpose: purpose.trim(),

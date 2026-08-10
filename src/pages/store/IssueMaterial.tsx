@@ -87,7 +87,7 @@ export function IssueMaterialPage() {
     queryKey: ['ready-to-issue'],
     queryFn: async () => {
       const res = await api.get<{ data: MaterialRequestDto[] }>('/material-requests', {
-        params: { status: 'MATERIAL_RECEIVED,CHAIRMAN_APPROVED,ALLOCATED' },
+        params: { status: 'MATERIAL_RECEIVED,CHAIRMAN_APPROVED,ALLOCATED,ISSUED' },
       });
       return normalizeListData<MaterialRequestDto>(res.data.data);
     },

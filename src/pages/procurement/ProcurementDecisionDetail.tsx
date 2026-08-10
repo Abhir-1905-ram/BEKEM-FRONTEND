@@ -154,6 +154,7 @@ export function ProcurementDecisionDetailPage({ listPath }: ProcurementDecisionD
       queryClient.invalidateQueries({ queryKey: ['procurement-decisions'] });
 
       queryClient.invalidateQueries({ queryKey: ['purchase-requests', 'ready-for-po'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-requests', 'ready-for-rfq'] });
 
       queryClient.invalidateQueries({ queryKey: ['dashboard-widgets'] });
 

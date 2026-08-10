@@ -1,44 +1,27 @@
 import {
-
   LayoutDashboard,
-
   Bell,
-
   User,
-
   FilePlus,
-
   FileText,
-
   Package,
-
   CheckSquare,
-
   ShoppingCart,
-
   Compass,
-
   FileStack,
-
   Users,
-
   HardHat,
-
   Building2,
-
   Truck,
-
   BarChart3,
-
   Shield,
-
   ClipboardCheck,
-
+  FileBarChart2,
   type LucideIcon,
-
 } from 'lucide-react';
 
 import { UserRole } from '@afios/shared';
+import { reportsHubPath } from '@/lib/reportCatalog';
 
 /** Sidebar grouping — `po` renders under a dedicated "PO" Workspace column. */
 export type NavSection = 'core' | 'po' | 'workspace';
@@ -50,6 +33,17 @@ export interface NavShortcut {
   href: string;
   icon: LucideIcon;
   section?: NavSection;
+}
+
+function reportsNav(role: UserRole): NavShortcut {
+  return {
+    id: 'reports',
+    label: 'Reports',
+    sublabel: 'MIS & registers',
+    href: reportsHubPath(role),
+    icon: FileBarChart2,
+    section: 'workspace',
+  };
 }
 
 export function getRoleNavShortcuts(
@@ -71,6 +65,7 @@ export function getRoleNavShortcuts(
         ...common,
         { id: 'new-request', label: 'New indent', href: '/request/new', icon: FilePlus, section: 'workspace' },
         { id: 'my-requests', label: 'My indents', href: '/incidents', icon: FileText, section: 'workspace' },
+        reportsNav(role),
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },
       ];
       break;
@@ -87,7 +82,6 @@ export function getRoleNavShortcuts(
         { id: 'stock-aging', label: 'Stock aging', href: '/store/stock-aging', icon: Package, section: 'workspace' },
         { id: 'add-material', label: 'Product catalog', href: '/materials/new', icon: Package, section: 'workspace' },
         { id: 'finance', label: 'Finance & Tally', href: '/store/finance', icon: BarChart3, section: 'workspace' },
-        // PO column — browse all POs for assigned projects
         {
           id: 'purchase-orders',
           label: 'Purchase orders',
@@ -95,6 +89,7 @@ export function getRoleNavShortcuts(
           icon: ShoppingCart,
           section: 'po',
         },
+        reportsNav(role),
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },
       ];
       break;
@@ -115,6 +110,7 @@ export function getRoleNavShortcuts(
         { id: 'branch-transfer', label: 'Branch transfer requests', href: '/pm/branch-transfer-requests', icon: Truck, section: 'workspace' },
         { id: 'stock', label: 'Live stock balance', href: '/store/stock', icon: Package, section: 'workspace' },
         { id: 'finance', label: 'Finance & Tally', href: '/pm/finance', icon: BarChart3, section: 'workspace' },
+        reportsNav(role),
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },
       ];
       break;
@@ -133,6 +129,7 @@ export function getRoleNavShortcuts(
         { id: 'vendors', label: 'Vendors master list', href: '/vendors', icon: Users, section: 'workspace' },
         { id: 'finance', label: 'Finance & Tally', href: '/executive/finance', icon: BarChart3, section: 'workspace' },
         { id: 'stock', label: 'Live stock balance', href: '/store/stock', icon: Package, section: 'workspace' },
+        reportsNav(role),
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },
       ];
       break;
@@ -170,6 +167,7 @@ export function getRoleNavShortcuts(
         { id: 'incidents', label: 'Material indents', href: '/coordinator/material-indents', icon: FileText, section: 'workspace' },
         { id: 'add-material', label: 'Product catalog', href: '/materials/new', icon: Package, section: 'workspace' },
         { id: 'stock', label: 'Live stock balance', href: '/store/stock', icon: Package, section: 'workspace' },
+        reportsNav(role),
         { id: 'audit', label: 'Audit log', href: '/audit-logs', icon: FileStack, section: 'workspace' },
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },
       ];
@@ -201,6 +199,7 @@ export function getRoleNavShortcuts(
         { id: 'settings', label: 'Admin settings', href: '/admin/settings', icon: Shield, section: 'workspace' },
         { id: 'indent-categories', label: 'Indent categories', href: '/admin/indent-categories', icon: ClipboardCheck, section: 'workspace' },
         { id: 'finance', label: 'Finance & Tally', href: '/chairman/finance', icon: BarChart3, section: 'workspace' },
+        reportsNav(role),
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },
         { id: 'audit', label: 'Audit log', href: '/audit-logs', icon: FileStack, section: 'workspace' },
       ];

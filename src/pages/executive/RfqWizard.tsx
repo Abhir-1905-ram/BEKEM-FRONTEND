@@ -59,7 +59,12 @@ export function RfqWizardPage() {
   });
   const [selectingPr, setSelectingPr] = useState(false);
 
-  const { data: purchaseRequests, isLoading: prLoading, isError: prError } = useQuery({
+  const {
+    data: purchaseRequests,
+    isLoading: prLoading,
+    isFetching: prFetching,
+    isError: prError,
+  } = useQuery({
     queryKey: ['purchase-requests', 'ready-for-rfq'],
     queryFn: async () => {
       const res = await api.get<{ data: PurchaseRequestDto[] }>('/purchase-requests', {
@@ -70,6 +75,23 @@ export function RfqWizardPage() {
   });
 
   const openPurchaseRequests = purchaseRequests ?? [];
+  const preselectedFromList = preselectedPrId
+    ? openPurchaseRequests.find((request) => request.id === preselectedPrId)
+    : undefined;
+  const {
+    data: preselectedPurchaseRequest,
+    isLoading: preselectedLoading,
+    isError: preselectedError,
+  } = useQuery({
+    queryKey: ['purchase-request', preselectedPrId],
+    queryFn: async () => {
+      const res = await api.get<{ data: PurchaseRequestDto }>(
+        `/purchase-requests/${preselectedPrId}`
+      );
+      return res.data.data;
+    },
+    enabled: Boolean(preselectedPrId && !preselectedFromList),
+  });
   const quantity = comparison?.quantity ?? 1;
   const materialIds = useMemo(() => {
     if (!selectedMr) return [];
@@ -210,7 +232,7 @@ export function RfqWizardPage() {
 
   useEffect(() => {
     if (!preselectedPrId || selectedPr || prLoading || selectingPr) return;
-    const pr = openPurchaseRequests.find((p) => p.id === preselectedPrId);
+    const pr = preselectedFromList || preselectedPurchaseRequest;
     if (!pr) return;
     void (async () => {
       await selectPurchaseRequest(pr);
@@ -232,7 +254,15 @@ export function RfqWizardPage() {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [preselectedPrId, resumeRfq, openPurchaseRequests, prLoading, selectedPr, selectingPr]);
+  }, [
+    preselectedPrId,
+    resumeRfq,
+    preselectedFromList,
+    preselectedPurchaseRequest,
+    prLoading,
+    selectedPr,
+    selectingPr,
+  ]);
 
   useEffect(() => {
     if (step !== 2) return;
@@ -277,8 +307,11 @@ export function RfqWizardPage() {
                     <div key={i} className="h-16 rounded-xl bg-surface-muted animate-pulse" />
                   ))}
                 </div>
-              ) : prError ? (
+              ) : prError || preselectedError ? (
                 <EmptyState title="Could not load requests" description="Check API is running." />
+              ) : (prLoading || prFetching || preselectedLoading || selectingPr) &&
+                !openPurchaseRequests.length ? (
+                <div className="h-32 rounded-2xl bg-surface-muted animate-pulse" />
               ) : !openPurchaseRequests.length ? (
                 <EmptyState
                   title="No requests ready"

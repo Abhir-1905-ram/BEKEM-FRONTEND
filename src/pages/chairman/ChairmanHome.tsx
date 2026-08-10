@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, Download, Users, ClipboardCheck, Package, HardHat } from 'lucide-react';
+import { AlertTriangle, Download, Users, ClipboardCheck, Package, HardHat, FileBarChart2 } from 'lucide-react';
 import { getGreeting, formatCurrency, formatUnitCount } from '@afios/shared';
 import type { ChairmanKpiDto } from '@afios/shared';
 import { api } from '@/lib/api';
@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/Button';
 import { downloadExport } from '@/lib/downloadExport';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { fmtInrLimit, useApprovalLimits } from '@/hooks/useApprovalLimits';
 
 function MiniBar({ value, max, tone }: { value: number; max: number; tone: string }) {
   const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
@@ -29,6 +30,7 @@ function MiniBar({ value, max, tone }: { value: number; max: number; tone: strin
 export function ChairmanHomePage() {
   const navigate = useNavigate();
   const { data: today, isLoading: todayLoading } = useTodayActions();
+  const { data: approvalLimits } = useApprovalLimits();
   const [exportingBudget, setExportingBudget] = useState(false);
   const [projectPage, setProjectPage] = useState(1);
   const [supplierPage, setSupplierPage] = useState(1);
@@ -132,7 +134,7 @@ export function ChairmanHomePage() {
           tone="chairman"
           sparkline={kpis?.sparklines.approvals}
           trend={{
-            label: 'Above ₹10,000 awaiting Chairman',
+            label: `Above ${fmtInrLimit(approvalLimits?.poCoordinatorMaxInr ?? 5000)} awaiting Chairman`,
             positive: (kpis?.approvalsPending ?? 0) === 0,
           }}
           onClick={() => navigate('/chairman/approve-pos')}
@@ -203,6 +205,15 @@ export function ChairmanHomePage() {
           icon={<Users className="h-6 w-6" />}
           trend={{ label: 'User activity, indents & assignments' }}
           onClick={() => navigate('/chairman/user-analytics')}
+        />
+        <StatCard
+          hero
+          label="Reports"
+          value="MIS"
+          tone="blue"
+          icon={<FileBarChart2 className="h-6 w-6" />}
+          trend={{ label: 'Pipeline, AP aging, project cost, audit' }}
+          onClick={() => navigate('/chairman/reports')}
         />
       </div>
 

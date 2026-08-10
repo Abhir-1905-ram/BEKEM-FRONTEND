@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Package, ChevronRight, AlertTriangle, Warehouse, Search } from 'lucide-react';
+import { Package, ChevronRight, AlertTriangle, Warehouse, Search, FileBarChart2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
 import { getGreeting, getFirstName } from '@afios/shared';
@@ -103,7 +103,7 @@ export function StoreHomePage() {
 
       <TodayPanel actions={today ?? []} loading={todayLoading} />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 section-gap">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 section-gap">
         <StatCard label="Waiting" value={summary?.waiting ?? '—'} hint="Needs allocation" tone="amber" />
         <StatCard
           label="Stock items"
@@ -117,6 +117,14 @@ export function StoreHomePage() {
           value={summary?.lowStock ?? '—'}
           hint="Below threshold"
           tone="rose"
+        />
+        <StatCard
+          label="Reports"
+          value="MIS"
+          hint="Registers, aging, GRN, pipeline"
+          tone="blue"
+          icon={<FileBarChart2 className="h-5 w-5" />}
+          onClick={() => navigate('/store/reports')}
         />
       </div>
 
