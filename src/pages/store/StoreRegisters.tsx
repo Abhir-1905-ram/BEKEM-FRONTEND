@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { formatCurrency, formatDate } from '@afios/shared';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -119,8 +120,21 @@ function money(n: number | null | undefined) {
   return formatCurrency(n);
 }
 
+function parseRegisterTab(value: string | null): RegisterTab {
+  if (value === 'outward' || value === 'stock' || value === 'inward') return value;
+  return 'inward';
+}
+
 export function StoreRegistersPage() {
-  const [tab, setTab] = useState<RegisterTab>('inward');
+  const [params, setParams] = useSearchParams();
+  const [tab, setTabState] = useState<RegisterTab>(() => parseRegisterTab(params.get('tab')));
+
+  const setTab = (next: RegisterTab) => {
+    setTabState(next);
+    const nextParams = new URLSearchParams(params);
+    nextParams.set('tab', next);
+    setParams(nextParams, { replace: true });
+  };
 
   const inward = useListQuery({
     queryKey: ['register-inward'],
