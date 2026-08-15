@@ -1,0 +1,205 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Check, Fingerprint, Send, X } from 'lucide-react';
+import { toast } from 'sonner';
+import { api } from '@/lib/api';
+import { requireBiometricConfirm } from '@/lib/biometricGate';
+import type { MaterialRequestDto } from '@afios/shared';
+import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { ListQueryBoundary } from '@/components/ListQueryBoundary';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+
+export function PmMobileApprovalPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const { data: request, isLoading, isError, refetch } = useQuery({
+    queryKey: ['material-request', id],
+    queryFn: async () => {
+      const res = await api.get<{ data: MaterialRequestDto }>(`/material-requests/${id}`);
+      return res.data.data;
+    },
+    enabled: Boolean(id),
+  });
+
+  const stockAvailable = Boolean(request?.canFullyIssue || request?.storeStockVerified);
+  const isBelowCap = request?.indentRequestType === 'BELOW_5000';
+  const showForwardToHo =
+    request?.status === 'FORWARDED_TO_PM' && !stockAvailable && !isBelowCap;
+  const showApprove =
+    request?.status === 'FORWARDED_TO_PM' && (stockAvailable || isBelowCap);
+
+  const approve = useMutation({
+    mutationFn: async () => {
+      const ok = await requireBiometricConfirm('Approve indent');
+      if (!ok) throw new Error('Biometric confirmation cancelled');
+      await api.post(`/material-requests/${id}/pm-local-close`, {
+        remark: 'Approved via mobile',
+      });
+    },
+    onSuccess: () => {
+      toast.success('Indent approved');
+      queryClient.invalidateQueries({ queryKey: ['pm-approvals'] });
+      navigate('/pm/material-indents?tab=pending&queue=pm');
+    },
+    onError: (e: Error & { response?: { data?: { message?: string } } }) => {
+      if (e.message !== 'Biometric confirmation cancelled') {
+        toast.error(e.response?.data?.message || e.message || 'Approval failed');
+      }
+    },
+  });
+
+  const forwardHo = useMutation({
+    mutationFn: async () => {
+      const ok = await requireBiometricConfirm('Forward to Head Office');
+      if (!ok) throw new Error('Biometric confirmation cancelled');
+      await api.post(`/material-requests/${id}/forward-to-ho`, {
+        remark: 'Forwarded to HO for stock requisition via mobile',
+      });
+    },
+    onSuccess: () => {
+      toast.success('Forwarded to HO for stock requisition');
+      queryClient.invalidateQueries({ queryKey: ['pm-approvals'] });
+      navigate('/pm/material-indents?tab=pending&queue=pm');
+    },
+    onError: (e: Error & { response?: { data?: { message?: string } } }) => {
+      if (e.message !== 'Biometric confirmation cancelled') {
+        toast.error(e.response?.data?.message || e.message || 'Forward failed');
+      }
+    },
+  });
+
+  const reject = useMutation({
+    mutationFn: async () => {
+      const ok = await requireBiometricConfirm('Reject indent');
+      if (!ok) throw new Error('Biometric confirmation cancelled');
+      await api.post(`/material-requests/${id}/reject`, {
+        reason: 'Rejected via mobile',
+      });
+    },
+    onSuccess: () => {
+      toast.success('Indent rejected');
+      queryClient.invalidateQueries({ queryKey: ['pm-approvals'] });
+      navigate('/pm/material-indents?tab=pending&queue=pm');
+    },
+    onError: (e: Error & { response?: { data?: { message?: string } } }) => {
+      if (e.message !== 'Biometric confirmation cancelled') {
+        toast.error(e.response?.data?.message || e.message || 'Rejection failed');
+      }
+    },
+  });
+
+  const items = request?.items?.length
+    ? request.items
+    : request?.materialId
+      ? [
+          {
+            material: request.material,
+            quantityRequested: request.quantityRequested || 0,
+          },
+        ]
+      : [];
+
+  const busy = approve.isPending || forwardHo.isPending || reject.isPending;
+
+  return (
+    <div className="min-h-[100dvh] bg-surface-muted px-4 py-6 max-w-lg mx-auto">
+      <PageHeader title="Approve indent" subtitle="Review and confirm with Face ID / fingerprint" />
+
+      <ListQueryBoundary
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
+        isEmpty={!request}
+        empty={<p className="text-sm text-ink-muted">Request not found.</p>}
+      >
+        {request && (
+          <div className="space-y-3">
+            <div className="panel p-3 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-lg font-bold text-ink">{request.indentNumber}</p>
+                  <p className="text-sm text-ink-secondary">
+                    {request.project?.name || request.project?.code || 'Project'}
+                  </p>
+                </div>
+                <StatusBadge status={request.status} />
+              </div>
+
+              <dl className="grid grid-cols-1 gap-2 text-sm">
+                <div>
+                  <dt className="text-ink-muted text-xs uppercase tracking-wide">Material</dt>
+                  <dd className="font-medium">
+                    {items
+                      .map(
+                        (item) =>
+                          `${item.material?.name || 'Material'} · ${item.quantityRequested} ${item.material?.unit || ''}`
+                      )
+                      .join('; ')}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-ink-muted text-xs uppercase tracking-wide">Requested by</dt>
+                  <dd className="font-medium">{request.requester?.name || '—'}</dd>
+                </div>
+                {stockAvailable ? (
+                  <div className="text-emerald-700 text-xs font-medium bg-emerald-50 rounded-lg px-3 py-2">
+                    Stock is available — Approve to allocate
+                  </div>
+                ) : showForwardToHo ? (
+                  <div className="text-amber-800 text-xs font-medium bg-amber-50 rounded-lg px-3 py-2">
+                    Stock short — forward to HO for stock requisition
+                  </div>
+                ) : null}
+              </dl>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3">
+              {showApprove && (
+                <Button
+                  variant="accent"
+                  size="lg"
+                  className="h-14"
+                  disabled={busy}
+                  onClick={() => approve.mutate()}
+                >
+                  <Check className="h-5 w-5 mr-2" />
+                  Approve
+                </Button>
+              )}
+              {showForwardToHo && (
+                <Button
+                  variant="accent"
+                  size="lg"
+                  className="h-14"
+                  disabled={busy}
+                  onClick={() => forwardHo.mutate()}
+                >
+                  <Send className="h-5 w-5 mr-2" />
+                  Forward to HO for Stock Requisition
+                </Button>
+              )}
+              <Button
+                variant="secondary"
+                size="lg"
+                className="h-14 text-danger border-danger/30"
+                disabled={busy || request.status !== 'FORWARDED_TO_PM'}
+                onClick={() => reject.mutate()}
+              >
+                <X className="h-5 w-5 mr-2" />
+                Reject
+              </Button>
+            </div>
+
+            <p className="text-xs text-center text-ink-muted flex items-center justify-center gap-1.5">
+              <Fingerprint className="h-4 w-4" />
+              Face ID or fingerprint required on supported devices
+            </p>
+          </div>
+        )}
+      </ListQueryBoundary>
+    </div>
+  );
+}

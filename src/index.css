@@ -1,0 +1,297 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Bekem enterprise design system — compact density for maximum information per viewport */
+
+@layer base {
+  * {
+    @apply border-surface-border;
+  }
+  body {
+    @apply bg-white text-ink font-sans antialiased text-xs leading-snug;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-bekem-accent;
+  }
+  button:focus:not(:focus-visible),
+  a:focus:not(:focus-visible) {
+    outline: none;
+  }
+  h1, h2, h3 {
+    @apply text-ink font-semibold tracking-tight;
+  }
+  h1 {
+    @apply text-base lg:text-lg;
+  }
+  h2 {
+    @apply text-sm;
+  }
+  h3 {
+    @apply text-xs;
+  }
+}
+
+@layer components {
+  .page-container {
+    @apply py-2 lg:py-3 w-full;
+    animation: bekem-fade-in 200ms ease-out;
+  }
+
+  .section-gap {
+    @apply mb-3 lg:mb-4;
+  }
+
+  .input-compact {
+    @apply h-7 px-2 py-0.5 text-xs;
+  }
+
+  .data-row {
+    @apply flex items-center justify-between gap-2 px-2 min-h-[28px] rounded border border-surface-border bg-white
+      hover:border-bekem-accent/30 hover:bg-bekem-accent-soft/30
+      transition-colors duration-150 cursor-pointer text-xs;
+  }
+
+  .section-label {
+    @apply text-[10px] font-semibold uppercase tracking-wider text-ink-muted;
+  }
+
+  .panel {
+    @apply rounded border border-surface-border bg-white;
+  }
+
+  .field-readonly {
+    @apply rounded border border-surface-border bg-surface-muted px-2 py-0.5 text-xs text-ink-secondary cursor-default;
+  }
+
+  .field-readonly-label {
+    @apply text-[10px] font-semibold uppercase tracking-wider text-ink-muted;
+  }
+
+  .field-stack {
+    @apply space-y-1;
+  }
+
+  .form-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-3 gap-y-2;
+  }
+
+  .form-grid-2 {
+    @apply grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2;
+  }
+
+  .action-card {
+    @apply relative overflow-hidden rounded border border-surface-border bg-white p-2.5
+      transition-colors duration-150 text-left w-full text-xs
+      hover:border-bekem-accent/30 hover:bg-bekem-accent-soft/20;
+  }
+
+  .action-card-strip {
+    @apply absolute left-0 top-0 bottom-0 w-1 rounded-l-lg;
+  }
+
+  /* Excel-style grid — default for all data tables app-wide */
+  .data-table,
+  .excel-grid,
+  .procurement-landscape-table {
+    @apply w-full border-collapse text-xs tabular-nums font-sans;
+  }
+
+  .data-table th,
+  .data-table td,
+  .excel-grid th,
+  .excel-grid td,
+  .procurement-landscape-table th,
+  .procurement-landscape-table td {
+    @apply border border-surface-border px-2 align-middle font-sans;
+  }
+
+  /* Compact density (default) */
+  :root[data-table-density='compact'] .data-table th,
+  :root[data-table-density='compact'] .data-table td,
+  :root[data-table-density='compact'] .excel-grid th,
+  :root[data-table-density='compact'] .excel-grid td,
+  :root[data-table-density='compact'] .procurement-landscape-table th,
+  :root[data-table-density='compact'] .procurement-landscape-table td {
+    @apply py-0;
+  }
+
+  :root[data-table-density='compact'] .data-table thead th,
+  :root[data-table-density='compact'] .excel-grid thead th,
+  :root[data-table-density='compact'] .procurement-landscape-table thead th {
+    @apply py-0.5;
+  }
+
+  /* Comfortable density toggle */
+  :root[data-table-density='comfortable'] .data-table th,
+  :root[data-table-density='comfortable'] .data-table td,
+  :root[data-table-density='comfortable'] .excel-grid th,
+  :root[data-table-density='comfortable'] .excel-grid td,
+  :root[data-table-density='comfortable'] .procurement-landscape-table th,
+  :root[data-table-density='comfortable'] .procurement-landscape-table td {
+    @apply py-0.5;
+  }
+
+  :root[data-table-density='comfortable'] .data-table thead th,
+  :root[data-table-density='comfortable'] .excel-grid thead th,
+  :root[data-table-density='comfortable'] .procurement-landscape-table thead th {
+    @apply py-1;
+  }
+
+  .data-table thead th,
+  .excel-grid thead th,
+  .procurement-landscape-table thead th {
+    @apply bg-slate-100 text-[10px] font-bold uppercase tracking-wide text-ink-muted sticky top-0 z-10 whitespace-nowrap text-left;
+  }
+
+  .data-table tbody tr:nth-child(even),
+  .excel-grid tbody tr:nth-child(even),
+  .procurement-landscape-table tbody tr:nth-child(even) {
+    @apply bg-slate-50/60;
+  }
+
+  .data-table tbody tr:hover,
+  .excel-grid tbody tr:hover,
+  .procurement-landscape-table tbody tr:hover {
+    @apply bg-bekem-accent-soft/15;
+  }
+
+  .data-table td.num,
+  .data-table th.num,
+  .excel-grid td.num,
+  .excel-grid th.num {
+    @apply text-right;
+  }
+
+  .data-table .cell-text,
+  .excel-grid .cell-text {
+    @apply truncate max-w-[220px];
+  }
+
+  .data-table .cell-code,
+  .excel-grid .cell-code {
+    @apply font-sans font-semibold text-ink whitespace-nowrap;
+  }
+
+  /* Keep one typeface in tables even if a cell uses font-mono / <code> */
+  .data-table .font-mono,
+  .excel-grid .font-mono,
+  .procurement-landscape-table .font-mono,
+  .data-table code,
+  .excel-grid code,
+  .procurement-landscape-table code {
+    font-family: inherit !important;
+  }
+
+  .table-shell {
+    @apply overflow-x-auto border border-surface-border bg-white;
+  }
+
+  /* Bound width so wide vendor-as-column tables scroll sideways instead of clipping. */
+  .procurement-landscape-scroll {
+    @apply w-full min-w-0 max-w-full overflow-x-auto;
+  }
+
+  .procurement-landscape-scroll > .data-table,
+  .procurement-landscape-scroll > table {
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .enterprise-chip {
+    @apply inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold border;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  .sidebar-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  }
+
+  .sidebar-scroll::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .sidebar-scroll::-webkit-scrollbar-track {
+    background: transparent;
+    margin: 8px 0;
+  }
+
+  .sidebar-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+  }
+
+  .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.32);
+  }
+}
+
+@layer utilities {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+  .animate-fade-in {
+    animation: bekem-fade-in 200ms ease-out;
+  }
+  .animate-slide-up {
+    animation: bekem-slide-up 220ms ease-out;
+  }
+  .animate-slide-down {
+    animation: bekem-slide-down 220ms ease-out;
+  }
+}
+
+@keyframes bekem-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes bekem-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bekem-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid #1D4E9E;
+  outline-offset: 2px;
+}
