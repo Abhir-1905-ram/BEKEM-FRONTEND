@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -98,6 +98,60 @@ function grandTotalAll(lines: PoLineItemDto[]) {
   );
 }
 
+/** Aggregate rates entered in Assign/Compare into RFQ quotation payload shape. */
+function buildWizardVendorQuotesPayload(
+  items: PoLineItemDto[],
+  activeIndexes: number[],
+  quotesByLineIndex: Record<number, LineVendorQuoteMap>,
+  offerRows: MaterialVendorOfferRow[]
+) {
+  const byVendor = new Map<
+    string,
+    {
+      vendorId: string;
+      rate: number;
+      gstPercent: number;
+      itemRates: Array<{ materialId: string; rate: number; gstPercent: number }>;
+      selectedMaterialIds: string[];
+    }
+  >();
+
+  for (const i of activeIndexes) {
+    const row = items[i];
+    const materialId = row?.materialId;
+    if (!materialId) continue;
+    const offers = offersForMaterialId(materialId, offerRows);
+    const quotes = quotesByLineIndex[i] || {};
+    for (const offer of offers) {
+      const resolved = resolveOfferQuote(offer, quotes[offer.vendorId]);
+      if (resolved.rate == null || resolved.rate <= 0) continue;
+      let entry = byVendor.get(offer.vendorId);
+      if (!entry) {
+        entry = {
+          vendorId: offer.vendorId,
+          rate: resolved.rate,
+          gstPercent: resolved.gstPercent,
+          itemRates: [],
+          selectedMaterialIds: [],
+        };
+        byVendor.set(offer.vendorId, entry);
+      }
+      if (!entry.itemRates.some((it) => it.materialId === materialId)) {
+        entry.itemRates.push({
+          materialId,
+          rate: resolved.rate,
+          gstPercent: resolved.gstPercent,
+        });
+      }
+      if (!entry.selectedMaterialIds.includes(materialId)) {
+        entry.selectedMaterialIds.push(materialId);
+      }
+    }
+  }
+
+  return Array.from(byVendor.values());
+}
+
 export function POWizardPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -111,6 +165,10 @@ export function POWizardPage() {
   const [lineVendorQuotesByIndex, setLineVendorQuotesByIndex] = useState<
     Record<number, LineVendorQuoteMap>
   >({});
+  /** Snapshot of all vendor rates from Assign/Compare — sent on PO create for RFQ persistence. */
+  const [wizardVendorQuotes, setWizardVendorQuotes] = useState<
+    ReturnType<typeof buildWizardVendorQuotesPayload>
+  >([]);
   /** Lines skipped because no vendor (custom products) — PO proceeds for the rest. */
   const [skippedLines, setSkippedLines] = useState<Record<number, boolean>>({});
   const [vendorRows, setVendorRows] = useState<LineVendorRow[]>([]);
@@ -249,6 +307,7 @@ export function POWizardPage() {
             ])
             .filter(([, reason]) => !!reason)
         ),
+        vendorQuotes: wizardVendorQuotes,
         orders,
       });
       return res.data;
@@ -382,7 +441,19 @@ export function POWizardPage() {
 
   const offersForLineIndex = (index: number) => {
     const row = lineItems[index];
-    return offersForMaterialId(row?.materialId, vendorOfferRows);
+    const base = offersForMaterialId(row?.materialId, vendorOfferRows);
+    const quotes = lineVendorQuotesByIndex[index] || {};
+    // Surface entered rates on the offer objects so Compare/L1 see wizard input,
+    // not only historical catalog rates.
+    return base.map((offer) => {
+      const resolved = resolveOfferQuote(offer, quotes[offer.vendorId]);
+      if (resolved.rate == null) return offer;
+      return {
+        ...offer,
+        rate: resolved.rate,
+        gstPercent: resolved.gstPercent,
+      };
+    });
   };
 
   const getVendorQuote = (
@@ -436,9 +507,13 @@ export function POWizardPage() {
     setLineVendorByIndex({});
     setLineVendorsByIndex({});
     setLineVendorQuotesByIndex({});
+    setWizardVendorQuotes([]);
     setSkippedLines({});
     setQuotations([]);
     setLineItems([]);
+    setVendorChoiceKind('');
+    setWhyWeChoseThisVendor('');
+    setVendorSelectionReason('');
     try {
       let mr: MaterialRequestDto | null = null;
       if (pr.materialRequestId) {
@@ -543,6 +618,14 @@ export function POWizardPage() {
       toast.error('Enter quoted rate and GST for at least one vendor on each product');
       return;
     }
+    setWizardVendorQuotes(
+      buildWizardVendorQuotesPayload(
+        lineItems,
+        activeLineIndexes,
+        lineVendorQuotesByIndex,
+        vendorOfferRows
+      )
+    );
     const next: Record<number, string[]> = {};
     activeLineIndexes.forEach((i) => {
       const row = lineItems[i];
@@ -570,6 +653,15 @@ export function POWizardPage() {
         return;
       }
     }
+    // Capture all entered quotes before line indexes are remapped for multi-vendor split.
+    setWizardVendorQuotes(
+      buildWizardVendorQuotesPayload(
+        lineItems,
+        activeLineIndexes,
+        lineVendorQuotesByIndex,
+        vendorOfferRows
+      )
+    );
     const firstVendorId = lineVendorsByIndex[activeLineIndexes[0]]?.[0];
     const quote = quotations.find((q) => q.vendorId === firstVendorId);
     if (quote?.terms) setPaymentTerms(quote.terms);
@@ -620,42 +712,95 @@ export function POWizardPage() {
     setLineVendorByIndex(expandedVendors);
     setLineVendorsByIndex({});
     setSkippedLines({});
+    setVendorChoiceKind('');
+    setWhyWeChoseThisVendor('');
+    setVendorSelectionReason('');
     setStep(3);
   };
 
-  const l1VendorId = (() => {
-    const fromComparison = comparison?.l1VendorId ? String(comparison.l1VendorId) : '';
+  const normalizeVendorId = (raw: unknown): string => {
+    if (!raw) return '';
+    if (typeof raw === 'string') return raw;
+    if (typeof raw === 'object') {
+      const obj = raw as { id?: string; _id?: string; vendorId?: string; toString?: () => string };
+      if (obj.id) return String(obj.id);
+      if (obj._id) return String(obj._id);
+      if (typeof obj.vendorId === 'string') return obj.vendorId;
+      if (obj.vendorId && typeof obj.vendorId === 'object') {
+        return normalizeVendorId(obj.vendorId);
+      }
+    }
+    return '';
+  };
+
+  /** L1 = lowest total from rates entered in this wizard (not stale RFQ comparison). */
+  const l1VendorId = useMemo(() => {
+    const totalsByVendor = new Map<string, number>();
+    for (const i of activeLineIndexes) {
+      const row = lineItems[i];
+      if (!row) continue;
+      const offers = offersForLineIndex(i);
+      const quotes = lineVendorQuotesByIndex[i] || {};
+      for (const offer of offers) {
+        const vendorId = normalizeVendorId(offer.vendorId);
+        if (!vendorId) continue;
+        const breakdown = effectiveBreakdown(offer, row.quantity, quotes[vendorId] || quotes[offer.vendorId]);
+        if (!breakdown) continue;
+        totalsByVendor.set(vendorId, (totalsByVendor.get(vendorId) || 0) + breakdown.finalAmount);
+      }
+    }
+    if (totalsByVendor.size) {
+      let bestId = '';
+      let bestTotal = Infinity;
+      for (const [id, total] of totalsByVendor) {
+        if (total < bestTotal) {
+          bestTotal = total;
+          bestId = id;
+        }
+      }
+      if (bestId) return bestId;
+    }
+
+    const fromComparison = normalizeVendorId(comparison?.l1VendorId);
     if (fromComparison) return fromComparison;
-    return pickL1VendorId(
-      (comparison?.vendors ?? quotations).map((q) => {
-        const raw = (q as { vendorId?: string | { id?: string; toString?: () => string } }).vendorId;
-        const vendorId =
-          typeof raw === 'string'
-            ? raw
-            : raw && typeof raw === 'object'
-              ? String((raw as { id?: string }).id || raw)
-              : '';
-        const finalCost =
-          'finalCost' in (q as object)
-            ? Number((q as { finalCost: number }).finalCost)
-            : Number((q as QuotationDto).amount || 0);
-        return { vendorId, finalCost };
-      })
+
+    return (
+      pickL1VendorId(
+        (comparison?.vendors ?? quotations).map((q) => {
+          const vendorId = normalizeVendorId(
+            (q as { vendorId?: unknown }).vendorId
+          );
+          const finalCost =
+            'finalCost' in (q as object)
+              ? Number((q as { finalCost: number }).finalCost)
+              : Number((q as QuotationDto).amount || 0);
+          return { vendorId, finalCost };
+        })
+      ) || ''
     );
-  })();
+  }, [
+    activeLineIndexes,
+    lineItems,
+    lineVendorQuotesByIndex,
+    vendorOfferRows,
+    comparison,
+    quotations,
+  ]);
 
   const assignedIsNonL1 = Boolean(
-    l1VendorId && assignedVendorIds.some((vid) => String(vid) !== String(l1VendorId))
+    l1VendorId &&
+      assignedVendorIds.length > 0 &&
+      assignedVendorIds.some((vid) => normalizeVendorId(vid) !== l1VendorId)
   );
 
-  // Suggest default once; user can freely switch L1 / Non-L1 and enter a remark.
+  // Suggest default once when vendors are assigned; do not override an explicit user choice.
   useEffect(() => {
     if (!assignedVendorIds.length) {
       setVendorChoiceKind('');
       return;
     }
     setVendorChoiceKind((prev) => {
-      if (prev) return prev;
+      if (prev === 'L1' || prev === 'NON_L1') return prev;
       if (!l1VendorId) return 'L1';
       return assignedIsNonL1 ? 'NON_L1' : 'L1';
     });
@@ -1352,11 +1497,19 @@ export function POWizardPage() {
                 <p className="text-xs font-semibold text-ink">Vendor selection</p>
                 <p className="text-[11px] text-ink-muted">
                   Choose L1 or Non-L1, then enter the remark.
-                  {l1VendorId && assignedIsNonL1
-                    ? ' Assigned vendor is Non-L1 — a Non-L1 reason is still required to submit.'
-                    : l1VendorId && !assignedIsNonL1
-                      ? ' Assigned vendor matches L1.'
-                      : ''}
+                  {vendorChoiceKind === 'L1'
+                    ? assignedIsNonL1
+                      ? ' You marked this as L1 — enter why this vendor is treated as L1.'
+                      : l1VendorId
+                        ? ' Assigned vendor matches L1 (lowest quote).'
+                        : ''
+                    : vendorChoiceKind === 'NON_L1'
+                      ? ' Non-L1 selected — a Non-L1 reason is required to submit.'
+                      : l1VendorId && assignedIsNonL1
+                        ? ' Assigned vendor is Non-L1 — choose Non-L1 and enter a reason, or choose L1 if this is the lowest quote.'
+                        : l1VendorId && !assignedIsNonL1
+                          ? ' Assigned vendor matches L1.'
+                          : ''}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -1372,7 +1525,7 @@ export function POWizardPage() {
                         : 'border-surface-border bg-white text-ink-secondary hover:text-ink'
                     )}
                   >
-                    Chose L1
+                    Choose L1
                   </button>
                   <button
                     type="button"
@@ -1387,7 +1540,7 @@ export function POWizardPage() {
                         : 'border-surface-border bg-white text-ink-secondary hover:text-ink'
                     )}
                   >
-                    Chose Non-L1
+                    Choose Non-L1
                   </button>
                 </div>
 

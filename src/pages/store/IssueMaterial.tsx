@@ -1,5 +1,6 @@
-import { useMemo, useState, useRef } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import {
@@ -25,6 +26,7 @@ type IssueLineSource = {
   materialId: string;
   quantityRequested: number;
   quantityAllocated?: number;
+  quantityIssued?: number;
   availableQty?: number;
   unit?: string;
   material?: MaterialRequestDto['material'];
@@ -37,6 +39,7 @@ function lineItems(mr: MaterialRequestDto): IssueLineSource[] {
       materialId: item.materialId,
       quantityRequested: item.quantityRequested,
       quantityAllocated: item.quantityAllocated,
+      quantityIssued: item.quantityIssued,
       availableQty: item.availableQty,
       unit: item.unit,
       material: item.material,
@@ -56,6 +59,14 @@ function lineItems(mr: MaterialRequestDto): IssueLineSource[] {
   return [];
 }
 
+function defaultIssuedQty(item: IssueLineSource) {
+  const requested = Number(item.quantityRequested || 0);
+  const alreadyIssued = Number(item.quantityIssued || 0);
+  const remainingRequested = Math.max(0, requested - alreadyIssued);
+  const available = Number(item.availableQty ?? item.quantityAllocated ?? remainingRequested ?? 0);
+  return Math.min(remainingRequested, available);
+}
+
 interface IssueAttachment {
   name: string;
   fileType: string;
@@ -66,6 +77,8 @@ const REASONS = Object.entries(ISSUE_REASON_LABELS) as [IssueReason, string][];
 const ISSUE_TYPE_OPTIONS = Object.entries(ISSUE_TYPE_LABELS) as [IssueType, string][];
 
 export function IssueMaterialPage() {
+  const [params] = useSearchParams();
+  const indentId = params.get('indentId');
   const [selected, setSelected] = useState<MaterialRequestDto | null>(null);
   const [reason, setReason] = useState<IssueReason | ''>('');
   const [issueType, setIssueType] = useState<IssueType | ''>('');
@@ -97,16 +110,20 @@ export function IssueMaterialPage() {
     if (!selected) return [];
     return lineItems(selected).map((item) => {
       const available = Number(item.availableQty ?? item.quantityAllocated ?? item.quantityRequested ?? 0);
+      const requested = Number(item.quantityRequested || 0);
+      const maxIssue = Math.min(requested, available);
       const key = item.id || item.materialId;
-      const issued = issuedQtyByLine[key] ?? available;
+      const issued = issuedQtyByLine[key] ?? defaultIssuedQty(item);
       return {
         key,
         materialId: item.materialId,
         itemCode: item.material?.code || '—',
         description: item.material?.name || 'Material',
         unit: item.unit || item.material?.unit || '',
+        requested,
         available,
         issued,
+        maxIssue,
         balance: Math.max(0, Math.round((available - issued + Number.EPSILON) * 100) / 100),
       };
     });
@@ -131,11 +148,17 @@ export function IssueMaterialPage() {
     const next: Record<string, number> = {};
     lineItems(mr).forEach((item) => {
       const key = item.id || item.materialId;
-      next[key] = Number(item.availableQty ?? item.quantityAllocated ?? item.quantityRequested ?? 0);
+      next[key] = defaultIssuedQty(item);
     });
     setIssuedQtyByLine(next);
     setIssuedAt(new Date().toISOString().slice(0, 10));
   };
+
+  useEffect(() => {
+    if (!indentId || selected?.id === indentId || !indents?.length) return;
+    const match = indents.find((mr) => mr.id === indentId);
+    if (match) selectIndent(match);
+  }, [indentId, indents, selected?.id]);
 
   const issue = useMutation({
     mutationFn: async () => {
@@ -327,6 +350,7 @@ export function IssueMaterialPage() {
                   <tr>
                     <th>Item Code</th>
                     <th>Item Description</th>
+                    <th className="num">Requested Quantity</th>
                     <th className="num">Available Quantity</th>
                     <th className="num">Issued Quantity</th>
                     <th className="num">Balance Quantity</th>
@@ -338,19 +362,20 @@ export function IssueMaterialPage() {
                     <tr key={row.key}>
                       <td className="cell-code whitespace-nowrap">{row.itemCode}</td>
                       <td className="cell-text">{row.description}</td>
+                      <td className="num tabular-nums">{row.requested}</td>
                       <td className="num tabular-nums">{row.available}</td>
                       <td className="num">
                         <Input
                           type="number"
                           min={0}
-                          max={row.available}
+                          max={row.maxIssue}
                           step="any"
                           value={row.issued}
                           onChange={(e) => {
                             const v = Math.max(0, Number(e.target.value) || 0);
                             setIssuedQtyByLine((prev) => ({
                               ...prev,
-                              [row.key]: Math.min(v, row.available),
+                              [row.key]: Math.min(v, row.maxIssue),
                             }));
                           }}
                           className="w-24 text-right"

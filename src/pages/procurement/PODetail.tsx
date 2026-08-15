@@ -33,7 +33,12 @@ import { FulfillmentStatusChip } from '@/components/FulfillmentStatusChip';
 import { DetailField, DetailFieldGrid } from '@/components/ui/DetailFields';
 import { useApprovalShortcuts } from '@/hooks/useApprovalShortcuts';
 import { useApprovalLimits } from '@/hooks/useApprovalLimits';
-import type { DelegationStatusDto, PoGrnsDto } from '@afios/shared';
+import {
+  applyCoordinatorDailyCap,
+  CoordinatorDailyCapBanner,
+  invalidateCoordinatorDailyCap,
+} from '@/components/PmDailyCapBanner';
+import type { DelegationStatusDto, PoGrnsDto, PmDailyCapDto } from '@afios/shared';
 
 const PO_PDF_AFTER_COORDINATOR_STATUSES = ['APPROVED'] as const;
 
@@ -76,6 +81,16 @@ export function PODetailPage() {
   const user = useAuthStore((s) => s.user)!;
   const role = user.role as UserRole;
   const { data: approvalLimits } = useApprovalLimits();
+  const { data: coordinatorCap, isFetched: coordinatorCapFetched } = useQuery({
+    queryKey: ['coordinator-daily-cap'],
+    queryFn: async () => {
+      const res = await api.get<{ data: PmDailyCapDto }>('/purchase-orders/coordinator/daily-cap');
+      return res.data.data;
+    },
+    enabled: role === UserRole.COORDINATOR,
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
   const [note, setNote] = useState('');
   const [editing, setEditing] = useState(false);
   const [showOverrideModal, setShowOverrideModal] = useState(false);
@@ -143,8 +158,10 @@ export function PODetailPage() {
       ]);
       if (previous && payload.action === 'APPROVE') {
         const amount = Number(previous.data.amount || 0);
-        const threshold = approvalLimits?.poCoordinatorMaxInr ?? 5000;
-        const nextStatus = amount > threshold ? 'CHAIRMAN_PENDING' : 'APPROVED';
+        const threshold = approvalLimits?.poCoordinatorMaxInr ?? 10000;
+        const remaining = coordinatorCap?.remaining ?? threshold;
+        const nextStatus =
+          amount > threshold || amount > remaining ? 'CHAIRMAN_PENDING' : 'APPROVED';
         queryClient.setQueryData(['purchase-order', id], {
           ...previous,
           data: { ...previous.data, status: nextStatus },
@@ -157,12 +174,14 @@ export function PODetailPage() {
       toast.error(e.response?.data?.message || 'Verification failed');
     },
     onSuccess: (res, payload) => {
-      const status = (res as { data?: { data?: { status?: string } } })?.data?.data?.status;
+      const body = (res as { data?: { data?: { status?: string } } & Partial<PmDailyCapDto> })?.data;
+      applyCoordinatorDailyCap(queryClient, body);
+      const status = body?.data?.status;
       const msg =
         payload.action === 'APPROVE'
           ? status === 'CHAIRMAN_PENDING'
             ? 'Verified — sent to Chairman for final approval'
-            : 'Purchase order approved'
+            : 'Approved & closed locally'
           : payload.action === 'RETURN'
             ? 'Returned to Executive'
             : 'Clarification requested';
@@ -173,6 +192,7 @@ export function PODetailPage() {
       queryClient.invalidateQueries({ queryKey: ['purchase-order', id] });
       queryClient.invalidateQueries({ queryKey: ['purchase-orders-browse'] });
       queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+      invalidateCoordinatorDailyCap(queryClient);
     },
   });
 
@@ -331,8 +351,12 @@ export function PODetailPage() {
 
   const po = data.data;
   const nextStep = getNextStepInfo(po);
-  const chairmanThreshold = approvalLimits?.poCoordinatorMaxInr ?? 5000;
+  const chairmanThreshold = approvalLimits?.poCoordinatorMaxInr ?? 10000;
+  const remainingDaily = coordinatorCap?.remaining ?? 0;
+  const canLocalClose =
+    Boolean(coordinatorCap) && po.amount <= chairmanThreshold && po.amount <= remainingDaily;
   const needsChairmanBand = po.amount > chairmanThreshold;
+  const exceedsDailyOnly = !needsChairmanBand && !canLocalClose && coordinatorCapFetched;
   const isCoordinator =
     role === UserRole.COORDINATOR &&
     (po.status === 'PENDING_REVIEW' ||
@@ -431,6 +455,21 @@ export function PODetailPage() {
         <div className="mb-4">
           <PoEmailStatusChip status={po.emailStatus} sentAt={po.emailSentAt} />
         </div>
+      )}
+
+      {role === UserRole.COORDINATOR && <CoordinatorDailyCapBanner cap={coordinatorCap} />}
+
+      {isCoordinator && canLocalClose && (
+        <p className="text-sm text-emerald-900 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 mb-4">
+          Can locally approve and close. No need to reach out to MD/Coordinator level.
+        </p>
+      )}
+
+      {isCoordinator && exceedsDailyOnly && (
+        <p className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
+          This PO exceeds today’s remaining daily cap. Verify & send to Chairman — it will not count
+          on the Coordinator bar.
+        </p>
       )}
 
       {po.approvalRoutingNote && (
@@ -703,10 +742,10 @@ export function PODetailPage() {
                 variant="accent"
                 size="lg"
                 accentColor={accent}
-                disabled={verify.isPending}
+                disabled={verify.isPending || !coordinatorCapFetched}
                 onClick={() => verify.mutate({ action: 'APPROVE' })}
               >
-                {needsChairmanBand ? 'Verify & send to Chairman' : 'Verify & approve PO'}
+                {canLocalClose ? 'Approve & close' : 'Verify & send to Chairman'}
               </Button>
               {needsChairmanBand && (
                 <>

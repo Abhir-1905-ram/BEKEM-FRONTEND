@@ -8,6 +8,7 @@ import { ActionCard } from '@/components/ui/ActionCard';
 import { EmptyState } from '@/components/EmptyState';
 import { ListQueryBoundary } from '@/components/ListQueryBoundary';
 import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
+import { CoordinatorDailyCapBanner } from '@/components/PmDailyCapBanner';
 import { AgeingBadge, daysSince } from '@/components/ui/AgeingBadge';
 import { PoEmailStatusChip } from '@/components/PoEmailStatusChip';
 import { WorkflowStatusTabs, type WorkflowStatusTab } from '@/components/WorkflowStatusTabs';
@@ -65,6 +66,8 @@ export function POQueuePage({
   return (
     <div className="page-container max-w-full">
       <PageHeader title={title} subtitle={subtitle} />
+
+      {queue === 'coordinator' && <CoordinatorDailyCapBanner />}
 
       {queue === 'pm' && (
         <WorkflowStatusTabs value={tab} onChange={(t) => setParams({ tab: t })} />

@@ -156,6 +156,7 @@ export function ChairmanHomePage() {
             label: (kpis?.delayed ?? 0) > 0 ? 'Past required-by date' : 'On schedule',
             positive: (kpis?.delayed ?? 0) === 0,
           }}
+          onClick={() => navigate('/chairman/material-indents')}
         />
         <StatCard
           hero
@@ -185,6 +186,7 @@ export function ChairmanHomePage() {
           value={kpis?.openIndents ?? 0}
           tone="amber"
           icon={<ClipboardCheck className="h-6 w-6" />}
+          onClick={() => navigate('/chairman/material-indents')}
         />
         <StatCard
           hero

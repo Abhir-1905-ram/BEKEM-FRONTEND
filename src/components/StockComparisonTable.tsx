@@ -8,7 +8,7 @@ interface StockComparisonTableProps {
   showBanner?: boolean;
   /** Show unit price and line total columns when item pricing is present. */
   showPricing?: boolean;
-  /** Show GRN/issue fulfillment quantities instead of the legacy allocated column. */
+  /** Show GRN/issue fulfillment quantities instead of available stock. */
   showFulfillment?: boolean;
   /** Hide store-only "Available to issue" (e.g. Indent raiser). */
   showAvailableToIssue?: boolean;
@@ -16,11 +16,10 @@ interface StockComparisonTableProps {
   totalEstimatedValue?: number | null;
 }
 
-function lineItems(items: IndentLineItemDto[]) {
-  return items.map((item) => {
+function lineItems(items: IndentLineItemDto[] | null | undefined) {
+  return (items ?? []).map((item) => {
     const requestedQty = item.requestedQty ?? item.quantityRequested ?? 0;
     const availableQty = item.availableQty ?? 0;
-    const allocatedQty = item.quantityAllocated ?? 0;
     const receivedQty = item.quantityReceived ?? 0;
     const issuedQty = item.quantityIssued ?? 0;
     const availableToIssueQty = item.availableToIssueQty ?? 0;
@@ -34,7 +33,7 @@ function lineItems(items: IndentLineItemDto[]) {
       name: item.material?.name || 'Material',
       unit: item.unit || item.material?.unit || '',
       requestedQty,
-      allocatedQty,
+      availableQty,
       receivedQty,
       issuedQty,
       availableToIssueQty,
@@ -61,7 +60,7 @@ export function StockComparisonTable({
   const hasShortfall = rows.some((row) => row.requiredQty > 0);
   const hasPricing = showPricing || rows.some((row) => row.unitPrice != null);
   const fulfillmentCols = showFulfillment
-    ? 3 + (showAvailableToIssue ? 1 : 0)
+    ? 2 + (showAvailableToIssue ? 1 : 0)
     : 1;
   const computedTotal =
     totalEstimatedValue ??
@@ -96,15 +95,14 @@ export function StockComparisonTable({
               <th className="num w-20">Requested</th>
               {showFulfillment ? (
                 <>
-                  <th className="num w-20">GRN received</th>
-                  <th className="num w-20">Issued</th>
+                  <th className="num w-28">Received based on GRN</th>
                   {showAvailableToIssue && (
                     <th className="num w-24">Available to issue</th>
                   )}
                   <th className="num w-24">Pending receipt</th>
                 </>
               ) : (
-                <th className="num w-20">Allocated</th>
+                <th className="num w-20">Available</th>
               )}
               {hasPricing && (
                 <>
@@ -125,7 +123,6 @@ export function StockComparisonTable({
                 {showFulfillment ? (
                   <>
                     <td className="num">{formatQuantity(row.receivedQty, row.unit)}</td>
-                    <td className="num">{formatQuantity(row.issuedQty, row.unit)}</td>
                     {showAvailableToIssue && (
                       <td className="num font-medium text-emerald-700">
                         {formatQuantity(row.availableToIssueQty, row.unit)}
@@ -134,7 +131,7 @@ export function StockComparisonTable({
                     <td className="num">{formatQuantity(row.pendingReceiptQty, row.unit)}</td>
                   </>
                 ) : (
-                  <td className="num">{formatQuantity(row.allocatedQty, row.unit)}</td>
+                  <td className="num">{formatQuantity(row.availableQty, row.unit)}</td>
                 )}
                 {hasPricing && (
                   <>

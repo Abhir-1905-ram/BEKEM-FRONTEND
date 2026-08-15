@@ -67,7 +67,7 @@ export function DashboardSearch({
 
   const groups = data
     ? (Object.entries(data) as [keyof GlobalSearchDto, GlobalSearchDto[keyof GlobalSearchDto]][]).filter(
-        ([, items]) => items.length > 0
+        ([, items]) => Array.isArray(items) && items.length > 0
       )
     : [];
 
@@ -115,11 +115,12 @@ export function DashboardSearch({
           )}
           {!isFetching &&
             groups.map(([key, items]) => {
-              const Icon = ICONS[key];
+              const Icon = ICONS[key] || FileText;
+              const rows = Array.isArray(items) ? items : [];
               return (
                 <div key={key} className="p-2">
-                  <p className="section-label px-3 py-1">{GROUP_LABELS[key]}</p>
-                  {items.map((item) => (
+                  <p className="section-label px-3 py-1">{GROUP_LABELS[key] || String(key)}</p>
+                  {rows.map((item) => (
                     <button
                       key={item.id}
                       type="button"

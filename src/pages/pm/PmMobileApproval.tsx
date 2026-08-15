@@ -5,8 +5,10 @@ import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { requireBiometricConfirm } from '@/lib/biometricGate';
 import type { MaterialRequestDto } from '@afios/shared';
+import { isBelowCapIndent, isOverCapIndent } from '@/lib/indentCap';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { applyPmDailyCap, invalidatePmDailyCap } from '@/components/PmDailyCapBanner';
 import { ListQueryBoundary } from '@/components/ListQueryBoundary';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 
@@ -25,7 +27,8 @@ export function PmMobileApprovalPage() {
   });
 
   const stockAvailable = Boolean(request?.canFullyIssue || request?.storeStockVerified);
-  const isBelowCap = request?.indentRequestType === 'BELOW_5000';
+  const isBelowCap = Boolean(request && isBelowCapIndent(request));
+  const isOverCap = Boolean(request && isOverCapIndent(request));
   const showForwardToHo =
     request?.status === 'FORWARDED_TO_PM' && !stockAvailable && !isBelowCap;
   const showApprove =
@@ -37,11 +40,14 @@ export function PmMobileApprovalPage() {
       if (!ok) throw new Error('Biometric confirmation cancelled');
       await api.post(`/material-requests/${id}/pm-local-close`, {
         remark: 'Approved via mobile',
+      }).then((res) => {
+        applyPmDailyCap(queryClient, res.data);
       });
     },
     onSuccess: () => {
       toast.success('Indent approved');
       queryClient.invalidateQueries({ queryKey: ['pm-approvals'] });
+      invalidatePmDailyCap(queryClient);
       navigate('/pm/material-indents?tab=pending&queue=pm');
     },
     onError: (e: Error & { response?: { data?: { message?: string } } }) => {
@@ -146,7 +152,15 @@ export function PmMobileApprovalPage() {
                 </div>
                 {stockAvailable ? (
                   <div className="text-emerald-700 text-xs font-medium bg-emerald-50 rounded-lg px-3 py-2">
-                    Stock is available — Approve to allocate
+                    Stock covers this indent — Approve locally. Head Office is not required.
+                  </div>
+                ) : isOverCap ? (
+                  <div className="text-amber-800 text-xs font-medium bg-amber-50 rounded-lg px-3 py-2">
+                    ₹5,000 or more and stock is short — forward to Head Office. Not added to today&apos;s approval bar.
+                  </div>
+                ) : isBelowCap ? (
+                  <div className="text-emerald-700 text-xs font-medium bg-emerald-50 rounded-lg px-3 py-2">
+                    Below ₹5,000 — approve locally. Store will purchase and allocate (no Head Office).
                   </div>
                 ) : showForwardToHo ? (
                   <div className="text-amber-800 text-xs font-medium bg-amber-50 rounded-lg px-3 py-2">
@@ -166,7 +180,7 @@ export function PmMobileApprovalPage() {
                   onClick={() => approve.mutate()}
                 >
                   <Check className="h-5 w-5 mr-2" />
-                  Approve
+                  Approve locally
                 </Button>
               )}
               {showForwardToHo && (
@@ -178,7 +192,7 @@ export function PmMobileApprovalPage() {
                   onClick={() => forwardHo.mutate()}
                 >
                   <Send className="h-5 w-5 mr-2" />
-                  Forward to HO for Stock Requisition
+                  {isOverCap ? 'Forward to Head Office' : 'Forward to HO for Stock Requisition'}
                 </Button>
               )}
               <Button

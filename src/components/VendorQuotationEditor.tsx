@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { computeFinalCost } from '@/lib/quotationTotals';
 import { cn } from '@/lib/utils';
+import { normalizeListData } from '@/hooks/useListQuery';
 
 export interface VendorQuotationDraft {
   vendorId: string;
@@ -98,8 +99,10 @@ export function VendorQuotationEditor({
   const { data: vendors } = useQuery({
     queryKey: ['vendors-active'],
     queryFn: async () => {
-      const res = await api.get<{ data: VendorDto[] }>('/vendors');
-      return res.data.data ?? [];
+      const res = await api.get<{ data: VendorDto[] }>('/vendors', {
+        params: { includePending: 'true' },
+      });
+      return normalizeListData<VendorDto>(res.data.data);
     },
   });
 
@@ -124,7 +127,14 @@ export function VendorQuotationEditor({
   const allVendorOptions = useMemo(() => {
     const map = new Map<
       string,
-      { id: string; name: string; code?: string; gstNumber?: string; phone?: string }
+      {
+        id: string;
+        name: string;
+        code?: string;
+        gstNumber?: string;
+        phone?: string;
+        authorizationStatus?: VendorDto['authorizationStatus'];
+      }
     >();
     for (const v of vendors ?? []) {
       map.set(v.id, {
@@ -133,6 +143,7 @@ export function VendorQuotationEditor({
         code: v.code,
         gstNumber: v.gstNumber,
         phone: v.phone,
+        authorizationStatus: v.authorizationStatus,
       });
     }
     for (const q of assignedQuotations) {
@@ -284,15 +295,27 @@ export function VendorQuotationEditor({
       return res.data.data;
     },
     onSuccess: (vendor) => {
-      queryClient.invalidateQueries({ queryKey: ['vendors-active'] });
-      queryClient.invalidateQueries({ queryKey: ['vendors'] });
+      queryClient.setQueryData<VendorDto[]>(['vendors-active'], (prev) => {
+        const list = normalizeListData<VendorDto>(prev);
+        const next = list.filter((v) => v.id !== vendor.id);
+        next.unshift(vendor);
+        return next;
+      });
+      queryClient.setQueryData<VendorDto[]>(['vendors'], (prev) => {
+        const list = normalizeListData<VendorDto>(prev);
+        const next = list.filter((v) => v.id !== vendor.id);
+        next.unshift(vendor);
+        return next;
+      });
+      void queryClient.invalidateQueries({ queryKey: ['vendors-active'] });
+      void queryClient.invalidateQueries({ queryKey: ['vendors'] });
       assignVendorToProducts(vendor.id, vendor.name, createProductIds);
       setCreateOpen(false);
       setCreateForm(emptyVendorForm());
       toast.success(
         vendor.authorizationStatus === 'PENDING'
-          ? `${vendor.name} created (pending authorization) and assigned to RFQ`
-          : `${vendor.name} created and assigned to RFQ`
+          ? `${vendor.name} saved to vendor master (pending authorization) and assigned`
+          : `${vendor.name} saved to vendor master and assigned`
       );
     },
     onError: (e: Error & { response?: { data?: { message?: string } } }) => {
@@ -334,27 +357,35 @@ export function VendorQuotationEditor({
               q.selectedMaterialIds?.includes(item.materialId)
             );
             const assignedIds = new Set(assignedForProduct.map((q) => q.vendorId));
-            const filteredVendors = allVendorOptions.filter((vendor) => {
+            const mappedUnassigned = allVendorOptions.filter((vendor) => {
               if (assignedIds.has(vendor.id)) return false;
-              const mappedMaterialIds = vendorMaterialIds.get(vendor.id);
-              if (!mappedMaterialIds?.has(item.materialId)) return false;
-              if (!searchQuery) return false;
-              const haystack = [
-                vendor.name,
-                vendor.code,
-                vendor.gstNumber,
-                vendor.phone,
-              ]
-                .filter(Boolean)
-                .join(' ')
-                .toLowerCase();
-              return haystack.includes(searchQuery);
+              return vendorMaterialIds.get(vendor.id)?.has(item.materialId);
             });
+            const filteredVendors = allVendorOptions
+              .filter((vendor) => {
+                if (assignedIds.has(vendor.id)) return false;
+                if (!searchQuery) return vendorMaterialIds.get(vendor.id)?.has(item.materialId);
+                const haystack = [
+                  vendor.name,
+                  vendor.code,
+                  vendor.gstNumber,
+                  vendor.phone,
+                ]
+                  .filter(Boolean)
+                  .join(' ')
+                  .toLowerCase();
+                return haystack.includes(searchQuery);
+              })
+              .sort((a, b) => {
+                const aMapped = vendorMaterialIds.get(a.id)?.has(item.materialId) ? 0 : 1;
+                const bMapped = vendorMaterialIds.get(b.id)?.has(item.materialId) ? 0 : 1;
+                if (aMapped !== bMapped) return aMapped - bMapped;
+                return a.name.localeCompare(b.name);
+              });
             const showSuggestions =
-              searchFocusedMaterialId === item.materialId && searchQuery.length > 0;
-            const mappedVendorCount = allVendorOptions.filter((vendor) =>
-              vendorMaterialIds.get(vendor.id)?.has(item.materialId)
-            ).length;
+              searchFocusedMaterialId === item.materialId &&
+              (searchQuery.length > 0 || mappedUnassigned.length > 0);
+            const mappedVendorCount = mappedUnassigned.length;
             const assignedNames = assignedForProduct.map((q) => q.vendorName || q.vendorId);
             return (
               <div key={item.materialId} className="border border-surface-border rounded-lg overflow-visible">
@@ -424,10 +455,10 @@ export function VendorQuotationEditor({
                             <div className="px-2.5 py-1.5 border-b border-surface-border bg-surface-muted/40">
                               <p className="text-[10px] font-medium text-ink-muted">
                                 {filteredVendors.length
-                                  ? `${filteredVendors.length} vendor${filteredVendors.length === 1 ? '' : 's'} — scroll to see all`
-                                  : mappedVendorCount
-                                    ? 'No matching vendor for this product search'
-                                    : 'No vendors mapped to this product yet'}
+                                  ? `${filteredVendors.length} vendor${filteredVendors.length === 1 ? '' : 's'} — scroll to see all${
+                                      mappedVendorCount ? ' (previously used for this product first)' : ''
+                                    }`
+                                  : 'No matching vendor — try another name or create a new vendor'}
                               </p>
                             </div>
                             <ul className="max-h-[min(22rem,50vh)] overflow-y-auto overscroll-contain">
@@ -454,6 +485,11 @@ export function VendorQuotationEditor({
                                     >
                                       <span className="block text-xs font-medium text-ink">
                                         {vendor.name}
+                                        {vendor.authorizationStatus === 'PENDING' ? (
+                                          <span className="ml-1.5 text-[10px] font-medium text-amber-700">
+                                            pending
+                                          </span>
+                                        ) : null}
                                       </span>
                                       {(vendor.code || vendor.gstNumber || vendor.phone) && (
                                         <span className="block text-[10px] text-ink-muted mt-0.5">
@@ -525,7 +561,8 @@ export function VendorQuotationEditor({
                       </div>
                     ) : (
                       <p className="text-[11px] text-ink-muted">
-                        Type a vendor name and select, or create a new vendor for this product.
+                        Click the search box to reuse saved vendors, or create a new one for this
+                        product.
                       </p>
                     )}
                   </div>
@@ -692,7 +729,7 @@ export function VendorQuotationEditor({
         open={createOpen}
         onClose={() => !createVendor.isPending && setCreateOpen(false)}
         title="Create new vendor"
-        subtitle="Vendor is created and assigned to selected RFQ products"
+        subtitle="Saved to the vendor master so you can search and reuse this supplier on later RFQs"
         className="max-w-xl"
       >
         <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">

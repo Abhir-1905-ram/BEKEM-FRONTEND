@@ -60,3 +60,24 @@ export function hideIndentPricingForRole(
 
 export const INDENT_CAP_REACHED_MESSAGE =
   'The ₹5,000 limit for this indent has been reached. Please create an Above ₹5,000 indent request if additional materials are required.';
+
+/** Petty indent: tagged Below ₹5,000, or estimated value is under the cap. PM approves locally — no HO. */
+export function isBelowCapIndent(indent?: {
+  indentRequestType?: IndentRequestType | null;
+  estimatedValue?: number | null;
+} | null): boolean {
+  if (!indent) return false;
+  if (indent.indentRequestType === 'BELOW_5000') return true;
+  const value = Number(indent.estimatedValue);
+  return Number.isFinite(value) && value > 0 && value < INDENT_VALUE_CAP_INR;
+}
+
+/** Indent is ₹5,000 or more — Head Office procurement, not the PM daily bar. */
+export function isOverCapIndent(indent?: {
+  indentRequestType?: IndentRequestType | null;
+  estimatedValue?: number | null;
+} | null): boolean {
+  if (!indent || indent.indentRequestType === 'BELOW_5000') return false;
+  const value = Number(indent.estimatedValue);
+  return Number.isFinite(value) && value >= INDENT_VALUE_CAP_INR;
+}

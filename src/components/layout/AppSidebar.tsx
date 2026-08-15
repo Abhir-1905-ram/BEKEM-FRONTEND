@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { LogOut, ArrowLeftRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
@@ -7,7 +7,7 @@ import { roleDisplayLabel } from '@/lib/roleDisplay';
 import { useI18n } from '@/i18n/I18nContext';
 import { BekemLogo } from '@/components/brand/BekemLogo';
 import { useSignOut } from '@/lib/signOut';
-import { getRoleNavShortcuts } from '@/lib/roleNav';
+import { getRoleNavShortcuts, isNavShortcutActive } from '@/lib/roleNav';
 
 interface AppSidebarProps {
   unread: number;
@@ -15,6 +15,7 @@ interface AppSidebarProps {
 
 export function AppSidebar({ unread }: AppSidebarProps) {
   const user = useAuthStore((s) => s.user);
+  const location = useLocation();
   const { signOut, signingOut } = useSignOut();
   const { t } = useI18n();
   const role = user?.role as UserRole;
@@ -38,29 +39,30 @@ export function AppSidebar({ unread }: AppSidebarProps) {
     return fallback;
   };
 
-  const renderLink = (item: (typeof shortcuts)[0]) => (
-    <NavLink
-      key={item.id}
-      to={item.href}
-      end={item.id === 'home'}
-      className={({ isActive }) =>
-        cn(
+  const renderLink = (item: (typeof shortcuts)[0]) => {
+    const active = isNavShortcutActive(location.pathname, item);
+    return (
+      <Link
+        key={item.id}
+        to={item.href}
+        aria-current={active ? 'page' : undefined}
+        className={cn(
           'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition-colors duration-200',
-          isActive
+          active
             ? 'bg-white text-bekem-navy'
             : 'text-white/65 hover:text-white hover:bg-white/10'
-        )
-      }
-    >
-      <item.icon className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
-      <span className="flex-1 truncate">{labelFor(item.id, item.label)}</span>
-      {item.id === 'notifications' && unread > 0 && (
-        <span className="min-w-[20px] h-5 px-1.5 rounded-md bg-white text-bekem-navy text-[10px] font-bold flex items-center justify-center shrink-0">
-          {unread > 9 ? '9+' : unread}
-        </span>
-      )}
-    </NavLink>
-  );
+        )}
+      >
+        <item.icon className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+        <span className="flex-1 truncate">{labelFor(item.id, item.label)}</span>
+        {item.id === 'notifications' && unread > 0 && (
+          <span className="min-w-[20px] h-5 px-1.5 rounded-md bg-white text-bekem-navy text-[10px] font-bold flex items-center justify-center shrink-0">
+            {unread > 9 ? '9+' : unread}
+          </span>
+        )}
+      </Link>
+    );
+  };
 
   return (
     <aside className="hidden lg:flex lg:flex-col lg:w-[232px] lg:shrink-0 bg-surface-sidebar lg:sticky lg:top-0 lg:h-screen border-r border-bekem-navy-dark/30">

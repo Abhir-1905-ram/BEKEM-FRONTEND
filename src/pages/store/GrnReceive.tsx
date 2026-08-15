@@ -153,7 +153,7 @@ export function GrnReceivePage() {
   const [receiptLines, setReceiptLines] = useState<PoGrnReceiptLineDto[]>([]);
   const [receivedByLine, setReceivedByLine] = useState<Record<string, number | ''>>({});
   const [invoicePriceByLine, setInvoicePriceByLine] = useState<Record<string, number>>({});
-  const [receiveType, setReceiveType] = useState<ReceiveType>('PARTIAL');
+  const [receiveType, setReceiveType] = useState<ReceiveType | null>(null);
   const [invoiceNo, setInvoiceNo] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [challanNo, setChallanNo] = useState('');
@@ -233,18 +233,22 @@ export function GrnReceivePage() {
       : selectedPo?.lineItems?.length
         ? mapPoLinesToReceiptLines(selectedPo)
         : [];
-    if (!lines.length) return;
     setReceiptLines(lines);
-    const received: Record<string, number | ''> = {};
     const prices: Record<string, number> = {};
     lines.forEach((line) => {
-      const key = lineKey(line);
-      received[key] = receiveType === 'FULL' ? line.remainingQty : '';
-      prices[key] = line.poRate;
+      prices[lineKey(line)] = line.poRate;
+    });
+    setInvoicePriceByLine(prices);
+  }, [grnContext, selectedPo]);
+
+  useEffect(() => {
+    if (!receiveType || !receiptLines.length) return;
+    const received: Record<string, number | ''> = {};
+    receiptLines.forEach((line) => {
+      received[lineKey(line)] = receiveType === 'FULL' ? line.remainingQty : '';
     });
     setReceivedByLine(received);
-    setInvoicePriceByLine(prices);
-  }, [grnContext, receiveType, selectedPo]);
+  }, [receiveType, receiptLines]);
 
   const resetForm = () => {
     setSelectedPo(null);
@@ -252,7 +256,7 @@ export function GrnReceivePage() {
     setReceiptLines([]);
     setReceivedByLine({});
     setInvoicePriceByLine({});
-    setReceiveType('PARTIAL');
+    setReceiveType(null);
     setInvoiceNo('');
     setChallanNo('');
     setEwayBillNumber('');
@@ -287,6 +291,10 @@ export function GrnReceivePage() {
   };
 
   const validateSubmit = (saveDraft: boolean) => {
+    if (!receiveType) {
+      toast.error('Select Partial or Full (remaining) first');
+      return false;
+    }
     if (saveDraft) return true;
     const totalReceivingNow = Object.values(receivedByLine).reduce<number>(
       (sum, value) => sum + Number(value || 0),
@@ -308,7 +316,7 @@ export function GrnReceivePage() {
 
   const receive = useMutation({
     mutationFn: async (saveDraft: boolean) => {
-      if (!selectedPo) throw new Error('No PO');
+      if (!selectedPo || !receiveType) throw new Error('No PO');
       const items = receiptLines.map((line) => {
         const key = lineKey(line);
         const qty = Number(receivedByLine[key] || 0);
@@ -366,7 +374,7 @@ export function GrnReceivePage() {
   const openPo = (po: PurchaseOrderDto) => {
     setSelectedGrnId(null);
     setSelectedPo(po);
-    setReceiveType('PARTIAL');
+    setReceiveType(null);
     setInvoiceNo('');
     setChallanNo('');
     setEwayBillNumber('');
@@ -718,6 +726,64 @@ export function GrnReceivePage() {
                 </div>
               )}
 
+              <fieldset>
+                <legend className="text-xs font-semibold text-ink-muted mb-2">
+                  Receipt type <span className="text-danger">*</span>
+                </legend>
+                <p className="text-[11px] text-ink-secondary mb-2">
+                  Choose Partial or Full (remaining) to load the GRN line items and invoice details.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  {(
+                    [
+                      {
+                        value: 'PARTIAL' as const,
+                        label: 'Partial',
+                        hint: 'Enter qty received in this delivery',
+                      },
+                      {
+                        value: 'FULL' as const,
+                        label: 'Full (remaining)',
+                        hint: 'Fill all remaining quantities',
+                      },
+                    ]
+                  ).map((opt) => (
+                    <label
+                      key={opt.value}
+                      className={cn(
+                        'flex flex-col gap-0.5 cursor-pointer rounded-lg border px-3 py-2 min-w-[160px]',
+                        receiveType === opt.value
+                          ? 'border-bekem-accent bg-bekem-accent/5 text-bekem-accent'
+                          : 'border-surface-border text-ink-secondary hover:border-bekem-accent/40'
+                      )}
+                    >
+                      <span className="inline-flex items-center gap-2 text-xs font-medium">
+                        <input
+                          type="radio"
+                          name="receiveType"
+                          value={opt.value}
+                          checked={receiveType === opt.value}
+                          onChange={() => setReceiveType(opt.value)}
+                          className="accent-bekem-accent"
+                        />
+                        {opt.label}
+                      </span>
+                      <span className="text-[11px] font-normal text-ink-muted pl-5">{opt.hint}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              {!receiveType ? (
+                <div className="rounded-xl border border-dashed border-surface-border bg-surface-muted/30 px-4 py-8 text-center">
+                  <p className="text-sm font-medium text-ink">Select a receipt type to continue</p>
+                  <p className="text-[13px] text-ink-muted mt-1">
+                    Line items, invoice details, and uploads appear after you choose Partial or Full
+                    (remaining).
+                  </p>
+                </div>
+              ) : (
+                <>
               <div className="overflow-x-auto rounded-xl border border-surface-border">
                 <table className="data-table min-w-[860px]">
                   <thead>
@@ -750,6 +816,7 @@ export function GrnReceivePage() {
                       const lineTotal = received * invoicePrice;
                       const qtyOver = received > row.remainingQty + 0.0001;
                       const rateClass = invoiceRateClass(invoicePrice, row.poRate);
+                      const tableLocked = receiveType === 'FULL';
 
                       return (
                         <tr key={key}>
@@ -761,45 +828,53 @@ export function GrnReceivePage() {
                             {row.previouslyReceived}
                           </td>
                           <td className="text-right">
-                            <Input
-                              type="number"
-                              min={0}
-                              step="any"
-                              value={receivedValue}
-                              placeholder="Enter qty"
-                              onChange={(e) => {
-                                const raw = e.target.value;
-                                const v = raw === '' ? '' : Math.max(0, Number(raw));
-                                setReceivedByLine((prev) => ({ ...prev, [key]: v }));
-                              }}
-                              className={cn(
-                                'h-9 text-right tabular-nums w-24 ml-auto',
-                                qtyOver && 'border-amber-400 text-amber-800'
-                              )}
-                            />
+                            {tableLocked ? (
+                              <span className="tabular-nums font-medium">{received || 0}</span>
+                            ) : (
+                              <Input
+                                type="number"
+                                min={0}
+                                step="any"
+                                value={receivedValue}
+                                placeholder="Enter qty"
+                                onChange={(e) => {
+                                  const raw = e.target.value;
+                                  const v = raw === '' ? '' : Math.max(0, Number(raw));
+                                  setReceivedByLine((prev) => ({ ...prev, [key]: v }));
+                                }}
+                                className={cn(
+                                  'h-9 text-right tabular-nums w-24 ml-auto',
+                                  qtyOver && 'border-amber-400 text-amber-800'
+                                )}
+                              />
+                            )}
                           </td>
                           <td className="text-right tabular-nums font-semibold text-ink-muted">
                             {balance}
                           </td>
                           <td className="text-center text-ink-secondary">{row.unit || '—'}</td>
                           <td className="text-right tabular-nums">{formatCurrency(row.poRate)}</td>
-                          <td className="text-right">
-                            <Input
-                              type="number"
-                              min={0}
-                              step="0.01"
-                              value={invoicePrice}
-                              onChange={(e) =>
-                                setInvoicePriceByLine((prev) => ({
-                                  ...prev,
-                                  [key]: Number(e.target.value),
-                                }))
-                              }
-                              className={cn(
-                                'h-9 text-right tabular-nums w-32 ml-auto',
-                                rateClass
-                              )}
-                            />
+                          <td className={cn('text-right tabular-nums', rateClass)}>
+                            {tableLocked ? (
+                              formatCurrency(invoicePrice)
+                            ) : (
+                              <Input
+                                type="number"
+                                min={0}
+                                step="0.01"
+                                value={invoicePrice}
+                                onChange={(e) =>
+                                  setInvoicePriceByLine((prev) => ({
+                                    ...prev,
+                                    [key]: Number(e.target.value),
+                                  }))
+                                }
+                                className={cn(
+                                  'h-9 text-right tabular-nums w-32 ml-auto',
+                                  rateClass
+                                )}
+                              />
+                            )}
                           </td>
                           <td className="text-right tabular-nums font-semibold">
                             {formatCurrency(lineTotal)}
@@ -910,35 +985,7 @@ export function GrnReceivePage() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-surface-border">
-                <fieldset className="flex flex-wrap gap-3">
-                  {(
-                    [
-                      { value: 'PARTIAL', label: 'Partial' },
-                      { value: 'FULL', label: 'Full (remaining)' },
-                    ] as const
-                  ).map((opt) => (
-                    <label
-                      key={opt.value}
-                      className={cn(
-                        'flex items-center gap-2 cursor-pointer rounded-lg border px-3 py-2 text-xs font-medium',
-                        receiveType === opt.value
-                          ? 'border-bekem-accent bg-bekem-accent/5 text-bekem-accent'
-                          : 'border-surface-border text-ink-secondary'
-                      )}
-                    >
-                      <input
-                        type="radio"
-                        name="receiveType"
-                        value={opt.value}
-                        checked={receiveType === opt.value}
-                        onChange={() => setReceiveType(opt.value)}
-                        className="accent-bekem-accent"
-                      />
-                      {opt.label}
-                    </label>
-                  ))}
-                </fieldset>
+              <div className="flex flex-wrap items-center justify-end gap-3 pt-2 border-t border-surface-border">
                 <div className="flex gap-2">
                   <Button variant="secondary" disabled={receive.isPending} onClick={() => submitGrn(true)}>
                     Save draft
@@ -953,6 +1000,8 @@ export function GrnReceivePage() {
                   </Button>
                 </div>
               </div>
+                </>
+              )}
             </div>
           </div>
         </div>

@@ -25,7 +25,7 @@ export function PMApprovalsPage() {
     <div className="page-container max-w-full">
       <PageHeader
         title="Indent approvals"
-        subtitle="Review stock across your projects — forward to Head Office, request branch transfer, or reject"
+        subtitle="Stock on hand: approve locally. Below ₹5,000 purchase: approve locally (counts on today’s bar). Stock short and ₹5,000+: forward to Head Office."
       />
 
       <PmDailyCapBanner />

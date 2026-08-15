@@ -182,22 +182,32 @@ export function RfqWizardPage() {
     setSelectedPr(pr);
     try {
       if (pr.materialRequestId) {
-        const res = await api.get<{ data: MaterialRequestDto }>(
-          `/material-requests/${pr.materialRequestId}`
-        );
-        const mr = res.data.data;
-        setSelectedMr(mr);
-        const skips: Record<string, boolean> = {};
-        for (const item of mr.items || []) {
-          const materialId = (item.materialId || item.material?.id || '') as string;
-          if (!materialId) continue;
-          const requested = item.quantityRequested ?? item.requestedQty ?? 0;
-          const available = item.availableQty ?? 0;
-          const required =
-            item.requiredQty != null ? item.requiredQty : Math.max(0, requested - available);
-          if (required <= 0) skips[materialId] = true;
+        try {
+          const res = await api.get<{ data: MaterialRequestDto }>(
+            `/material-requests/${pr.materialRequestId}`
+          );
+          const mr = res.data.data;
+          setSelectedMr(mr);
+          const skips: Record<string, boolean> = {};
+          for (const item of mr.items || []) {
+            const materialId = (item.materialId || item.material?.id || '') as string;
+            if (!materialId) continue;
+            const requested = item.quantityRequested ?? item.requestedQty ?? 0;
+            const available = item.availableQty ?? 0;
+            const required =
+              item.requiredQty != null ? item.requiredQty : Math.max(0, requested - available);
+            if (required <= 0) skips[materialId] = true;
+          }
+          setSkippedMaterialIds(skips);
+        } catch (e: unknown) {
+          setSelectedMr(null);
+          setSkippedMaterialIds({});
+          const msg =
+            (e as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+            'Could not load indent products for this request';
+          toast.error(msg);
+          return;
         }
-        setSkippedMaterialIds(skips);
       } else {
         setSelectedMr(null);
         setSkippedMaterialIds({});
@@ -402,7 +412,13 @@ export function RfqWizardPage() {
                     </tbody>
                   </table>
                 </div>
-              ) : null}
+              ) : (
+                <EmptyState
+                  title="No products on this indent"
+                  description="This purchase request has no material lines to include in an RFQ."
+                  className="mb-3"
+                />
+              )}
               <div className="grid sm:grid-cols-2 gap-3 mb-3">
                 <div>
                   <label className="text-xs font-semibold text-ink-muted">Vendor quote due date</label>

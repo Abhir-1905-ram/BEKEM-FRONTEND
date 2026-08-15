@@ -78,10 +78,20 @@ export function WorkOrderDetailPage() {
   const pmApprove = useMutation({
     mutationFn: () => api.post(`/work-orders/${id}/pm-approve`, { note }),
     onSuccess: () => {
-      setDoneMessage('Work order approved — sent to Executive for review');
+      setDoneMessage('Work order approved — forwarded to Store Incharge');
       setDone(true);
     },
     onError: () => toast.error('PM approval failed'),
+    onSettled: invalidate,
+  });
+
+  const storeAcknowledge = useMutation({
+    mutationFn: () => api.post(`/work-orders/${id}/store-acknowledge`, { note }),
+    onSuccess: () => {
+      setDoneMessage('Acknowledged — sent to Coordinator for verification');
+      setDone(true);
+    },
+    onError: () => toast.error('Store acknowledgement failed'),
     onSettled: invalidate,
   });
 
@@ -102,7 +112,11 @@ export function WorkOrderDetailPage() {
     mutationFn: (action: 'APPROVE' | 'RETURN') =>
       api.post(`/work-orders/${id}/verify`, { action, note }),
     onSuccess: (_, action) => {
-      setDoneMessage(action === 'APPROVE' ? 'Verified and sent to Chairman' : 'Returned to Executive');
+      setDoneMessage(
+        action === 'APPROVE'
+          ? 'Verified and sent to Chairman'
+          : 'Returned to Store Incharge'
+      );
       setDone(true);
     },
     onError: () => toast.error('Verification failed'),
@@ -162,6 +176,8 @@ export function WorkOrderDetailPage() {
     onApprove: () => {
       if (!wo) return;
       if (role === UserRole.PROJECT_MANAGER && wo.status === 'PM_PENDING') pmApprove.mutate();
+      else if (role === UserRole.STORE_INCHARGE && wo.status === 'STORE_PENDING')
+        storeAcknowledge.mutate();
       else if (role === UserRole.EXECUTIVE && wo.status === 'EXECUTIVE_PENDING')
         executiveReview.mutate('APPROVE');
       else if (role === UserRole.COORDINATOR && wo.status === 'COORDINATOR_PENDING')
@@ -209,6 +225,7 @@ export function WorkOrderDetailPage() {
   if (!wo) return null;
 
   const isPmApprove = role === UserRole.PROJECT_MANAGER && wo.status === 'PM_PENDING';
+  const isStoreAcknowledge = role === UserRole.STORE_INCHARGE && wo.status === 'STORE_PENDING';
   const isExecutiveReview = role === UserRole.EXECUTIVE && wo.status === 'EXECUTIVE_PENDING';
   const isCoordinatorVerify =
     role === UserRole.COORDINATOR && wo.status === 'COORDINATOR_PENDING';
@@ -404,7 +421,12 @@ export function WorkOrderDetailPage() {
         </div>
       )}
 
-      {(isPmApprove || isExecutiveReview || isCoordinatorVerify || canFinalApprove || canAccept) && (
+      {(isPmApprove ||
+        isStoreAcknowledge ||
+        isExecutiveReview ||
+        isCoordinatorVerify ||
+        canFinalApprove ||
+        canAccept) && (
         <div className="mt-6 space-y-3 border-t border-surface-border pt-6">
           <Textarea
             value={note}
@@ -419,7 +441,18 @@ export function WorkOrderDetailPage() {
               disabled={pmApprove.isPending}
               onClick={() => pmApprove.mutate()}
             >
-              Approve & send to Executive
+              Approve and forward to Store Incharge
+            </Button>
+          )}
+          {isStoreAcknowledge && (
+            <Button
+              variant="accent"
+              size="lg"
+              accentColor={accent}
+              disabled={storeAcknowledge.isPending}
+              onClick={() => storeAcknowledge.mutate()}
+            >
+              Acknowledge &amp; send to Coordinator
             </Button>
           )}
           {isExecutiveReview && (
@@ -431,7 +464,7 @@ export function WorkOrderDetailPage() {
                 disabled={executiveReview.isPending}
                 onClick={() => executiveReview.mutate('APPROVE')}
               >
-                Approve & send to Coordinator
+                Approve &amp; send to Coordinator
               </Button>
               <Button
                 variant="ghost"
@@ -452,7 +485,7 @@ export function WorkOrderDetailPage() {
                 disabled={verify.isPending}
                 onClick={() => verify.mutate('APPROVE')}
               >
-                Verify & send to Chairman
+                Verify &amp; send to Chairman
               </Button>
               <Button
                 variant="ghost"
@@ -460,7 +493,7 @@ export function WorkOrderDetailPage() {
                 disabled={verify.isPending}
                 onClick={() => verify.mutate('RETURN')}
               >
-                Return to Executive
+                Return to Store Incharge
               </Button>
             </div>
           )}

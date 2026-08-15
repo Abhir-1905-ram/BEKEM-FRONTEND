@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, ChevronRight, AlertTriangle, FileText } from 'lucide-react';
+import { ShoppingCart, ChevronRight, AlertTriangle, FileText, FileStack } from 'lucide-react';
 import { getGreeting, formatCurrency } from '@afios/shared';
 import type { DeliveryAlertDto, ExecutiveDashboardDto, PurchaseOrderDto } from '@afios/shared';
 import { api } from '@/lib/api';
@@ -18,6 +18,7 @@ import { PoEmailStatusChip } from '@/components/PoEmailStatusChip';
 import { TodayPanel } from '@/components/layout/TodayPanel';
 import { useTodayActions } from '@/hooks/useTodayActions';
 import { ActionCard } from '@/components/ui/ActionCard';
+import { normalizeListData } from '@/hooks/useListQuery';
 
 export function ExecutiveHomePage() {
   const navigate = useNavigate();
@@ -79,12 +80,12 @@ export function ExecutiveHomePage() {
       const res = await api.get<{ data: PurchaseOrderDto[] }>('/purchase-orders', {
         params: { queue: 'executive' },
       });
-      return res.data.data ?? [];
+      return normalizeListData<PurchaseOrderDto>(res.data.data);
     },
   });
 
   const filteredProjects = useMemo(() => {
-    let list = dashboard?.projects ?? [];
+    let list = Array.isArray(dashboard?.projects) ? dashboard.projects : [];
     if (statusFilter) {
       list = list.filter((p) => p.status === statusFilter);
     }
@@ -92,8 +93,7 @@ export function ExecutiveHomePage() {
   }, [dashboard?.projects, statusFilter]);
 
   const filteredPos = useMemo(() => {
-    if (!pendingPos) return [];
-    return pendingPos.filter((po) => {
+    return normalizeListData<PurchaseOrderDto>(pendingPos).filter((po) => {
       if (statusFilter && po.status !== statusFilter) return false;
       return true;
     });
@@ -121,19 +121,27 @@ export function ExecutiveHomePage() {
 
       <section className="section-gap">
         <h2 className="section-label mb-3">Process</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <ActionCard
             title="Indents workflow"
             subtitle="Review, decide, create RFQ, create PO, and track fulfillment"
-            count={dashboard?.totals.pendingIndentCount ?? 0}
+            count={dashboard?.totals?.pendingIndentCount ?? 0}
             icon={FileText}
             tone="warning"
             onClick={() => navigate('/executive/material-indents')}
           />
           <ActionCard
+            title="Create RFQ"
+            subtitle="Choose a purchase request, then invite vendors and compare quotes"
+            count={(Array.isArray(today) ? today : []).find((a) => a.id === 'exec-pr-queue')?.count ?? 0}
+            icon={FileStack}
+            tone="info"
+            onClick={() => navigate('/executive/rfq/new')}
+          />
+          <ActionCard
             title="Purchase orders"
             subtitle="Track open purchase orders and follow through to fulfillment"
-            count={dashboard?.totals.openPoCount ?? 0}
+            count={dashboard?.totals?.openPoCount ?? 0}
             icon={ShoppingCart}
             tone="success"
             onClick={() => navigate('/executive/purchase-orders')}
@@ -143,7 +151,7 @@ export function ExecutiveHomePage() {
 
       <DashboardSearch placeholder="Search projects, materials, employees, POs…" />
 
-      {!!deliveryAlerts?.length && (
+      {Array.isArray(deliveryAlerts) && deliveryAlerts.length > 0 && (
         <div className="mb-3 rounded-lg border border-danger/25 bg-danger-light px-3 py-2 flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-danger shrink-0 mt-0.5" />
           <div>
@@ -195,19 +203,19 @@ export function ExecutiveHomePage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
             <div className="panel p-3">
               <p className="text-xs text-ink-muted uppercase tracking-wide">Projects</p>
-              <p className="text-2xl font-bold mt-1">{dashboard?.totals.projectCount ?? 0}</p>
+              <p className="text-2xl font-bold mt-1">{dashboard?.totals?.projectCount ?? 0}</p>
             </div>
             <div className="panel p-3">
               <p className="text-xs text-ink-muted uppercase tracking-wide">Open POs</p>
-              <p className="text-2xl font-bold mt-1">{dashboard?.totals.openPoCount ?? 0}</p>
+              <p className="text-2xl font-bold mt-1">{dashboard?.totals?.openPoCount ?? 0}</p>
             </div>
             <div className="panel p-3">
               <p className="text-xs text-ink-muted uppercase tracking-wide">Open PRs</p>
-              <p className="text-2xl font-bold mt-1">{dashboard?.totals.openPrCount ?? 0}</p>
+              <p className="text-2xl font-bold mt-1">{dashboard?.totals?.openPrCount ?? 0}</p>
             </div>
             <div className="panel p-3">
               <p className="text-xs text-ink-muted uppercase tracking-wide">Pending indents</p>
-              <p className="text-2xl font-bold mt-1">{dashboard?.totals.pendingIndentCount ?? 0}</p>
+              <p className="text-2xl font-bold mt-1">{dashboard?.totals?.pendingIndentCount ?? 0}</p>
             </div>
           </div>
 
@@ -254,7 +262,7 @@ export function ExecutiveHomePage() {
                   </tbody>
                 </table>
               </div>
-              {dashboard?.pagination && (
+              {dashboard?.pagination && typeof dashboard.pagination.totalPages === 'number' && (
                 <PaginationBar
                   pagination={dashboard.pagination}
                   onPageChange={setProjectPage}

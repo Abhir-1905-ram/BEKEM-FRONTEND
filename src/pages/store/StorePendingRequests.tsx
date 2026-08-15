@@ -16,6 +16,7 @@ import {
   filterMaterialIndents,
   getIndentQueueFiltersForRole,
   isIndentQueueFilterId,
+  storeIndentNextPath,
   uniqueIndentCategories,
   type IndentDaysFilter,
   type IndentQueueQuickFilter,
@@ -196,9 +197,7 @@ export function StorePendingRequestsPage() {
             requests={filtered}
             onRowClick={(id) => {
               const row = filtered.find((r) => r.id === id);
-              navigate(
-                row?.status === 'PENDING_STORE' ? `/store/allocate/${id}` : `/requests/${id}`
-              );
+              navigate(row ? storeIndentNextPath(row) : `/requests/${id}`);
             }}
           />
         )}

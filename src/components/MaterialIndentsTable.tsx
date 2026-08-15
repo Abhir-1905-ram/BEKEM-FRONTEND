@@ -23,10 +23,10 @@ export function formatIndentQueueStatus(
   switch (status) {
     case 'PENDING_STORE':
       return `Awaiting ${roleLabel(UserRole.STORE_INCHARGE)}`;
-    case 'ALLOCATED':
     case 'FORWARDED_TO_PM':
     case 'BRANCH_TRANSFER_REQUESTED':
       return `Approved by ${roleLabel(UserRole.STORE_INCHARGE)}`;
+    case 'ALLOCATED':
     case 'PM_APPROVED':
     case 'PENDING_HO':
     case 'PENDING_EXECUTIVE_DECISION':
@@ -99,6 +99,7 @@ function executiveStageLabel(r: MaterialRequestDto): string | null {
     return null;
   }
   if (['PENDING_HO', 'PENDING_EXECUTIVE_DECISION'].includes(r.status)) {
+    if (r.canFullyIssue || r.storeStockVerified) return 'Approved by Project Manager';
     return 'Awaiting executive decision';
   }
   if (r.status === 'EXECUTIVE_DECISION_BRANCH_TRANSFER') {
@@ -305,7 +306,8 @@ export function MaterialIndentsTable({
                           >
                             <p className="font-semibold text-ink">{summary.materialName}</p>
                             <p>
-                              Requested: {summary.requested} · GRN received: {summary.received}
+                              Requested: {summary.requested} · Received based on GRN:{' '}
+                              {summary.received}
                               {summary.receivedOn ? ` on ${summary.receivedOn}` : ''}
                             </p>
                             <p>

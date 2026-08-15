@@ -13,11 +13,13 @@ import { cn } from '@/lib/utils';
 import { MaterialIndentsTable } from '@/components/MaterialIndentsTable';
 import { IndentListFilters, IndentQueueQuickButtons } from '@/components/IndentListFilters';
 import { PmDailyCapBanner } from '@/components/PmDailyCapBanner';
+import { needsExecutiveDecision } from '@/lib/indentCap';
 import {
   countIndentQueueFilters,
   filterMaterialIndents,
   getIndentQueueFiltersForRole,
   isIndentQueueFilterId,
+  storeIndentNextPath,
   uniqueIndentCategories,
   type IndentDaysFilter,
   type IndentQueueQuickFilter,
@@ -50,7 +52,9 @@ function subtitleForRole(role: UserRole): string {
 }
 
 function titleForRole(role: UserRole): string {
-  if ([UserRole.PROJECT_MANAGER, UserRole.EXECUTIVE].includes(role)) return 'Indents';
+  if ([UserRole.PROJECT_MANAGER, UserRole.EXECUTIVE, UserRole.CHAIRMAN].includes(role)) {
+    return 'Indents';
+  }
   return 'Material indents';
 }
 
@@ -93,7 +97,9 @@ export function IncidentsPage() {
         ? '/executive/material-indents'
         : role === UserRole.COORDINATOR && location.pathname === '/incidents'
           ? '/coordinator/material-indents'
-          : null;
+          : role === UserRole.CHAIRMAN && location.pathname === '/incidents'
+            ? '/chairman/material-indents'
+            : null;
 
   const { data: requests, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['material-requests', 'indents', tab, role],
@@ -158,7 +164,7 @@ export function IncidentsPage() {
   };
 
   const renderExecutiveAction = (request: MaterialRequestDto) => {
-    if (['PENDING_HO', 'PENDING_EXECUTIVE_DECISION'].includes(request.status)) {
+    if (needsExecutiveDecision(request)) {
       return (
         <Button
           variant="primary"
@@ -230,9 +236,15 @@ export function IncidentsPage() {
           <Button
             variant="primary"
             size="sm"
-            onClick={() => navigate(`/rfqs/${request.rfqId}`)}
+            onClick={() =>
+              navigate(
+                request.purchaseRequestId
+                  ? `/executive/rfq/new?purchaseRequestId=${request.purchaseRequestId}&resume=1`
+                  : '/executive/rfq/new'
+              )
+            }
           >
-            {request.rfqStatus === 'OPEN' ? 'Open RFQ — add quotes' : 'Open RFQ'}
+            Create RFQ
           </Button>
           {request.rfqNumber && (
             <span className="text-[10px] text-ink-muted">{request.rfqNumber}</span>
@@ -408,8 +420,8 @@ export function IncidentsPage() {
           }
           onRowClick={(id) => {
             const row = filtered.find((r) => r.id === id);
-            if (role === UserRole.STORE_INCHARGE && row?.status === 'PENDING_STORE') {
-              navigate(`/store/allocate/${id}`);
+            if (role === UserRole.STORE_INCHARGE && row) {
+              navigate(storeIndentNextPath(row));
               return;
             }
             navigate(`/requests/${id}`);

@@ -18,16 +18,65 @@ import { SuccessScreen } from '@/components/SuccessScreen';
 import { EmptyState } from '@/components/EmptyState';
 import { ListQueryBoundary } from '@/components/ListQueryBoundary';
 import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
+import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
+
+/** Prefill WO qty/unit from the approved PO's line items (already agreed on the PO). */
+function quantityFromPo(po: PurchaseOrderDto): { qty: string; unit: string } {
+  const lines = po.lineItems || [];
+  if (!lines.length) return { qty: '', unit: 'Units' };
+  const total = lines.reduce((sum, li) => sum + Number(li.quantity || 0), 0);
+  const unit =
+    lines.map((li) => String(li.unit || '').trim()).find(Boolean) || 'Units';
+  return {
+    qty: total > 0 ? String(total) : '',
+    unit,
+  };
+}
 
 export function CreateWorkOrderPage() {
   const navigate = useNavigate();
-  const accent = ROLE_COLORS[UserRole.EXECUTIVE].primary;
+  const role = useAuthStore((s) => s.user?.role);
+  const accent =
+    ROLE_COLORS[
+      role === UserRole.COORDINATOR ? UserRole.COORDINATOR : UserRole.EXECUTIVE
+    ].primary;
+  const homeHref =
+    role === UserRole.COORDINATOR ? '/coordinator' : '/executive';
   const [selectedPo, setSelectedPo] = useState<PurchaseOrderDto | null>(null);
   const [scope, setScope] = useState('');
   const [totalQuantity, setTotalQuantity] = useState('');
   const [quantityUnit, setQuantityUnit] = useState('Units');
   const [createdWo, setCreatedWo] = useState<WorkOrderDto | null>(null);
+  const [selectingPo, setSelectingPo] = useState(false);
+
+  const applyPoDefaults = (po: PurchaseOrderDto) => {
+    setSelectedPo(po);
+    setScope(
+      po.purchaseRequest?.project?.name
+        ? `Execution — ${po.purchaseRequest.project.name}`
+        : ''
+    );
+    const { qty, unit } = quantityFromPo(po);
+    setTotalQuantity(qty);
+    setQuantityUnit(unit);
+  };
+
+  const selectPo = async (po: PurchaseOrderDto) => {
+    setSelectingPo(true);
+    try {
+      // Always load full PO so quantity/unit match the approved order lines.
+      const res = await api.get<{ data: PurchaseOrderDto }>(
+        `/purchase-orders/${po.id}`
+      );
+      applyPoDefaults(res.data.data || po);
+    } catch {
+      applyPoDefaults(po);
+      toast.error('Could not load PO lines — enter quantity manually');
+    } finally {
+      setSelectingPo(false);
+    }
+  };
 
   const { data: approvedPos, list } = useListQuery({
     queryKey: ['approved-pos-for-wo'],
@@ -70,7 +119,7 @@ export function CreateWorkOrderPage() {
           label: 'View work order',
           onClick: () => navigate(`/work-orders/${createdWo.id}`),
         }}
-        secondaryAction={{ label: 'Back to home', onClick: () => navigate('/executive') }}
+        secondaryAction={{ label: 'Back to home', onClick: () => navigate(homeHref) }}
       />
     );
   }
@@ -79,7 +128,7 @@ export function CreateWorkOrderPage() {
     <div className="page-container max-w-lg mx-auto">
       <header className="flex items-center gap-3 mb-3">
         <button
-          onClick={() => navigate('/executive')}
+          onClick={() => navigate('/work-orders')}
           className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-gray-100"
           aria-label="Go back"
         >
@@ -112,13 +161,11 @@ export function CreateWorkOrderPage() {
               {(approvedPos ?? []).map((po) => (
                 <Card
                   key={po.id}
-                  className={cn('cursor-pointer hover:border-bekem-accent transition-colors py-3')}
-                  onClick={() => {
-                    setSelectedPo(po);
-                    setScope(po.purchaseRequest?.project?.name
-                      ? `Execution — ${po.purchaseRequest.project.name}`
-                      : '');
-                  }}
+                  className={cn(
+                    'cursor-pointer hover:border-bekem-accent transition-colors py-3',
+                    selectingPo && 'opacity-60 pointer-events-none'
+                  )}
+                  onClick={() => void selectPo(po)}
                 >
                   <p className="font-semibold text-ink">{po.poNumber}</p>
                   <p className="text-sm text-ink-secondary">
@@ -142,10 +189,27 @@ export function CreateWorkOrderPage() {
             <p className="text-sm text-ink-secondary">
               Contractor: {selectedPo.vendor?.name} · {formatCurrency(selectedPo.amount)}
             </p>
+            {(selectedPo.lineItems?.length ?? 0) > 0 && (
+              <p className="text-xs text-ink-muted mt-1">
+                From PO lines:{' '}
+                {(selectedPo.lineItems || [])
+                  .map(
+                    (li) =>
+                      `${li.quantity ?? 0} ${li.unit || ''}`.trim() +
+                      (li.description ? ` (${li.description})` : '')
+                  )
+                  .join(' · ')}
+              </p>
+            )}
             <button
               type="button"
               className="text-sm text-bekem-accent mt-2 hover:underline"
-              onClick={() => setSelectedPo(null)}
+              onClick={() => {
+                setSelectedPo(null);
+                setScope('');
+                setTotalQuantity('');
+                setQuantityUnit('Units');
+              }}
             >
               Change PO
             </button>
@@ -156,7 +220,7 @@ export function CreateWorkOrderPage() {
             <Input
               value={scope}
               onChange={(e) => setScope(e.target.value)}
-              placeholder="e.g. Install 2,500 rooftop solar systems"
+              placeholder="e.g. Supply and execution per approved PO"
               className="mt-1"
             />
           </div>
@@ -169,16 +233,17 @@ export function CreateWorkOrderPage() {
                 min={1}
                 value={totalQuantity}
                 onChange={(e) => setTotalQuantity(e.target.value)}
-                placeholder="2500"
+                placeholder="From PO"
                 className="mt-1"
               />
+              <p className="text-[11px] text-ink-muted mt-1">Prefilled from the selected PO</p>
             </div>
             <div>
               <label className="text-sm font-medium text-ink">Unit</label>
               <Input
                 value={quantityUnit}
                 onChange={(e) => setQuantityUnit(e.target.value)}
-                placeholder="Houses"
+                placeholder="Unit"
                 className="mt-1"
               />
             </div>

@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Bell, Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UserRole } from '@afios/shared';
-import { getRoleNavShortcuts } from '@/lib/roleNav';
+import { getRoleNavShortcuts, isNavShortcutActive, type NavShortcut } from '@/lib/roleNav';
 
 const CORE_IDS = new Set(['home', 'notifications', 'profile']);
 
@@ -16,6 +16,7 @@ interface MobileNavProps {
 
 export function MobileNav({ role, homePath, unread, isSystemAdmin }: MobileNavProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const location = useLocation();
   const shortcuts = getRoleNavShortcuts(role, { isSystemAdmin });
   const workspaceNav = shortcuts.filter((s) => !CORE_IDS.has(s.id));
   const primaryAction = workspaceNav.find((s) =>
@@ -23,13 +24,20 @@ export function MobileNav({ role, homePath, unread, isSystemAdmin }: MobileNavPr
   );
 
   const dockItems = [
-    { id: 'home', label: 'Home', href: homePath, icon: LayoutDashboard, end: true },
+    { id: 'home', label: 'Home', href: homePath, icon: LayoutDashboard },
     ...(primaryAction
-      ? [{ id: primaryAction.id, label: primaryAction.label.split(' ')[0], href: primaryAction.href, icon: primaryAction.icon, end: false }]
+      ? [{ id: primaryAction.id, label: primaryAction.label.split(' ')[0], href: primaryAction.href, icon: primaryAction.icon }]
       : []),
-    { id: 'notifications', label: 'Alerts', href: '/notifications', icon: Bell, end: false },
-    { id: 'menu', label: 'More', href: '#', icon: Menu, end: false, isMenu: true },
+    { id: 'notifications', label: 'Alerts', href: '/notifications', icon: Bell },
+    { id: 'menu', label: 'More', href: '#', icon: Menu, isMenu: true },
   ];
+
+  const shortcutById = new Map(shortcuts.map((s) => [s.id, s]));
+  const isItemActive = (id: string, href: string) => {
+    const shortcut = shortcutById.get(id);
+    if (shortcut) return isNavShortcutActive(location.pathname, shortcut);
+    return isNavShortcutActive(location.pathname, { id, href } as NavShortcut);
+  };
 
   return (
     <>
@@ -58,47 +66,49 @@ export function MobileNav({ role, homePath, unread, isSystemAdmin }: MobileNavPr
             {shortcuts
               .filter((s) => s.section === 'po' || (s.section || 'workspace') === 'workspace')
               .filter((s) => !CORE_IDS.has(s.id))
-              .map((item) => (
-                <NavLink
-                  key={item.id}
-                  to={item.href}
-                  end={item.id === 'home'}
-                  onClick={() => setMenuOpen(false)}
-                  className={({ isActive }) =>
-                    cn(
+              .map((item) => {
+                const active = isNavShortcutActive(location.pathname, item);
+                return (
+                  <Link
+                    key={item.id}
+                    to={item.href}
+                    aria-current={active ? 'page' : undefined}
+                    onClick={() => setMenuOpen(false)}
+                    className={cn(
                       'flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold',
-                      isActive ? 'bg-white text-bekem-navy' : 'text-white/70 hover:bg-white/10'
-                    )
-                  }
-                >
-                  <item.icon className="h-5 w-5 shrink-0" />
-                  <span className="flex-1">{item.label}</span>
-                </NavLink>
-              ))}
+                      active ? 'bg-white text-bekem-navy' : 'text-white/70 hover:bg-white/10'
+                    )}
+                  >
+                    <item.icon className="h-5 w-5 shrink-0" />
+                    <span className="flex-1">{item.label}</span>
+                  </Link>
+                );
+              })}
             {shortcuts
               .filter((s) => s.id === 'notifications' || s.id === 'profile')
-              .map((item) => (
-                <NavLink
-                  key={item.id}
-                  to={item.href}
-                  end={item.id === 'home'}
-                  onClick={() => setMenuOpen(false)}
-                  className={({ isActive }) =>
-                    cn(
+              .map((item) => {
+                const active = isNavShortcutActive(location.pathname, item);
+                return (
+                  <Link
+                    key={item.id}
+                    to={item.href}
+                    aria-current={active ? 'page' : undefined}
+                    onClick={() => setMenuOpen(false)}
+                    className={cn(
                       'flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold',
-                      isActive ? 'bg-white text-bekem-navy' : 'text-white/70 hover:bg-white/10'
-                    )
-                  }
-                >
-                  <item.icon className="h-5 w-5 shrink-0" />
-                  <span className="flex-1">{item.label}</span>
-                  {item.id === 'notifications' && unread > 0 && (
-                    <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-bekem-accent text-white text-[10px] font-bold flex items-center justify-center">
-                      {unread > 9 ? '9+' : unread}
-                    </span>
-                  )}
-                </NavLink>
-              ))}
+                      active ? 'bg-white text-bekem-navy' : 'text-white/70 hover:bg-white/10'
+                    )}
+                  >
+                    <item.icon className="h-5 w-5 shrink-0" />
+                    <span className="flex-1">{item.label}</span>
+                    {item.id === 'notifications' && unread > 0 && (
+                      <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-bekem-accent text-white text-[10px] font-bold flex items-center justify-center">
+                        {unread > 9 ? '9+' : unread}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
           </div>
         </div>
       )}
@@ -126,17 +136,16 @@ export function MobileNav({ role, homePath, unread, isSystemAdmin }: MobileNavPr
               );
             }
 
+            const active = isItemActive(item.id, item.href);
             return (
-              <NavLink
+              <Link
                 key={item.id}
                 to={item.href}
-                end={item.end}
-                className={({ isActive }) =>
-                  cn(
-                    'flex flex-col items-center gap-0.5 px-3 py-1 text-[10px] font-semibold relative min-w-[52px]',
-                    isActive ? 'text-white' : 'text-white/45'
-                  )
-                }
+                aria-current={active ? 'page' : undefined}
+                className={cn(
+                  'flex flex-col items-center gap-0.5 px-3 py-1 text-[10px] font-semibold relative min-w-[52px]',
+                  active ? 'text-white' : 'text-white/45'
+                )}
               >
                 <item.icon className="h-5 w-5" strokeWidth={2} />
                 <span className="truncate max-w-[64px]">{item.label}</span>
@@ -145,7 +154,7 @@ export function MobileNav({ role, homePath, unread, isSystemAdmin }: MobileNavPr
                     {unread > 9 ? '9+' : unread}
                   </span>
                 )}
-              </NavLink>
+              </Link>
             );
           })}
         </div>

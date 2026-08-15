@@ -35,6 +35,7 @@ const STATUS_STYLES: Record<string, string> = {
   PM_PENDING: PENDING,
   CHAIRMAN_PENDING: PENDING,
   EXECUTIVE_PENDING: REVIEW,
+  STORE_PENDING: REVIEW,
   IN_REVIEW: REVIEW,
   ALLOCATED: REVIEW,
   FORWARDED_TO_PM: REVIEW,
@@ -82,6 +83,7 @@ const STATUS_DOT: Record<string, string> = {
   PM_PENDING: PENDING_DOT,
   CHAIRMAN_PENDING: PENDING_DOT,
   EXECUTIVE_PENDING: REVIEW_DOT,
+  STORE_PENDING: REVIEW_DOT,
   IN_REVIEW: REVIEW_DOT,
   ALLOCATED: REVIEW_DOT,
   FORWARDED_TO_PM: REVIEW_DOT,
@@ -112,7 +114,7 @@ const STATUS_DOT: Record<string, string> = {
 /** Default labels: awaiting current approver, not blanket approved wording. */
 const STATUS_LABELS: Record<string, string> = {
   PENDING_STORE: 'Awaiting Store Incharge',
-  ALLOCATED: 'Approved by Store Incharge',
+  ALLOCATED: 'Approved by PM',
   FORWARDED_TO_PM: 'Approved by Store Incharge',
   BRANCH_TRANSFER_REQUESTED: 'Approved by Store Incharge',
   PENDING_HO: 'Approved by PM',
@@ -161,24 +163,26 @@ const STATUS_LABELS: Record<string, string> = {
   TRANSFERRED: 'Transferred',
   RAISE_PO_INSTEAD: 'Raise PO instead',
   EXECUTIVE_PENDING: 'Awaiting Executive',
-  PM_PENDING: 'Awaiting Coordinator',
+  STORE_PENDING: 'Awaiting Store Incharge',
+  PM_PENDING: 'Awaiting PM',
 };
 
 interface StatusBadgeProps {
-  status: string;
+  status?: string | null;
   label?: string;
   className?: string;
 }
 
 export function StatusBadge({ status, label, className }: StatusBadgeProps) {
-  const dot = STATUS_DOT[status] || NEUTRAL_DOT;
-  const displayLabel = label ?? STATUS_LABELS[status] ?? status.replace(/_/g, ' ');
+  const key = typeof status === 'string' ? status : '';
+  const dot = STATUS_DOT[key] || NEUTRAL_DOT;
+  const displayLabel = label ?? STATUS_LABELS[key] ?? (key ? key.replace(/_/g, ' ') : 'Unknown');
 
   return (
     <span
       className={cn(
         'enterprise-chip',
-        STATUS_STYLES[status] || NEUTRAL,
+        STATUS_STYLES[key] || NEUTRAL,
         className
       )}
     >
@@ -189,5 +193,6 @@ export function StatusBadge({ status, label, className }: StatusBadgeProps) {
 }
 
 export function getStatusLabel(status: string): string {
-  return STATUS_LABELS[status] || status.replace(/_/g, ' ');
+  const key = typeof status === 'string' ? status : '';
+  return STATUS_LABELS[key] || (key ? key.replace(/_/g, ' ') : 'Unknown');
 }

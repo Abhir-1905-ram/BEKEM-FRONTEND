@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 
 import { UserRole } from '@afios/shared';
+import { getRoleHomePath } from '@/lib/rolePaths';
 
 /** Sidebar grouping — `po` renders under a dedicated "PO" Workspace column. */
 export type NavSection = 'core' | 'po' | 'workspace';
@@ -50,13 +51,33 @@ export interface NavShortcut {
   href: string;
   icon: LucideIcon;
   section?: NavSection;
+  /** Extra path prefixes that should keep this item highlighted (detail pages). */
+  activePrefixes?: string[];
+}
+
+function matchesNavPrefix(pathname: string, prefix: string): boolean {
+  if (pathname === prefix) return true;
+  const withSlash = prefix.endsWith('/') ? prefix : `${prefix}/`;
+  if (!pathname.startsWith(withSlash)) return false;
+  const rest = pathname.slice(withSlash.length);
+  if (rest === 'new' || rest.startsWith('new/')) return false;
+  return true;
+}
+
+/** Whether the current location should highlight this sidebar item. */
+export function isNavShortcutActive(pathname: string, item: NavShortcut): boolean {
+  if (item.id === 'home') {
+    return pathname === item.href || pathname === '/';
+  }
+  if (matchesNavPrefix(pathname, item.href)) return true;
+  return (item.activePrefixes ?? []).some((prefix) => matchesNavPrefix(pathname, prefix));
 }
 
 export function getRoleNavShortcuts(
   role: UserRole,
   options?: { isSystemAdmin?: boolean }
 ): NavShortcut[] {
-  const home = '/';
+  const home = getRoleHomePath(role);
   const common: NavShortcut[] = [
     { id: 'home', label: 'Dashboard', sublabel: 'Role home', href: home, icon: LayoutDashboard, section: 'core' },
     { id: 'notifications', label: 'Notifications', href: '/notifications', icon: Bell, section: 'core' },
@@ -70,7 +91,14 @@ export function getRoleNavShortcuts(
       shortcuts = [
         ...common,
         { id: 'new-request', label: 'New indent', href: '/request/new', icon: FilePlus, section: 'workspace' },
-        { id: 'my-requests', label: 'My indents', href: '/incidents', icon: FileText, section: 'workspace' },
+        {
+          id: 'my-requests',
+          label: 'My indents',
+          href: '/incidents',
+          icon: FileText,
+          section: 'workspace',
+          activePrefixes: ['/requests'],
+        },
         { id: 'explorer', label: 'Explorer', href: '/explorer', icon: Compass, section: 'workspace' },
       ];
       break;
@@ -79,7 +107,7 @@ export function getRoleNavShortcuts(
       shortcuts = [
         ...common,
         { id: 'new-request', label: 'New indent', href: '/request/new', icon: FilePlus, section: 'workspace' },
-        { id: 'my-indents', label: 'My indents', href: '/store/requests', icon: FileText, section: 'workspace' },
+        { id: 'my-indents', label: 'My indents', href: '/store/requests', icon: FileText, section: 'workspace', activePrefixes: ['/requests', '/store/allocate'] },
         { id: 'grn', label: 'Material receipt (GRN)', href: '/store/grn', icon: Package, section: 'workspace' },
         { id: 'issue', label: 'Issue to site', href: '/store/issue', icon: FilePlus, section: 'workspace' },
         { id: 'stock', label: 'Live stock balance', href: '/store/stock', icon: Package, section: 'workspace' },
@@ -102,14 +130,16 @@ export function getRoleNavShortcuts(
     case UserRole.PROJECT_MANAGER:
       shortcuts = [
         ...common,
-        { id: 'indents', label: 'Indents', href: '/pm/material-indents', icon: FileText, section: 'workspace' },
+        { id: 'indents', label: 'Indents', href: '/pm/material-indents', icon: FileText, section: 'workspace', activePrefixes: ['/requests'] },
         {
           id: 'purchase-orders',
           label: 'Purchase orders',
           href: '/pm/purchase-orders',
           icon: ShoppingCart,
           section: 'po',
+          activePrefixes: ['/pm/po', '/pm/mobile-po-approve'],
         },
+        { id: 'work-orders', label: 'Work order', href: '/work-orders', icon: HardHat, section: 'po' },
         { id: 'add-material', label: 'Product catalog', href: '/materials/new', icon: Package, section: 'workspace' },
         { id: 'material-lookup', label: 'Material search', href: '/pm/material-lookup', icon: Package, section: 'workspace' },
         { id: 'branch-transfer', label: 'Branch transfer requests', href: '/pm/branch-transfer-requests', icon: Truck, section: 'workspace' },
@@ -122,7 +152,14 @@ export function getRoleNavShortcuts(
     case UserRole.EXECUTIVE:
       shortcuts = [
         ...common,
-        { id: 'incidents', label: 'Indents', href: '/executive/material-indents', icon: FileText, section: 'po' },
+        { id: 'incidents', label: 'Indents', href: '/executive/material-indents', icon: FileText, section: 'po', activePrefixes: ['/requests'] },
+        {
+          id: 'create-rfq',
+          label: 'Create RFQ',
+          href: '/executive/rfq/new',
+          icon: FileStack,
+          section: 'po',
+        },
         {
           id: 'purchase-orders',
           label: 'Purchase orders',
@@ -130,6 +167,7 @@ export function getRoleNavShortcuts(
           icon: ShoppingCart,
           section: 'po',
         },
+        { id: 'work-orders', label: 'Work order', href: '/work-orders', icon: HardHat, section: 'po' },
         { id: 'vendors', label: 'Vendors master list', href: '/vendors', icon: Users, section: 'workspace' },
         { id: 'finance', label: 'Finance & Tally', href: '/executive/finance', icon: BarChart3, section: 'workspace' },
         { id: 'stock', label: 'Live stock balance', href: '/store/stock', icon: Package, section: 'workspace' },
@@ -154,20 +192,21 @@ export function getRoleNavShortcuts(
           icon: ShoppingCart,
           section: 'po',
         },
-        { id: 'verify-po', label: 'Verify POs', href: '/coordinator/verify-pos', icon: Shield, section: 'po' },
+        { id: 'work-orders', label: 'Work order', href: '/work-orders', icon: HardHat, section: 'po' },
+        { id: 'verify-po', label: 'Verify POs', href: '/coordinator/verify-pos', icon: Shield, section: 'po', activePrefixes: ['/coordinator/po'] },
         { id: 'procurement-decisions', label: 'Procurement Decisions', href: '/coordinator/procurement-decisions', icon: ClipboardCheck, section: 'po' },
         { id: 'rfq-inbox', label: 'RFQ inbox', href: '/coordinator/rfq/inbox', icon: FileStack, section: 'po' },
         { id: 'ho-indents', label: 'Generate indent (HO)', href: '/coordinator/ho-indents', icon: FilePlus, section: 'workspace' },
         { id: 'grn', label: 'Material receipt (GRN)', href: '/coordinator/grn', icon: Package, section: 'workspace' },
         { id: 'grn-approvals', label: 'GRN on hold', href: '/coordinator/grn-approvals', icon: Shield, section: 'workspace' },
-        { id: 'verify-wo', label: 'Approve WOs', href: '/coordinator/verify-wos', icon: HardHat, section: 'workspace' },
+        { id: 'verify-wo', label: 'Approve WOs', href: '/coordinator/verify-wos', icon: HardHat, section: 'workspace', activePrefixes: ['/coordinator/wo'] },
         { id: 'branch-transfers', label: 'Branch transfer approvals', href: '/coordinator/branch-transfers', icon: Truck, section: 'workspace' },
         { id: 'projects', label: 'Projects', href: '/admin/projects', icon: Building2, section: 'workspace' },
         { id: 'vendors', label: 'Vendors', href: '/admin/vendors', icon: Truck, section: 'workspace' },
         { id: 'settings', label: 'Admin settings', href: '/admin/settings', icon: Shield, section: 'workspace' },
         { id: 'indent-categories', label: 'Indent categories', href: '/admin/indent-categories', icon: ClipboardCheck, section: 'workspace' },
         { id: 'finance', label: 'Finance & Tally', href: '/coordinator/finance', icon: BarChart3, section: 'workspace' },
-        { id: 'incidents', label: 'Material indents', href: '/coordinator/material-indents', icon: FileText, section: 'workspace' },
+        { id: 'incidents', label: 'Material indents', href: '/coordinator/material-indents', icon: FileText, section: 'workspace', activePrefixes: ['/requests'] },
         { id: 'add-material', label: 'Product catalog', href: '/materials/new', icon: Package, section: 'workspace' },
         { id: 'stock', label: 'Live stock balance', href: '/store/stock', icon: Package, section: 'workspace' },
         { id: 'audit', label: 'Audit log', href: '/audit-logs', icon: FileStack, section: 'workspace' },
@@ -178,6 +217,14 @@ export function getRoleNavShortcuts(
     case UserRole.CHAIRMAN:
       shortcuts = [
         ...common,
+        {
+          id: 'incidents',
+          label: 'Indents',
+          href: '/chairman/material-indents',
+          icon: FileText,
+          section: 'po',
+          activePrefixes: ['/requests'],
+        },
         {
           id: 'procurement-requests',
           label: 'Procurement requests',
@@ -192,9 +239,10 @@ export function getRoleNavShortcuts(
           icon: ShoppingCart,
           section: 'po',
         },
-        { id: 'approvals', label: 'Approve POs', href: '/chairman/approve-pos', icon: CheckSquare, section: 'po' },
+        { id: 'work-orders', label: 'Work order', href: '/work-orders', icon: HardHat, section: 'po' },
+        { id: 'approvals', label: 'Approve POs', href: '/chairman/approve-pos', icon: CheckSquare, section: 'po', activePrefixes: ['/chairman/po'] },
         { id: 'grn-approvals', label: 'GRN on hold', href: '/chairman/grn-approvals', icon: Package, section: 'workspace' },
-        { id: 'approve-wos', label: 'Approve work orders', href: '/chairman/approve-wos', icon: HardHat, section: 'workspace' },
+        { id: 'approve-wos', label: 'Approve work orders', href: '/chairman/approve-wos', icon: HardHat, section: 'workspace', activePrefixes: ['/chairman/wo'] },
         { id: 'stock', label: 'Live stock balance', href: '/store/stock', icon: Package, section: 'workspace' },
         { id: 'branch-transfers', label: 'Branch transfer monitoring', href: '/chairman/branch-transfers', icon: Truck, section: 'workspace' },
         { id: 'user-analytics', label: 'User analytics', href: '/chairman/user-analytics', icon: BarChart3, section: 'workspace' },

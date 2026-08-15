@@ -164,6 +164,7 @@ export interface ProcurementDecisionDto {
   executiveDecisionRemark: string;
   executiveDecidedBy: string | null;
   executiveDecidedAt: string | null;
+  executiveFromProjectId?: string | null;
   coordinatorProcurementMethod: 'PURCHASE_ORDER' | 'BRANCH_TRANSFER' | null;
   coordinatorProcurementRemark: string;
   canExecutiveDecide: boolean;
@@ -518,6 +519,13 @@ export interface MaterialRequestDto {
     receivedAt: string;
     invoiceNumber?: string;
     invoiceDate?: string | null;
+    invoiceValue?: number;
+    challanNo?: string;
+    ewayBillNumber?: string;
+    vehicleNo?: string;
+    driverName?: string;
+    deliveryDate?: string | null;
+    note?: string;
     items: Array<{
       materialId: string;
       materialName: string;
@@ -542,6 +550,8 @@ export interface PmDailyCapDto {
   dailyCap: number;
   remaining: number;
 }
+
+export type CoordinatorDailyCapDto = PmDailyCapDto;
 
 export interface PmDashboardDto {
   pendingRequests: MaterialRequestDto[];
@@ -1561,6 +1571,7 @@ export interface OrgSettingsDto {
   poPmMaxInr: number;
   poCoordinatorMaxInr: number;
   mrPmDailyMaxInr: number;
+  mrCoordinatorDailyMaxInr: number;
   timezone: string;
   expenseCategories: ExpenseCategoryApprovalDto[];
   approvalRoutingNote: string;
@@ -1571,6 +1582,7 @@ export interface UpdateOrgSettingsDto {
   poPmMaxInr?: number;
   poCoordinatorMaxInr?: number;
   mrPmDailyMaxInr?: number;
+  mrCoordinatorDailyMaxInr?: number;
   timezone?: string;
   expenseCategories?: ExpenseCategoryApprovalDto[];
 }
@@ -1579,5 +1591,6 @@ export interface ApprovalLimitsDto {
   poPmMaxInr: number;
   poCoordinatorMaxInr: number;
   mrPmDailyMaxInr: number;
+  mrCoordinatorDailyMaxInr: number;
   approvalRoutingNote: string;
 }

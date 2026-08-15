@@ -56,7 +56,7 @@ export function PMHomePage() {
 
       <TodayPanel actions={today ?? []} loading={todayLoading} />
 
-      <PmDailyCapBanner cap={dashboard?.dailyCap} />
+      <PmDailyCapBanner />
 
       <div className="flex flex-col sm:flex-row gap-3 section-gap">
         <button

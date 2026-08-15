@@ -23,7 +23,20 @@ function comparedOffers(
   quantity: number,
   vendorQuotes: LineVendorQuoteMap
 ) {
-  return offers
+  const byId = new Map(offers.map((offer) => [offer.vendorId, offer]));
+  // Include vendors that only have wizard-entered rates (override without catalog offer).
+  for (const [vendorId, override] of Object.entries(vendorQuotes)) {
+    if (byId.has(vendorId)) continue;
+    if (override?.rate == null || !(override.rate > 0)) continue;
+    byId.set(vendorId, {
+      vendorId,
+      vendorName: 'Vendor',
+      rate: override.rate,
+      gstPercent: override.gstPercent,
+    });
+  }
+
+  return Array.from(byId.values())
     .map((offer) => {
       const breakdown = effectiveBreakdown(offer, quantity, vendorQuotes[offer.vendorId]);
       if (!breakdown) return null;

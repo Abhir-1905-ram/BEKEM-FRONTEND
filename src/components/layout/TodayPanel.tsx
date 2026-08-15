@@ -29,7 +29,7 @@ export function TodayPanel({ actions, loading }: TodayPanelProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useI18n();
-  const safeActions = actions ?? [];
+  const safeActions = (actions ?? []).filter((a) => a && typeof a.id === 'string');
 
   if (loading) {
     return (
@@ -45,7 +45,12 @@ export function TodayPanel({ actions, loading }: TodayPanelProps) {
 
   if (!safeActions.length) return null;
 
-  const primary = safeActions[0];
+  // Feature the first high-priority items side-by-side (e.g. Verify POs + Material receipt).
+  const highPriority = safeActions.filter((a) => a.priority === 'high');
+  const featured =
+    highPriority.length >= 2 ? highPriority.slice(0, 2) : safeActions.slice(0, 1);
+  const featuredIds = new Set(featured.map((a) => a.id));
+  const rest = safeActions.filter((a) => !featuredIds.has(a.id)).slice(0, 5);
 
   return (
     <section className="section-gap animate-slide-up" aria-label="Today's priorities">
@@ -54,28 +59,42 @@ export function TodayPanel({ actions, loading }: TodayPanelProps) {
         <h2 className="section-label">{t('today.title')}</h2>
       </div>
 
-      {primary && (
-        <button
-          type="button"
-          onClick={() => goToAction(primary.href, navigate, location.pathname)}
+      {featured.length > 0 && (
+        <div
           className={cn(
-            'w-full text-left rounded-lg border-2 border-bekem-accent bg-bekem-accent-soft/40 p-3 mb-2',
-            'transition-colors duration-200 hover:bg-bekem-accent-soft/70',
-            'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bekem-accent'
+            'grid gap-2 mb-2',
+            featured.length > 1 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'
           )}
         >
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-bekem-accent mb-1">
-            Top priority
-          </p>
-          <p className="text-sm font-semibold text-ink">{primary.title}</p>
-          <p className="text-xs text-ink-secondary mt-0.5">{primary.subtitle}</p>
-          <span className="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-bekem-accent">
-            Go now <ArrowRight className="h-3.5 w-3.5" />
-          </span>
-        </button>
+          {featured.map((action, index) => (
+            <button
+              key={action.id}
+              type="button"
+              onClick={() => goToAction(action.href, navigate, location.pathname)}
+              className={cn(
+                'w-full text-left rounded-lg border-2 border-bekem-accent bg-bekem-accent-soft/40 p-3',
+                'transition-colors duration-200 hover:bg-bekem-accent-soft/70',
+                'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bekem-accent'
+              )}
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-bekem-accent mb-1">
+                {featured.length > 1
+                  ? index === 0
+                    ? 'Top priority'
+                    : 'Also today'
+                  : 'Top priority'}
+              </p>
+              <p className="text-sm font-semibold text-ink">{action.title}</p>
+              <p className="text-xs text-ink-secondary mt-0.5">{action.subtitle}</p>
+              <span className="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-bekem-accent">
+                Go now <ArrowRight className="h-3.5 w-3.5" />
+              </span>
+            </button>
+          ))}
+        </div>
       )}
 
-      {safeActions.length > 1 && (
+      {rest.length > 0 && (
         <div className="table-shell">
           <table className="data-table">
             <thead>
@@ -86,7 +105,7 @@ export function TodayPanel({ actions, loading }: TodayPanelProps) {
               </tr>
             </thead>
             <tbody>
-              {safeActions.slice(1, 5).map((action) => (
+              {rest.map((action) => (
                 <tr
                   key={action.id}
                   className="cursor-pointer"

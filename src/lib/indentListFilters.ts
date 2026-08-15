@@ -20,10 +20,17 @@ export type IndentQueueFilterOption = {
 
 const STORE_STATUSES = new Set([
   'PENDING_STORE',
-  'ALLOCATED',
   'MATERIAL_RECEIVED',
   'CHAIRMAN_APPROVED',
+]);
+/** Store verified stock / forwarded — PM has not approved yet. */
+const STORE_APPROVED_STATUSES = new Set(['FORWARDED_TO_PM', 'BRANCH_TRANSFER_REQUESTED']);
+/** PM has approved (local stock issue, petty purchase, or HO queue). */
+const PM_APPROVED_STATUSES = new Set([
+  'ALLOCATED',
   'PM_APPROVED',
+  'PENDING_HO',
+  'PENDING_EXECUTIVE_DECISION',
 ]);
 const PM_STATUSES = new Set(['FORWARDED_TO_PM', 'BRANCH_TRANSFER_REQUESTED']);
 const COORDINATOR_STATUSES = new Set([
@@ -85,10 +92,13 @@ export function matchesIndentQueueQuickFilter(
   const pending = request.pendingWith;
 
   if (filter === 'awaiting-store') {
-    if (pending) return pending === UserRole.STORE_INCHARGE;
+    if (PM_APPROVED_STATUSES.has(status) || STORE_APPROVED_STATUSES.has(status)) return false;
+    if (pending) return pending === UserRole.STORE_INCHARGE && status === 'PENDING_STORE';
     return status === 'PENDING_STORE';
   }
   if (filter === 'approved-store') {
+    if (PM_APPROVED_STATUSES.has(status)) return false;
+    if (STORE_APPROVED_STATUSES.has(status)) return true;
     if (pending === UserRole.STORE_INCHARGE) return status !== 'PENDING_STORE';
     // Don't treat HO roles as store even if status is in STORE_STATUSES
     if (
@@ -110,6 +120,8 @@ export function matchesIndentQueueQuickFilter(
     return CHAIRMAN_STATUSES.has(status);
   }
   if (filter === 'pm') {
+    if (PM_APPROVED_STATUSES.has(status)) return true;
+    if (STORE_APPROVED_STATUSES.has(status)) return false;
     if (pending) return pending === UserRole.PROJECT_MANAGER;
     return PM_STATUSES.has(status);
   }  if (filter === 'executive') {
@@ -219,6 +231,19 @@ export function isIndentQueueFilterId(value: string): value is IndentQueueQuickF
     'chairman',
     'executive',
   ].includes(value);
+}
+
+const READY_TO_ISSUE_STATUSES = new Set(['ALLOCATED', 'MATERIAL_RECEIVED', 'CHAIRMAN_APPROVED']);
+
+export function isReadyToIssueIndent(status?: string | null): boolean {
+  return READY_TO_ISSUE_STATUSES.has(status || '');
+}
+
+/** Next Store Incharge screen for an indent row. */
+export function storeIndentNextPath(request: { id: string; status: string }): string {
+  if (request.status === 'PENDING_STORE') return `/store/allocate/${request.id}`;
+  if (isReadyToIssueIndent(request.status)) return `/store/issue?indentId=${request.id}`;
+  return `/requests/${request.id}`;
 }
 
 /** Count indents matching each quick-queue chip (for badges). */

@@ -123,6 +123,9 @@ const ProfilePage = lazy(() => import('@/pages/Profile').then((m) => ({ default:
 const CreateWorkOrderPage = lazy(() =>
   import('@/pages/executive/CreateWorkOrder').then((m) => ({ default: m.CreateWorkOrderPage }))
 );
+const WorkOrdersListPage = lazy(() =>
+  import('@/pages/workOrders/WorkOrdersList').then((m) => ({ default: m.WorkOrdersListPage }))
+);
 const WorkOrderDetailPage = lazy(() =>
   import('@/pages/workOrders/WorkOrderDetail').then((m) => ({ default: m.WorkOrderDetailPage }))
 );
@@ -576,12 +579,12 @@ export default function App() {
                 }
               />
 
-              <Route path="/executive/rfq" element={<Navigate to="/executive/material-indents" replace />} />
-              <Route path="/executive/rfqs" element={<Navigate to="/executive/material-indents" replace />} />
+              <Route path="/executive/rfq" element={<Navigate to="/executive/rfq/new" replace />} />
+              <Route path="/executive/rfqs" element={<Navigate to="/executive/rfq/new" replace />} />
 
               <Route
                 path="/executive/rfq/inbox"
-                element={<Navigate to="/executive/material-indents" replace />}
+                element={<Navigate to="/executive/rfq/new" replace />}
               />
 
               <Route
@@ -779,6 +782,15 @@ export default function App() {
                 path="/coordinator/material-indents"
                 element={
                   <RoleGuard roles={[UserRole.COORDINATOR]}>
+                    <IncidentsPage />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/chairman/material-indents"
+                element={
+                  <RoleGuard roles={[UserRole.CHAIRMAN]}>
                     <IncidentsPage />
                   </RoleGuard>
                 }
@@ -1083,50 +1095,56 @@ export default function App() {
               />
 
               <Route
-
                 path="/executive/wo/new"
-
                 element={
-
-                  <RoleGuard roles={[UserRole.EXECUTIVE]}>
-
+                  <RoleGuard roles={[UserRole.EXECUTIVE]} capability="CREATE_WORK_ORDER">
                     <CreateWorkOrderPage />
-
                   </RoleGuard>
-
                 }
-
               />
 
               <Route
-
-                path="/work-orders/:id"
-
+                path="/coordinator/wo/new"
                 element={
-
-                  <RoleGuard
-
-                    roles={[
-                      UserRole.EXECUTIVE,
-
-                      UserRole.COORDINATOR,
-
-                      UserRole.CHAIRMAN,
-
-                      UserRole.PROJECT_MANAGER,
-
-                    ]}
-
-                  >
-
-                    <WorkOrderDetailPage />
-
+                  <RoleGuard roles={[UserRole.COORDINATOR]} capability="CREATE_WORK_ORDER">
+                    <CreateWorkOrderPage />
                   </RoleGuard>
-
                 }
-
               />
 
+              <Route
+                path="/work-orders"
+                element={
+                  <RoleGuard
+                    roles={[
+                      UserRole.EXECUTIVE,
+                      UserRole.COORDINATOR,
+                      UserRole.CHAIRMAN,
+                      UserRole.PROJECT_MANAGER,
+                      UserRole.STORE_INCHARGE,
+                    ]}
+                  >
+                    <WorkOrdersListPage />
+                  </RoleGuard>
+                }
+              />
+
+              <Route
+                path="/work-orders/:id"
+                element={
+                  <RoleGuard
+                    roles={[
+                      UserRole.EXECUTIVE,
+                      UserRole.COORDINATOR,
+                      UserRole.CHAIRMAN,
+                      UserRole.PROJECT_MANAGER,
+                      UserRole.STORE_INCHARGE,
+                    ]}
+                  >
+                    <WorkOrderDetailPage />
+                  </RoleGuard>
+                }
+              />
               <Route
 
                 path="/coordinator/wo/:id"

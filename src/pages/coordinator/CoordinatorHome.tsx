@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ClipboardCheck, HardHat, FileText } from 'lucide-react';
+import { ClipboardCheck, HardHat, FileText, Package } from 'lucide-react';
 import { getGreeting } from '@afios/shared';
 import type { PurchaseOrderDto, WorkOrderDto, MaterialRequestDto } from '@afios/shared';
 import { api } from '@/lib/api';
@@ -11,6 +11,7 @@ import { ActionCard } from '@/components/ui/ActionCard';
 import { TodayPanel } from '@/components/layout/TodayPanel';
 import { DashboardSearch } from '@/components/layout/DashboardSearch';
 import { DashboardWidgetCards } from '@/components/DashboardWidgetCards';
+import { CoordinatorDailyCapBanner } from '@/components/PmDailyCapBanner';
 import { useTodayActions } from '@/hooks/useTodayActions';
 import { useListQuery, normalizeListData } from '@/hooks/useListQuery';
 
@@ -74,23 +75,40 @@ export function CoordinatorHomePage() {
   const pending = queueResult?.count ?? queueResult?.items?.length ?? 0;
   const woPending = woQueue?.length ?? 0;
   const decisionPending = procurementQueue?.length ?? 0;
+  const pendingMaterialReceipt = widgets?.widgets?.pendingMaterialReceipt ?? 0;
   const indentsNeedingCoord =
     coordinatorIndents?.filter((r) => r.pendingWith === 'COORDINATOR').length ?? 0;
   const totalPending = pending + woPending + decisionPending;
+
+  const handleWidgetNavigate = (key: string) => {
+    if (key === 'pendingPo' || key === 'pendingApprovals') {
+      navigate('/coordinator/verify-pos');
+      return;
+    }
+    if (key === 'pendingMaterialReceipt' || key === 'pendingDeliveries') {
+      navigate('/coordinator/grn');
+    }
+  };
 
   return (
     <div className="page-container">
       <PageHeader
         eyebrow={getGreeting()}
         title="Today's approvals"
-        subtitle="POs, procurement decisions, and work orders awaiting Coordinator"
+        subtitle="POs, material receipt (GRN), procurement decisions, and work orders awaiting Coordinator"
       />
 
       <TodayPanel actions={today ?? []} loading={todayLoading} />
 
+      <CoordinatorDailyCapBanner />
+
       <DashboardSearch placeholder="Search POs, work orders, indents…" />
 
-      <DashboardWidgetCards widgets={widgets?.widgets} loading={widgetsLoading} />
+      <DashboardWidgetCards
+        widgets={widgets?.widgets}
+        loading={widgetsLoading}
+        onNavigate={handleWidgetNavigate}
+      />
 
       <ListQueryBoundary
         isLoading={queueList.isLoading || woQueueList.isLoading}
@@ -111,6 +129,18 @@ export function CoordinatorHomePage() {
             icon={ClipboardCheck}
             tone="primary"
             onClick={() => navigate('/coordinator/verify-pos')}
+          />
+          <ActionCard
+            title="Material receipt (GRN)"
+            count={pendingMaterialReceipt}
+            subtitle={
+              pendingMaterialReceipt > 0
+                ? 'Approved POs awaiting goods receipt'
+                : 'Open GRN to receive materials'
+            }
+            icon={Package}
+            tone="info"
+            onClick={() => navigate('/coordinator/grn')}
           />
           <ActionCard
             title="Procurement decisions"
@@ -144,11 +174,11 @@ export function CoordinatorHomePage() {
           )}
         </div>
 
-        {totalPending === 0 && indentsNeedingCoord === 0 && (
+        {totalPending === 0 && indentsNeedingCoord === 0 && pendingMaterialReceipt === 0 && (
           <EmptyState
             celebrate
             title="All quiet"
-            description="No POs, decisions, or work orders need verification right now."
+            description="No POs, GRNs, decisions, or work orders need attention right now."
           />
         )}
       </ListQueryBoundary>

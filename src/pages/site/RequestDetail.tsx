@@ -16,6 +16,7 @@ import {
   INDENT_REQUEST_TYPE_LABELS,
   canEditIndentOneLevelAhead,
 } from '@afios/shared';
+import { isBelowCapIndent, isOverCapIndent, needsExecutiveDecision } from '@/lib/indentCap';
 import type { MaterialRequestDto, UpdateIndentDto } from '@afios/shared';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -24,11 +25,13 @@ import { StatusTimeline } from '@/components/StatusTimeline';
 import { Input, Textarea } from '@/components/ui/Input';
 import { StockComparisonTable } from '@/components/StockComparisonTable';
 import { CrossProjectStockPanel } from '@/components/CrossProjectStockPanel';
-import { PmDailyCapBanner } from '@/components/PmDailyCapBanner';
+import { applyPmDailyCap, invalidatePmDailyCap, PmDailyCapBanner } from '@/components/PmDailyCapBanner';
+import { fmtInrLimit, useApprovalLimits } from '@/hooks/useApprovalLimits';
 import { useApprovalShortcuts } from '@/hooks/useApprovalShortcuts';
 import { DetailField, DetailFieldGrid } from '@/components/ui/DetailFields';
 import { formatIndentQueueStatus } from '@/components/MaterialIndentsTable';
 import { QuantityStepper } from '@/components/QuantityStepper';
+import { isReadyToIssueIndent } from '@/lib/indentListFilters';
 
 export function RequestDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -37,6 +40,8 @@ export function RequestDetailPage() {
   const user = useAuthStore((s) => s.user);
   const role = user?.role as UserRole;
   const accent = ROLE_COLORS[UserRole.PROJECT_MANAGER].primary;
+  const { data: approvalLimits } = useApprovalLimits();
+  const pmDailyCap = approvalLimits?.mrPmDailyMaxInr ?? 5000;
   const [pmRemark, setPmRemark] = useState('');
   const [pmRemarkError, setPmRemarkError] = useState('');
   const [editing, setEditing] = useState(false);
@@ -90,17 +95,21 @@ export function RequestDetailPage() {
 
   const pmLocalClose = useMutation({
     mutationFn: async (remark: string) => {
-      const res = await api.post<{ data: MaterialRequestDto }>(
-        `/material-requests/${id}/pm-local-close`,
-        { remark }
-      );
-      return res.data.data;
+      const res = await api.post<{
+        data: MaterialRequestDto;
+        dailyApprovedTotal?: number;
+        dailyCap?: number;
+        remaining?: number;
+      }>(`/material-requests/${id}/pm-local-close`, { remark });
+      return res.data;
     },
-    onSuccess: () => {
+    onSuccess: (body) => {
       toast.success('Indent approved and closed locally — store will proceed');
       setPmRemark('');
+      applyPmDailyCap(queryClient, body);
       queryClient.invalidateQueries({ queryKey: ['material-request', id] });
       queryClient.invalidateQueries({ queryKey: ['pm-approvals'] });
+      invalidatePmDailyCap(queryClient);
     },
     onError: (err: Error & { response?: { data?: { message?: string } } }) => {
       toast.error(err.response?.data?.message || 'Could not approve locally');
@@ -146,8 +155,9 @@ export function RequestDetailPage() {
     request.status === 'FORWARDED_TO_PM' &&
     !request.escalatedToHo;
   const stockAvailable = Boolean(request?.canFullyIssue || request?.storeStockVerified);
-  const isBelowCap = request?.indentRequestType === 'BELOW_5000';
-  /** Above ₹5,000 + stock short → HO stock requisition (not local Approve). */
+  const isBelowCap = Boolean(request && isBelowCapIndent(request));
+  const isOverCap = Boolean(request && isOverCapIndent(request));
+  /** Stock on hand → PM local approve (even ₹5,000+). Shortfall + over cap / not petty → HO. */
   const showForwardToHo = Boolean(canPmDecide && !stockAvailable && !isBelowCap);
   const showPmApprove = Boolean(canPmDecide && (stockAvailable || isBelowCap));
 
@@ -180,6 +190,9 @@ export function RequestDetailPage() {
   // Store pending actions live on AllocateFlow (Allocation Request / Stock requisition).
   if (role === UserRole.STORE_INCHARGE && request.status === 'PENDING_STORE') {
     return <Navigate to={`/store/allocate/${request.id}`} replace />;
+  }
+  if (role === UserRole.STORE_INCHARGE && isReadyToIssueIndent(request.status)) {
+    return <Navigate to={`/store/issue?indentId=${request.id}`} replace />;
   }
 
   const items = request.items?.length
@@ -214,7 +227,7 @@ export function RequestDetailPage() {
         request.poId ||
         canHoReview
     );
-  const awaitingDecision = ['PENDING_HO', 'PENDING_EXECUTIVE_DECISION'].includes(request.status);
+  const awaitingDecision = needsExecutiveDecision(request);
   const canConfirmReceipt = role === UserRole.SITE_INCHARGE && request.status === 'ISSUED';
   const hidePricing = hideIndentPricingForRole(role, request.indentRequestType);
   const isIndentRaiser = role === UserRole.SITE_INCHARGE;
@@ -281,12 +294,20 @@ export function RequestDetailPage() {
         </p>
       )}
 
-      {canPmDecide && !isBelowCap && showPmApprove && <PmDailyCapBanner />}
+      {canPmDecide && <PmDailyCapBanner />}
+
+      {showPmApprove && (
+        <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+          Can locally approve and close. No need to reach out to HO level.
+        </div>
+      )}
 
       {request.escalatedToHo && !isBelowCap && (
         <div className="mb-4 rounded-xl border border-warning/30 bg-warning/5 px-3 py-2 text-sm">
-          This indent was escalated to Head Office — it exceeds the PM&apos;s configurable daily
-          approval limit (see Admin settings).
+          This indent was sent to Head Office
+          {isOverCap
+            ? ` because it is ${fmtInrLimit(pmDailyCap)} or more. It is not counted on today’s approval bar.`
+            : ' because it exceeds the PM daily approval limit.'}
         </div>
       )}
 
@@ -429,8 +450,8 @@ export function RequestDetailPage() {
           <h2 className="font-semibold text-gray-900">Indent line items</h2>
           <p className="text-xs text-ink-secondary mt-1">
             {showAvailableToIssue
-              ? 'GRN receipts, issues, available stock, and pending receipts are tracked per product line.'
-              : 'GRN receipts, issues, and pending receipts are tracked per product line.'}
+              ? 'Receipts based on GRN, available stock, and pending receipts are tracked per product line.'
+              : 'Receipts based on GRN and pending receipts are tracked per product line.'}
           </p>
         </div>
         <div className="table-shell">
@@ -441,8 +462,7 @@ export function RequestDetailPage() {
                 <th>Location</th>
                 <th>Required by</th>
                 <th className="num">Requested</th>
-                <th className="num">GRN received</th>
-                <th className="num">Issued</th>
+                <th className="num">Received based on GRN</th>
                 {showAvailableToIssue && (
                   <th className="num">Available to issue</th>
                 )}
@@ -462,9 +482,6 @@ export function RequestDetailPage() {
                   </td>
                   <td className="num tabular-nums">
                     {item.quantityReceived ?? 0} {item.unit || item.material?.unit || ''}
-                  </td>
-                  <td className="num tabular-nums">
-                    {item.quantityIssued ?? 0} {item.unit || item.material?.unit || ''}
                   </td>
                   {showAvailableToIssue && (
                     <td className="num tabular-nums font-semibold text-emerald-700">
@@ -506,7 +523,22 @@ export function RequestDetailPage() {
                   <DetailField label="Invoice date">
                     {grn.invoiceDate ? formatDate(grn.invoiceDate) : '—'}
                   </DetailField>
+                  <DetailField label="Invoice value">
+                    {grn.invoiceValue != null && grn.invoiceValue > 0
+                      ? formatCurrency(grn.invoiceValue)
+                      : '—'}
+                  </DetailField>
+                  <DetailField label="Challan number">{grn.challanNo || '—'}</DetailField>
+                  <DetailField label="E-Way bill">{grn.ewayBillNumber || '—'}</DetailField>
+                  <DetailField label="Vehicle number">{grn.vehicleNo || '—'}</DetailField>
+                  <DetailField label="Driver name">{grn.driverName || '—'}</DetailField>
+                  <DetailField label="Delivery date">
+                    {grn.deliveryDate ? formatDate(grn.deliveryDate) : '—'}
+                  </DetailField>
                 </div>
+                {grn.note ? (
+                  <DetailField label="Remarks">{grn.note}</DetailField>
+                ) : null}
                 <div>
                   <p className="text-xs font-medium text-gray-500 mb-1">Products received</p>
                   <div className="rounded-lg border border-surface-border divide-y divide-surface-border">
@@ -560,13 +592,13 @@ export function RequestDetailPage() {
             <div>
               <p className="text-sm font-semibold text-ink">PM decision</p>
               <p className="text-xs text-ink-secondary mt-1">
-                {isBelowCap
-                  ? stockAvailable
-                    ? 'Below ₹5,000 and stock is available — Approve to reserve stock for Store to issue (no Head Office).'
-                    : 'Below ₹5,000 — your approval is final. Store will purchase with approved funds and allocate (no Head Office).'
-                  : stockAvailable
-                    ? 'Stock is available at site — Approve to reserve allocation so Store can issue.'
-                    : 'Stock is short at site. Forward to Head Office for stock requisition / procurement.'}
+                {stockAvailable
+                  ? 'Stock already covers this indent — Approve & close so Store can issue. Head Office is not required.'
+                  : isOverCap
+                  ? `This indent is ${fmtInrLimit(pmDailyCap)} or more and stock is short — forward to Head Office. It is not counted on today’s approval bar.`
+                  : isBelowCap
+                  ? `Within ${fmtInrLimit(pmDailyCap)}/day — Approve & close locally. Store will purchase with approved funds and allocate (no Head Office).`
+                  : 'Stock is short at site. Forward to Head Office for stock requisition / procurement.'}
               </p>
 
               <div className="mt-3">
@@ -580,8 +612,12 @@ export function RequestDetailPage() {
                     if (e.target.value.trim()) setPmRemarkError('');
                   }}
                   placeholder={
-                    showForwardToHo
-                      ? 'Reason for stock requisition to Head Office…'
+                    stockAvailable
+                      ? 'Decision rationale — stock will be reserved for Store to issue…'
+                      : showForwardToHo
+                      ? isOverCap
+                        ? `Reason for forwarding this ${fmtInrLimit(pmDailyCap)}+ indent to Head Office…`
+                        : 'Reason for stock requisition to Head Office…'
                       : 'Decision rationale — visible in audit trail to all approvers…'
                   }
                 />
@@ -600,7 +636,7 @@ export function RequestDetailPage() {
                     pmLocalClose.mutate(pmRemark.trim());
                   }}
                 >
-                  Approve
+                  Approve & close
                 </Button>
               )}
               {showForwardToHo && (
@@ -613,7 +649,7 @@ export function RequestDetailPage() {
                     forwardToHo.mutate(pmRemark.trim());
                   }}
                 >
-                  Forward to HO for Stock Requisition
+                  {isOverCap ? 'Forward to Head Office' : 'Forward to HO for Stock Requisition'}
                 </Button>
               )}
             </div>

@@ -34,6 +34,7 @@ export function SettingsAdminPage() {
         poPmMaxInr: draft.poPmMaxInr,
         poCoordinatorMaxInr: draft.poCoordinatorMaxInr,
         mrPmDailyMaxInr: draft.mrPmDailyMaxInr,
+        mrCoordinatorDailyMaxInr: draft.mrCoordinatorDailyMaxInr,
         timezone: draft.timezone,
         expenseCategories: draft.expenseCategories,
       });
@@ -44,6 +45,7 @@ export function SettingsAdminPage() {
       queryClient.invalidateQueries({ queryKey: ['org-settings'] });
       queryClient.invalidateQueries({ queryKey: ['approval-limits'] });
       queryClient.invalidateQueries({ queryKey: ['pm-daily-cap'] });
+      queryClient.invalidateQueries({ queryKey: ['coordinator-daily-cap'] });
       toast.success('Settings saved');
     },
     onError: (e: Error & { response?: { data?: { message?: string } } }) => {
@@ -74,7 +76,7 @@ export function SettingsAdminPage() {
             <section className="panel p-3 space-y-3">
               <h2 className="text-sm font-semibold text-ink">PO approval limits (INR)</h2>
               <p className="text-xs text-ink-muted">{settings.approvalRoutingNote}</p>
-              <div className="grid sm:grid-cols-3 gap-3">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div>
                   <p className="text-[11px] font-medium text-ink-muted mb-1">PM final approval up to</p>
                   <Input
@@ -116,6 +118,26 @@ export function SettingsAdminPage() {
                       })
                     }
                   />
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium text-ink-muted mb-1">
+                    Coordinator daily approval cap
+                  </p>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={settings.mrCoordinatorDailyMaxInr}
+                    onChange={(e) =>
+                      setDraft({
+                        ...settings,
+                        mrCoordinatorDailyMaxInr: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                  />
+                  <p className="text-[10px] text-ink-muted mt-1">
+                    Role-level daily pool. The Coordinator bar and Approve & close logic follow this
+                    value.
+                  </p>
                 </div>
               </div>
             </section>
