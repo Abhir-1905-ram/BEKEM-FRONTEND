@@ -933,7 +933,7 @@ export default function App() {
 
               <Route
                 path="/pm/approvals"
-                element={<Navigate to="/pm/material-indents?tab=pending&queue=pm" replace />}
+                element={<Navigate to="/pm/material-indents?tab=pending&queue=approved-store" replace />}
               />
 
               <Route

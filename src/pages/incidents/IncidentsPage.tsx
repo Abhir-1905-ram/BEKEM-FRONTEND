@@ -107,7 +107,7 @@ export function IncidentsPage() {
     enabled: !redirectPath && rawTab !== 'approved',
   });
 
-  /** Dedicated pending set so chip badges stay accurate on every tab. */
+  /** Chip badges: on All tab count the full list; otherwise open/pending queue. */
   const { data: pendingRequests } = useQuery({
     queryKey: ['material-requests', 'indents', 'pending', role, 'chip-counts'],
     queryFn: async () => {
@@ -132,9 +132,10 @@ export function IncidentsPage() {
     [requests, search, queue, category, days]
   );
 
+  const queueCountSource = tab === 'all' ? requests : pendingRequests ?? requests;
   const queueCounts = useMemo(
-    () => countIndentQueueFilters(pendingRequests ?? requests ?? [], queueOptions),
-    [pendingRequests, requests, queueOptions]
+    () => countIndentQueueFilters(queueCountSource ?? [], queueOptions),
+    [queueCountSource, queueOptions]
   );
 
   const pendingCount =
@@ -286,12 +287,14 @@ export function IncidentsPage() {
                 counts={queueCounts}
                 onChange={(next) => {
                   if (next === 'all') {
+                    // Full list across statuses — clear chip filter
                     patchParams({ queue: undefined, tab: 'all' });
                     return;
                   }
                   patchParams({
                     queue: next || undefined,
-                    tab: next ? 'pending' : tab === 'all' ? undefined : tab,
+                    // Status chips apply within the open (pending) queue
+                    tab: next ? 'pending' : tab === 'all' ? 'all' : tab,
                   });
                 }}
               />
@@ -331,7 +334,10 @@ export function IncidentsPage() {
             type="button"
             onClick={() =>
               patchParams({
-                tab: t.key === 'all' ? undefined : t.key,
+                // Keep tab=all in the URL (do not delete — missing tab defaults to pending).
+                // Clear queue so the full indent list is visible, not a status chip slice.
+                tab: t.key,
+                ...(t.key === 'all' ? { queue: undefined } : {}),
               })
             }
             className={cn(

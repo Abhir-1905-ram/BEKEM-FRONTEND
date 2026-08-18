@@ -15,10 +15,9 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@afios/shared": ["packages/shared/src/index.ts"]
+      "@/*": ["./src/*"],
+      "@afios/shared": ["./packages/shared/src/index.ts"]
     }
   },
   "include": ["src"]

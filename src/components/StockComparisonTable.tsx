@@ -12,6 +12,8 @@ interface StockComparisonTableProps {
   showFulfillment?: boolean;
   /** Hide store-only "Available to issue" (e.g. Indent raiser). */
   showAvailableToIssue?: boolean;
+  /** Show live store stock beside requested qty (allocate / review flows). */
+  showAvailableStock?: boolean;
   /** Server-computed total (sum of line totals). Falls back to item sum. */
   totalEstimatedValue?: number | null;
 }
@@ -34,6 +36,7 @@ function lineItems(items: IndentLineItemDto[]) {
       name: item.material?.name || 'Material',
       unit: item.unit || item.material?.unit || '',
       requestedQty,
+      availableQty,
       allocatedQty,
       receivedQty,
       issuedQty,
@@ -53,6 +56,7 @@ export function StockComparisonTable({
   showPricing = false,
   showFulfillment = false,
   showAvailableToIssue = true,
+  showAvailableStock = true,
   totalEstimatedValue,
 }: StockComparisonTableProps) {
   const rows = lineItems(items);
@@ -62,7 +66,7 @@ export function StockComparisonTable({
   const hasPricing = showPricing || rows.some((row) => row.unitPrice != null);
   const fulfillmentCols = showFulfillment
     ? 3 + (showAvailableToIssue ? 1 : 0)
-    : 1;
+    : 1 + (showAvailableStock ? 1 : 0);
   const computedTotal =
     totalEstimatedValue ??
     (hasPricing
@@ -104,7 +108,10 @@ export function StockComparisonTable({
                   <th className="num w-24">Pending receipt</th>
                 </>
               ) : (
-                <th className="num w-20">Allocated</th>
+                <>
+                  {showAvailableStock && <th className="num w-24">Available</th>}
+                  <th className="num w-20">Allocated</th>
+                </>
               )}
               {hasPricing && (
                 <>
@@ -134,7 +141,21 @@ export function StockComparisonTable({
                     <td className="num">{formatQuantity(row.pendingReceiptQty, row.unit)}</td>
                   </>
                 ) : (
-                  <td className="num">{formatQuantity(row.allocatedQty, row.unit)}</td>
+                  <>
+                    {showAvailableStock && (
+                      <td
+                        className={cn(
+                          'num font-medium',
+                          row.availableQty >= row.requestedQty
+                            ? 'text-emerald-700'
+                            : 'text-warning-dark'
+                        )}
+                      >
+                        {formatQuantity(row.availableQty, row.unit)}
+                      </td>
+                    )}
+                    <td className="num">{formatQuantity(row.allocatedQty, row.unit)}</td>
+                  </>
                 )}
                 {hasPricing && (
                   <>
