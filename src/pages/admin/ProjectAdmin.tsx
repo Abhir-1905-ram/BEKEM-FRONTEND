@@ -308,8 +308,8 @@ export function ProjectAdminPage() {
                     ))}
                 </select>
                 <p className="text-xs text-ink-muted mt-1">
-                  Site Manager &amp; Project Manager: one project only (replaces existing). Store
-                  Manager: can be on many projects.
+                  Site Manager &amp; Store Manager: one project only (replaces existing). Project
+                  Manager: can be on one or more projects.
                 </p>
               </div>
               <Button
