@@ -17,19 +17,20 @@ import {
   canEditIndentOneLevelAhead,
   formatProjectLabel,
 } from '@afios/shared';
-import type { MaterialRequestDto, UpdateIndentDto } from '@afios/shared';
+import type { MaterialRequestDto, UpdateIndentDto, CreateBranchTransferDto } from '@afios/shared';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { StatusTimeline } from '@/components/StatusTimeline';
 import { Input, Textarea } from '@/components/ui/Input';
 import { StockComparisonTable } from '@/components/StockComparisonTable';
-import { CrossProjectStockPanel } from '@/components/CrossProjectStockPanel';
+import { CrossProjectStockPanel, otherProjectSitesWithStock, transferQtyForSource, type CrossProjectSource } from '@/components/CrossProjectStockPanel';
 import { PmDailyCapBanner } from '@/components/PmDailyCapBanner';
 import { useApprovalShortcuts } from '@/hooks/useApprovalShortcuts';
 import { DetailField, DetailFieldGrid } from '@/components/ui/DetailFields';
 import { formatIndentQueueStatus } from '@/components/MaterialIndentsTable';
 import { QuantityStepper } from '@/components/QuantityStepper';
+import { newIdempotencyKey, idempotencyHeaders } from '@/lib/idempotency';
 
 export function RequestDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -47,6 +48,7 @@ export function RequestDetailPage() {
   const [editRequiredByDate, setEditRequiredByDate] = useState('');
   const [editQty, setEditQty] = useState(0);
   const [editUnit, setEditUnit] = useState('Nos');
+  const [btSource, setBtSource] = useState<CrossProjectSource | null>(null);
 
   const { data: request, isLoading, isError, error } = useQuery({
     queryKey: ['material-request', id],
@@ -72,6 +74,10 @@ export function RequestDetailPage() {
     setEditQty(first?.quantityRequested ?? request.quantityRequested ?? 0);
     setEditUnit(first?.unit || first?.material?.unit || 'Nos');
   }, [request]);
+
+  useEffect(() => {
+    setBtSource(null);
+  }, [request?.id]);
 
   const saveIndent = useMutation({
     mutationFn: async (payload: UpdateIndentDto) => {
@@ -131,6 +137,29 @@ export function RequestDetailPage() {
     },
   });
 
+  const requestBranchTransfer = useMutation({
+    mutationFn: async (payload: CreateBranchTransferDto) => {
+      const res = await api.post<{ data: { id: string; transferNumber: string } }>(
+        '/branch-transfers',
+        payload,
+        { headers: idempotencyHeaders(newIdempotencyKey(`bt:${id}`)) }
+      );
+      return res.data.data;
+    },
+    onSuccess: (data) => {
+      toast.success(`Branch transfer ${data.transferNumber} sent to Head Office for approval`);
+      setPmRemark('');
+      setBtSource(null);
+      queryClient.invalidateQueries({ queryKey: ['material-request', id] });
+      queryClient.invalidateQueries({ queryKey: ['pm-approvals'] });
+      queryClient.invalidateQueries({ queryKey: ['pm-branch-transfer-requests'] });
+      navigate(`/branch-transfers/${data.id}`);
+    },
+    onError: (err: Error & { response?: { data?: { message?: string } } }) => {
+      toast.error(err.response?.data?.message || 'Could not request branch transfer');
+    },
+  });
+
   const confirmReceipt = useMutation({
     mutationFn: () => api.post(`/material-requests/${id}/confirm-receipt`, {}),
     onSuccess: () => {
@@ -153,8 +182,13 @@ export function RequestDetailPage() {
   /** Live stock check only — storeStockVerified alone must not allow a PM close. */
   const stockAvailable = Boolean(request?.canFullyIssue);
   const isBelowCap = request?.indentRequestType === 'BELOW_5000';
-  /** Any stock-short indent must go to Head Office. */
-  const showForwardToHo = Boolean(canPmDecide && !stockAvailable);
+  const otherStockAvailable = otherProjectSitesWithStock(
+    request?.crossProjectStock || [],
+    request?.projectId
+  ).length > 0;
+  const showBranchTransfer = Boolean(canPmDecide && !stockAvailable && otherStockAvailable);
+  /** Stock-short with no other-project surplus goes to Head Office for purchase. */
+  const showForwardToHo = Boolean(canPmDecide && !stockAvailable && !otherStockAvailable);
   const showPmApprove = Boolean(canPmDecide && stockAvailable);
   const pmApproveClosesAtPm = stockAvailable;
 
@@ -568,12 +602,15 @@ export function RequestDetailPage() {
         <>
           <h2 className="font-semibold text-gray-900 mb-3">Stock at other projects</h2>
           <p className="text-xs text-ink-secondary mb-3">
-            Live stock on your other assigned projects and their sites — not this indent&apos;s
-            project.
+            {showBranchTransfer
+              ? 'Select a source site with stock, then request a branch transfer to this indent. Head Office will approve it — this does not raise a purchase order.'
+              : 'Live stock on your other assigned projects and their sites — not this indent\u2019s project.'}
           </p>
           <CrossProjectStockPanel
             rows={request.crossProjectStock}
             requestingProjectId={request.projectId}
+            selectedSiteId={showBranchTransfer ? btSource?.siteId : undefined}
+            onSelectSource={showBranchTransfer ? setBtSource : undefined}
             className="mb-3"
           />
         </>
@@ -588,10 +625,14 @@ export function RequestDetailPage() {
                 {isBelowCap
                   ? stockAvailable
                     ? 'Below ₹5,000 and stock is available — Approve to close at PM and reserve stock for Store to issue.'
-                    : 'Below ₹5,000 and stock is short — Forward to Head Office for procurement.'
+                    : showBranchTransfer
+                      ? 'Below ₹5,000 and this site is short, but other projects have stock — request a branch transfer.'
+                      : 'Below ₹5,000 and stock is short — Forward to Head Office for procurement.'
                   : stockAvailable
                     ? 'Stock is available at site — Approve to close at PM and reserve allocation so Store can issue.'
-                    : 'Stock is short at site. Forward to Head Office for stock requisition / procurement.'}
+                    : showBranchTransfer
+                      ? 'This site is short, but other assigned projects have stock. Select a source site and request a branch transfer instead of buying.'
+                      : 'Stock is short at site. Forward to Head Office for stock requisition / procurement.'}
               </p>
 
               <div className="mt-3">
@@ -605,7 +646,9 @@ export function RequestDetailPage() {
                     if (e.target.value.trim()) setPmRemarkError('');
                   }}
                   placeholder={
-                    showForwardToHo
+                    showBranchTransfer
+                      ? 'Why transfer from the selected project/site…'
+                      : showForwardToHo
                       ? 'Reason for stock requisition to Head Office…'
                       : 'Decision rationale — visible in audit trail to all approvers…'
                   }
@@ -619,7 +662,11 @@ export function RequestDetailPage() {
                 <Button
                   variant="accent"
                   accentColor={accent}
-                  disabled={pmLocalClose.isPending || forwardToHo.isPending}
+                  disabled={
+                    pmLocalClose.isPending ||
+                    forwardToHo.isPending ||
+                    requestBranchTransfer.isPending
+                  }
                   onClick={() => {
                     if (!requirePmRemark()) return;
                     pmLocalClose.mutate(pmRemark.trim());
@@ -628,11 +675,69 @@ export function RequestDetailPage() {
                   {pmApproveClosesAtPm ? 'Approve & close at PM' : 'Approve'}
                 </Button>
               )}
+              {showBranchTransfer && (
+                <Button
+                  variant="accent"
+                  accentColor={accent}
+                  disabled={
+                    requestBranchTransfer.isPending ||
+                    forwardToHo.isPending ||
+                    pmLocalClose.isPending
+                  }
+                  onClick={() => {
+                    if (!requirePmRemark()) return;
+                    if (!btSource) {
+                      toast.error('Select a source project site with available stock');
+                      return;
+                    }
+                    const indentLines = (request.items?.length
+                      ? request.items
+                      : request.materialId
+                        ? [
+                            {
+                              materialId: request.materialId,
+                              quantityRequested: request.quantityRequested || 0,
+                            },
+                          ]
+                        : []
+                    ).map((item) => ({
+                      materialId: item.materialId,
+                      quantityRequested: item.quantityRequested,
+                    }));
+                    const payloadItems = transferQtyForSource(
+                      request.crossProjectStock || [],
+                      indentLines,
+                      btSource.siteId
+                    );
+                    if (!payloadItems.length) {
+                      toast.error('Selected site has no available qty for this indent');
+                      return;
+                    }
+                    requestBranchTransfer.mutate({
+                      fromProjectId: btSource.projectId,
+                      fromSiteId: btSource.siteId,
+                      materialRequestId: request.id,
+                      note: pmRemark.trim(),
+                      items: payloadItems,
+                    });
+                  }}
+                >
+                  {requestBranchTransfer.isPending
+                    ? 'Requesting…'
+                    : btSource
+                      ? `Request branch transfer from ${btSource.projectName}`
+                      : 'Select a source site, then request branch transfer'}
+                </Button>
+              )}
               {showForwardToHo && (
                 <Button
                   variant="accent"
                   accentColor={accent}
-                  disabled={forwardToHo.isPending || pmLocalClose.isPending}
+                  disabled={
+                    forwardToHo.isPending ||
+                    pmLocalClose.isPending ||
+                    requestBranchTransfer.isPending
+                  }
                   onClick={() => {
                     if (!requirePmRemark()) return;
                     forwardToHo.mutate(pmRemark.trim());
