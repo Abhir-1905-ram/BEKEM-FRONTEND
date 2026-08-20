@@ -96,14 +96,18 @@ export function RequestDetailPage() {
       );
       return res.data.data;
     },
-    onSuccess: () => {
-      toast.success('Indent approved and closed locally — store will proceed');
+    onSuccess: (data) => {
+      toast.success(
+        data.status === 'ALLOCATED'
+          ? 'Closed at PM — stock reserved for Store to issue'
+          : 'Approved — Store will purchase and allocate'
+      );
       setPmRemark('');
       queryClient.invalidateQueries({ queryKey: ['material-request', id] });
       queryClient.invalidateQueries({ queryKey: ['pm-approvals'] });
     },
     onError: (err: Error & { response?: { data?: { message?: string } } }) => {
-      toast.error(err.response?.data?.message || 'Could not approve locally');
+      toast.error(err.response?.data?.message || 'Could not approve');
     },
   });
 
@@ -145,11 +149,17 @@ export function RequestDetailPage() {
     role === UserRole.PROJECT_MANAGER &&
     request.status === 'FORWARDED_TO_PM' &&
     !request.escalatedToHo;
-  const stockAvailable = Boolean(request?.canFullyIssue || request?.storeStockVerified);
+  /** Live stock check only — storeStockVerified alone must not allow a PM close. */
+  const stockAvailable = Boolean(request?.canFullyIssue);
   const isBelowCap = request?.indentRequestType === 'BELOW_5000';
-  /** Above ₹5,000 + stock short → HO stock requisition (not local Approve). */
+  /** Above ₹5,000 + stock short → HO stock requisition. */
   const showForwardToHo = Boolean(canPmDecide && !stockAvailable && !isBelowCap);
+  /**
+   * Below ₹5,000: Approve always (close if stock; else Store procurement).
+   * Above ₹5,000: Approve only when stock can be closed at PM.
+   */
   const showPmApprove = Boolean(canPmDecide && (stockAvailable || isBelowCap));
+  const pmApproveClosesAtPm = stockAvailable;
 
   useApprovalShortcuts({
     enabled: showPmApprove && !isLoading,
@@ -562,10 +572,10 @@ export function RequestDetailPage() {
               <p className="text-xs text-ink-secondary mt-1">
                 {isBelowCap
                   ? stockAvailable
-                    ? 'Below ₹5,000 and stock is available — Approve to reserve stock for Store to issue (no Head Office).'
-                    : 'Below ₹5,000 — your approval is final. Store will purchase with approved funds and allocate (no Head Office).'
+                    ? 'Below ₹5,000 and stock is available — Approve to close at PM and reserve stock for Store to issue.'
+                    : 'Below ₹5,000 and stock is short — Approve to continue procurement. Store will purchase with approved funds and allocate.'
                   : stockAvailable
-                    ? 'Stock is available at site — Approve to reserve allocation so Store can issue.'
+                    ? 'Stock is available at site — Approve to close at PM and reserve allocation so Store can issue.'
                     : 'Stock is short at site. Forward to Head Office for stock requisition / procurement.'}
               </p>
 
@@ -600,7 +610,7 @@ export function RequestDetailPage() {
                     pmLocalClose.mutate(pmRemark.trim());
                   }}
                 >
-                  Approve
+                  {pmApproveClosesAtPm ? 'Approve & close at PM' : 'Approve — continue procurement'}
                 </Button>
               )}
               {showForwardToHo && (

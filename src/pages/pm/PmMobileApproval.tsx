@@ -24,23 +24,32 @@ export function PmMobileApprovalPage() {
     enabled: Boolean(id),
   });
 
-  const stockAvailable = Boolean(request?.canFullyIssue || request?.storeStockVerified);
+  const stockAvailable = Boolean(request?.canFullyIssue);
   const isBelowCap = request?.indentRequestType === 'BELOW_5000';
   const showForwardToHo =
     request?.status === 'FORWARDED_TO_PM' && !stockAvailable && !isBelowCap;
   const showApprove =
     request?.status === 'FORWARDED_TO_PM' && (stockAvailable || isBelowCap);
+  const closesAtPm = stockAvailable;
 
   const approve = useMutation({
     mutationFn: async () => {
-      const ok = await requireBiometricConfirm('Approve indent');
+      const ok = await requireBiometricConfirm(
+        closesAtPm ? 'Close indent at PM' : 'Approve for Store procurement'
+      );
       if (!ok) throw new Error('Biometric confirmation cancelled');
       await api.post(`/material-requests/${id}/pm-local-close`, {
-        remark: 'Approved via mobile',
+        remark: closesAtPm
+          ? 'Closed at PM — stock available'
+          : 'Approved — Store to purchase (stock short)',
       });
     },
     onSuccess: () => {
-      toast.success('Indent approved');
+      toast.success(
+        closesAtPm
+          ? 'Closed at PM — stock reserved'
+          : 'Approved — Store will purchase and allocate'
+      );
       queryClient.invalidateQueries({ queryKey: ['pm-approvals'] });
       navigate('/pm/material-indents?tab=pending&queue=approved-store');
     },
@@ -146,11 +155,15 @@ export function PmMobileApprovalPage() {
                 </div>
                 {stockAvailable ? (
                   <div className="text-emerald-700 text-xs font-medium bg-emerald-50 rounded-lg px-3 py-2">
-                    Stock is available — Approve to allocate
+                    Stock available — Approve to close at PM and reserve for issue
                   </div>
                 ) : showForwardToHo ? (
                   <div className="text-amber-800 text-xs font-medium bg-amber-50 rounded-lg px-3 py-2">
                     Stock short — forward to HO for stock requisition
+                  </div>
+                ) : isBelowCap ? (
+                  <div className="text-amber-800 text-xs font-medium bg-amber-50 rounded-lg px-3 py-2">
+                    Below ₹5,000 · stock short — Approve to continue Store purchase
                   </div>
                 ) : null}
               </dl>
@@ -166,7 +179,7 @@ export function PmMobileApprovalPage() {
                   onClick={() => approve.mutate()}
                 >
                   <Check className="h-5 w-5 mr-2" />
-                  Approve
+                  {closesAtPm ? 'Approve & close at PM' : 'Approve — continue procurement'}
                 </Button>
               )}
               {showForwardToHo && (
