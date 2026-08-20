@@ -22,6 +22,7 @@ import {
 
 import { UserRole } from '@afios/shared';
 import { reportsHubPath } from '@/lib/reportCatalog';
+import { getRoleHomePath } from '@/lib/rolePaths';
 
 /** Sidebar grouping — `po` renders under a dedicated "PO" Workspace column. */
 export type NavSection = 'core' | 'po' | 'workspace';
@@ -50,7 +51,7 @@ export function getRoleNavShortcuts(
   role: UserRole,
   options?: { isSystemAdmin?: boolean }
 ): NavShortcut[] {
-  const home = '/';
+  const home = getRoleHomePath(role);
   const common: NavShortcut[] = [
     { id: 'home', label: 'Dashboard', sublabel: 'Role home', href: home, icon: LayoutDashboard, section: 'core' },
     { id: 'notifications', label: 'Notifications', href: '/notifications', icon: Bell, section: 'core' },
