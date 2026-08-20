@@ -11,6 +11,7 @@ import {
   formatCurrency,
   type WorkOrderDto,
   type DelegationStatusDto,
+  formatProjectLabel,
 } from '@afios/shared';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -275,7 +276,7 @@ export function WorkOrderDetailPage() {
           )}
           {wo.project && (
             <DetailField label="Project" labelClassName="text-gray-500">
-              {wo.project.code} — {wo.project.name}
+              {formatProjectLabel(wo.project)}
             </DetailField>
           )}
         </DetailFieldGrid>

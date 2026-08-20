@@ -9,6 +9,7 @@ import {
   formatCurrency,
   formatDate,
   formatQuantity,
+  formatProjectLabel,
   type PurchaseOrderDto,
   type PoGrnReceiptLineDto,
   type ProjectGrnCounterDto,
@@ -41,6 +42,8 @@ interface GrnListRow {
   purchaseOrderId?: string | null;
   poNumber: string;
   indentNumber: string;
+  projectCode?: string;
+  projectName?: string;
   vendorName: string;
   status: string;
   receivedAt: string | null;
@@ -425,6 +428,14 @@ export function GrnReceivePage() {
                 </div>
 
                 <DetailFieldGrid>
+                  {(grnDetail.projectName || grnDetail.projectCode) && (
+                    <DetailField label="Project">
+                      {formatProjectLabel({
+                        code: grnDetail.projectCode,
+                        name: grnDetail.projectName,
+                      })}
+                    </DetailField>
+                  )}
                   <DetailField label="Indent">{grnDetail.indentNumber || '—'}</DetailField>
                   <DetailField label="Received on">
                     {grnDetail.receivedAt ? formatDate(grnDetail.receivedAt) : '—'}
@@ -576,7 +587,7 @@ export function GrnReceivePage() {
                     <td className="cell-text whitespace-nowrap">{po.procurementRef || po.poNumber}</td>
                     <td className="cell-text">{po.vendor?.name || '—'}</td>
                     <td className="cell-text whitespace-nowrap">
-                      {po.purchaseRequest?.project?.code || '—'}
+                      {formatProjectLabel(po.purchaseRequest?.project)}
                     </td>
                     <td className="num tabular-nums whitespace-nowrap">{qty.ordered}</td>
                     <td className="num tabular-nums whitespace-nowrap">{qty.received}</td>
@@ -615,6 +626,7 @@ export function GrnReceivePage() {
                       <th>GRN Number</th>
                       <th>PO Number</th>
                       <th>Indent Number</th>
+                      <th>Project</th>
                       <th>Vendor</th>
                       <th>Invoice</th>
                       <th>Material Receipt Date</th>
@@ -642,6 +654,9 @@ export function GrnReceivePage() {
                         <td className="cell-code whitespace-nowrap">{g.grnNumber}</td>
                         <td className="cell-code whitespace-nowrap">{g.poNumber || '—'}</td>
                         <td className="cell-code whitespace-nowrap">{g.indentNumber || '—'}</td>
+                        <td className="cell-text whitespace-nowrap">
+                          {formatProjectLabel({ code: g.projectCode, name: g.projectName })}
+                        </td>
                         <td className="cell-text">{g.vendorName || '—'}</td>
                         <td className="cell-code whitespace-nowrap">{g.invoiceNo || '—'}</td>
                         <td className="whitespace-nowrap">
@@ -696,7 +711,7 @@ export function GrnReceivePage() {
                     {selectedPo.procurementRef || selectedPo.poNumber}
                   </p>
                   <p className="text-sm text-ink-secondary mt-1">
-                    {selectedPo.purchaseRequest?.project?.name} · {selectedPo.vendor?.name}
+                    {formatProjectLabel(selectedPo.purchaseRequest?.project)} · {selectedPo.vendor?.name}
                   </p>
                 </div>
                 {grnContext?.grnNumber && (

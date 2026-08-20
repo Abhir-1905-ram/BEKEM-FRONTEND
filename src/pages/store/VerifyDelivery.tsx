@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import { ROLE_COLORS, UserRole, formatDate, type PurchaseOrderDto, type PoLineItemDto } from '@afios/shared';
+import { ROLE_COLORS, UserRole, formatDate, formatProjectLabel, type PurchaseOrderDto, type PoLineItemDto } from '@afios/shared';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -78,7 +78,7 @@ export function VerifyDeliveryPage() {
 
         <div className="panel p-3 mb-4 space-y-2 text-sm">
           <p>
-            <span className="text-ink-muted">Project:</span> {project?.name || '—'}
+            <span className="text-ink-muted">Project:</span> {formatProjectLabel(project)}
           </p>
           <p>
             <span className="text-ink-muted">Vendor:</span> {selectedPo.vendor?.name}
@@ -178,7 +178,7 @@ export function VerifyDeliveryPage() {
                   <td className="cell-code whitespace-nowrap">PO #{po.displayPoNumber || '—'}</td>
                   <td className="cell-text whitespace-nowrap">{po.procurementRef || po.poNumber}</td>
                   <td className="cell-text">{po.vendor?.name || '—'}</td>
-                  <td className="cell-text whitespace-nowrap">{po.purchaseRequest?.project?.code || '—'}</td>
+                  <td className="cell-text whitespace-nowrap">{formatProjectLabel(po.purchaseRequest?.project)}</td>
                   <td className="whitespace-nowrap">{formatDate(po.createdAt)}</td>
                   <td className="text-right">
                     <ChevronRight className="h-4 w-4 text-ink-muted inline-block" />

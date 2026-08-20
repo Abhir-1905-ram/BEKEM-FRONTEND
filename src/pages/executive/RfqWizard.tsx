@@ -12,6 +12,7 @@ import {
   type PurchaseRequestDto,
   type MaterialRequestDto,
   type RfqComparisonDto,
+  formatProjectLabel,
 } from '@afios/shared';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -335,7 +336,7 @@ export function RfqWizardPage() {
                         <DetailFieldInline label="Indent">
                           {pr.materialRequest?.indentNumber ?? 'Material request'}
                         </DetailFieldInline>
-                        <DetailFieldInline label="Project">{pr.project?.code}</DetailFieldInline>
+                        <DetailFieldInline label="Project">{formatProjectLabel(pr.project)}</DetailFieldInline>
                         <DetailFieldInline label="Est.">
                           {formatCurrency(pr.amountEstimate)}
                         </DetailFieldInline>

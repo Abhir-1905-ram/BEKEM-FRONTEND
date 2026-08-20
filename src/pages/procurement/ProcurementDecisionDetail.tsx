@@ -19,7 +19,7 @@ import {
   UserRole,
 
   computeRequiredQty,
-
+  formatProjectLabel,
 } from '@afios/shared';
 
 import type { IndentLineItemDto, ProcurementDecisionDto, ProjectDto } from '@afios/shared';
@@ -351,9 +351,10 @@ export function ProcurementDecisionDetailPage({ listPath }: ProcurementDecisionD
                 )}
 
                 <DetailField label="Project">
-
-                  {decision.projectCode} — {decision.projectName}
-
+                  {formatProjectLabel({
+                    code: decision.projectCode,
+                    name: decision.projectName,
+                  })}
                 </DetailField>
 
                 <DetailField label="Requested date">

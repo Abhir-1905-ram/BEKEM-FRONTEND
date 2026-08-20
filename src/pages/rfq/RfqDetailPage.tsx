@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, Mail, MessageCircle } from 'lucide-react';
-import { UserRole } from '@afios/shared';
+import { UserRole, formatProjectLabel } from '@afios/shared';
 import { api } from '@/lib/api';
 import type { RfqDetailDto } from '@afios/shared';
 import { Button } from '@/components/ui/Button';
@@ -94,7 +94,9 @@ export function RfqDetailPage() {
       <PageHeader
         title={rfq?.rfqNumber || 'RFQ'}
         subtitle={
-          rfq?.projectCode ? `${rfq.projectCode} — ${rfq.projectName || ''}` : 'Request for quotation'
+          rfq?.projectCode || rfq?.projectName
+            ? formatProjectLabel({ code: rfq.projectCode, name: rfq.projectName })
+            : 'Request for quotation'
         }
         action={
           rfq ? (

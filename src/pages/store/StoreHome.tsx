@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Package, ChevronRight, AlertTriangle, Warehouse, Search, FileBarChart2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
-import { getGreeting, getFirstName } from '@afios/shared';
+import { getGreeting, getFirstName, formatProjectLabel } from '@afios/shared';
 import type { MaterialRequestDto, SiteDto } from '@afios/shared';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/EmptyState';
@@ -90,7 +90,9 @@ export function StoreHomePage() {
       <PageHeader
         eyebrow={getGreeting()}
         title={getFirstName(user.name)}
-        subtitle={`Store Incharge · ${site?.chainageLabel || 'Loading site…'}`}
+        subtitle={`Store Incharge · ${
+          formatProjectLabel(site?.project, site?.chainageLabel || site?.name || 'Loading site…')
+        }${site?.chainageLabel && site?.project ? ` · ${site.chainageLabel}` : ''}`}
         action={
           waiting > 0 ? (
             <Button onClick={() => navigate('/store/requests')}>

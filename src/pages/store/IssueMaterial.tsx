@@ -9,6 +9,7 @@ import {
   type IssueReason,
   type IssueType,
   type MaterialRequestDto,
+  formatProjectLabel,
 } from '@afios/shared';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -268,6 +269,7 @@ export function IssueMaterialPage() {
               <thead>
                 <tr>
                   <th>Indent No</th>
+                  <th>Project</th>
                   <th>Reason</th>
                   <th>Requested by</th>
                   <th className="num">Items</th>
@@ -280,6 +282,7 @@ export function IssueMaterialPage() {
                 {(indents ?? []).map((mr) => (
                   <tr key={mr.id} className="cursor-pointer" onClick={() => selectIndent(mr)}>
                     <td className="cell-code whitespace-nowrap">{mr.indentNumber}</td>
+                    <td className="cell-text whitespace-nowrap">{formatProjectLabel(mr.project)}</td>
                     <td className="cell-text">{mr.purpose || '—'}</td>
                     <td className="cell-text whitespace-nowrap">
                       {mr.requestedByName || mr.requester?.name || '—'}
@@ -306,6 +309,10 @@ export function IssueMaterialPage() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="font-semibold">{selected.indentNumber}</p>
+                <p className="text-sm text-ink-secondary">
+                  {formatProjectLabel(selected.project)}
+                  {selected.site?.name ? ` · ${selected.site.name}` : ''}
+                </p>
                 <p className="text-sm text-ink-secondary">{selected.purpose || '—'}</p>
               </div>
               <div>

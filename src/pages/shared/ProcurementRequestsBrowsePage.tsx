@@ -1,6 +1,6 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
-import { formatCurrency, formatDate } from '@afios/shared';
+import { formatCurrency, formatDate, formatProjectLabel } from '@afios/shared';
 import type { PurchaseRequestDto } from '@afios/shared';
 import { api } from '@/lib/api';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -112,7 +112,7 @@ export function ProcurementRequestsBrowsePage({
                 >
                   <td className="cell-code whitespace-nowrap">{pr.prNumber}</td>
                   <td className="cell-text whitespace-nowrap">
-                    {pr.project?.code} — {pr.project?.name}
+                    {formatProjectLabel(pr.project)}
                   </td>
                   <td className="num tabular-nums whitespace-nowrap">
                     {formatCurrency(pr.totalValue ?? pr.amountEstimate)}

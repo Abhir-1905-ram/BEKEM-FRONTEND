@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
-import { UserRole, type SiteDto } from '@afios/shared';
+import { UserRole, formatProjectLabel, type SiteDto } from '@afios/shared';
 
 export function useNavbarContext() {
   const user = useAuthStore((s) => s.user);
@@ -20,7 +20,7 @@ export function useNavbarContext() {
   });
 
   const projectLabel = site?.project
-    ? `${site.project.code} — ${site.project.name}${
+    ? `${formatProjectLabel(site.project)}${
         site.chainageLabel ? ` · ${site.chainageLabel}` : site.name ? ` · ${site.name}` : ''
       }`
     : null;

@@ -11,6 +11,7 @@ import {
   type PurchaseOrderDto,
   type QuotationDto,
   type QuotationComparisonDto,
+  formatProjectLabel,
 } from '@afios/shared';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -483,6 +484,11 @@ export function PODetailPage() {
               valueClassName="text-sm font-normal whitespace-pre-line"
             >
               {po.deliveryAddress}
+            </DetailField>
+          )}
+          {po.purchaseRequest?.project && (
+            <DetailField label="Project">
+              {formatProjectLabel(po.purchaseRequest.project)}
             </DetailField>
           )}
           {po.purchaseRequest?.prNumber && (

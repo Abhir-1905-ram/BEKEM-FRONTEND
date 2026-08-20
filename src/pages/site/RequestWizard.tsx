@@ -19,6 +19,7 @@ import {
   hasMaterialUnitPrice,
   isMaterialOverBelowCap,
   resolveMaterialUnitPrice,
+  formatProjectLabel,
   type IndentRequestType,
   type MaterialDto,
   type CreateIndentDto,
@@ -453,7 +454,17 @@ export function RequestWizardPage() {
                       <Building2 className="h-6 w-6" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+                      {(site.project?.name || site.project?.code) && (
+                        <>
+                          <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+                            Project
+                          </p>
+                          <p className="text-sm font-medium text-ink mt-0.5">
+                            {formatProjectLabel(site.project)}
+                          </p>
+                        </>
+                      )}
+                      <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted mt-2">
                         Site
                       </p>
                       <p className="text-lg font-semibold text-ink mt-1">{site.name}</p>
@@ -506,12 +517,30 @@ export function RequestWizardPage() {
           <PageHeader
             eyebrow={skipProjectStep ? roleLabel : `${roleLabel} · Step 2 of 2`}
             title="New indent"
-            subtitle="Add multiple products — each with its own quantity, location and required-by date."
+            subtitle={
+              selectedSite
+                ? `${formatProjectLabel(selectedSite.project, selectedSite.name)} · ${selectedSite.name}${
+                    selectedSite.chainageLabel ? ` · ${selectedSite.chainageLabel}` : ''
+                  }`
+                : 'Add multiple products — each with its own quantity, location and required-by date.'
+            }
           />
         </div>
       </div>
 
       <div className="mb-3 grid gap-3 lg:grid-cols-3">
+        {(selectedSite?.project?.name || selectedSite?.project?.code) && (
+          <div className="panel p-3 space-y-1">
+            <p className="text-xs font-semibold text-ink">Project</p>
+            <p className="text-sm font-medium text-ink">{formatProjectLabel(selectedSite?.project)}</p>
+            {selectedSite?.name && (
+              <p className="text-[11px] text-ink-secondary">
+                {selectedSite.name}
+                {selectedSite.chainageLabel ? ` · ${selectedSite.chainageLabel}` : ''}
+              </p>
+            )}
+          </div>
+        )}
         <div className="panel p-3 space-y-2">
           <label className="text-xs font-semibold text-ink">
             Requested by <span className="text-danger">*</span>

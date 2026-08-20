@@ -293,6 +293,11 @@ export function StockPage() {
             projectCode: string;
             projectName: string;
             availableQty: number;
+            sites?: Array<{
+              siteId: string;
+              siteName: string;
+              availableQty: number;
+            }>;
           }>;
         }>;
       }>('/stock/cross-project', { params: { search: materialCompare } });

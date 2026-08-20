@@ -10,6 +10,7 @@ import {
   UserRole,
   formatCurrency,
   snapGstPercent,
+  formatProjectLabel,
   type MaterialRequestDto,
   type PoLineItemDto,
   type PurchaseRequestDto,
@@ -686,7 +687,7 @@ export function POWizardPage() {
                             <DetailFieldInline label="Indent">
                               {pr.materialRequest?.indentNumber ?? 'Material request'}
                             </DetailFieldInline>
-                            <DetailFieldInline label="Project">{pr.project?.code}</DetailFieldInline>
+                            <DetailFieldInline label="Project">{formatProjectLabel(pr.project)}</DetailFieldInline>
                             <DetailFieldInline label="Est.">
                               {formatCurrency(pr.amountEstimate)}
                             </DetailFieldInline>
@@ -1173,6 +1174,11 @@ export function POWizardPage() {
             <motion.div key="s5" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}>
               <Card className="mb-4">
                 <DetailFieldGrid>
+                  {(selectedPr?.project || selectedMr?.project) && (
+                    <DetailField label="Project" labelClassName="text-ink-secondary">
+                      {formatProjectLabel(selectedPr?.project || selectedMr?.project)}
+                    </DetailField>
+                  )}
                   <DetailField label="Indent" labelClassName="text-ink-secondary">
                     {selectedMr?.indentNumber ?? '—'}
                   </DetailField>

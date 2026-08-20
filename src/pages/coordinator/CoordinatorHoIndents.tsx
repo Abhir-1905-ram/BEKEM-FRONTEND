@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle, ChevronRight, FilePlus } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { MaterialRequestDto, ProjectDto } from '@afios/shared';
+import { formatProjectLabel } from '@afios/shared';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -166,7 +167,7 @@ export function CoordinatorHoIndentsPage() {
                 <div>
                   <p className="font-semibold text-ink">{r.indentNumber}</p>
                   <p className="text-sm text-ink-secondary mt-0.5">
-                    {r.material?.name || r.items?.[0]?.material?.name} · {r.project?.code}
+                    {r.material?.name || r.items?.[0]?.material?.name} · {formatProjectLabel(r.project)}
                   </p>
                   <div className="mt-2">
                     <StatusBadge status={r.status} />
@@ -224,7 +225,7 @@ export function CoordinatorHoIndentsPage() {
                   <td className="cell-text">
                     {r.material?.name || r.items?.[0]?.material?.name || '—'}
                   </td>
-                  <td className="cell-text whitespace-nowrap">{r.project?.code || '—'}</td>
+                  <td className="cell-text whitespace-nowrap">{formatProjectLabel(r.project)}</td>
                   <td className="cell-text">{r.purpose || '—'}</td>
                   <td>
                     <StatusBadge status={r.status} />

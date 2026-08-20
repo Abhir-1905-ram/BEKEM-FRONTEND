@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
-import { formatCurrency, formatDate } from '@afios/shared';
+import { formatCurrency, formatDate, formatProjectLabel } from '@afios/shared';
 import type { ProcurementDecisionListItemDto } from '@afios/shared';
 import { api } from '@/lib/api';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -83,7 +83,7 @@ export function ProcurementDecisionsListPage({
                   onClick={() => navigate(`${basePath}/${d.id}`)}
                 >
                   <td className="cell-code whitespace-nowrap">{d.indentNumber}</td>
-                  <td className="cell-text whitespace-nowrap">{d.projectCode} — {d.projectName}</td>
+                  <td className="cell-text whitespace-nowrap">{formatProjectLabel({ code: d.projectCode, name: d.projectName })}</td>
                   <td className="whitespace-nowrap">{d.indentDate ? formatDate(d.indentDate) : '—'}</td>
                   <td className="num tabular-nums whitespace-nowrap">{formatCurrency(d.estimatedValue)}</td>
                   <td className="whitespace-nowrap">{d.priority || '—'}</td>

@@ -143,6 +143,8 @@ export function matchesIndentSearch(request: MaterialRequestDto, rawQuery: strin
     request.requestedByName,
     request.requester?.name,
     request.indentCategory?.name,
+    request.project?.name,
+    request.project?.code,
     request.purpose,
     request.status,
     statusLabel,

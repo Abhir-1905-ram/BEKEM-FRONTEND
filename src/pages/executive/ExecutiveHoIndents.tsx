@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronRight, FilePlus } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { MaterialRequestDto, ProjectDto } from '@afios/shared';
+import { formatProjectLabel } from '@afios/shared';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -164,7 +165,7 @@ export function ExecutiveHoIndentsPage() {
                 >
                   <td className="cell-code whitespace-nowrap">{r.indentNumber}</td>
                   <td className="cell-text">{r.material?.name || r.items?.[0]?.material?.name || '—'}</td>
-                  <td className="cell-text whitespace-nowrap">{r.project?.code || '—'}</td>
+                  <td className="cell-text whitespace-nowrap">{formatProjectLabel(r.project)}</td>
                   <td className="cell-text">{r.purpose || '—'}</td>
                   <td><StatusBadge status={r.status} /></td>
                   <td className="text-right"><ChevronRight className="h-4 w-4 text-ink-muted inline-block" /></td>

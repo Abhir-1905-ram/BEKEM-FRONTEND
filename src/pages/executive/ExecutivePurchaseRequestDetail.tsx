@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatCurrency, formatDate, ROLE_COLORS, ROLE_LABELS, UserRole } from '@afios/shared';
+import { formatCurrency, formatDate, ROLE_COLORS, ROLE_LABELS, UserRole, formatProjectLabel } from '@afios/shared';
 import type { PurchaseRequestDto } from '@afios/shared';
 import { api } from '@/lib/api';
 import { Card } from '@/components/ui/Card';
@@ -122,7 +122,7 @@ export function ExecutivePurchaseRequestDetailPage() {
             <Card className="mb-3">
               <DetailFieldGrid>
                 <DetailField label="Project">
-                  {pr.project?.code} — {pr.project?.name}
+                  {formatProjectLabel(pr.project)}
                 </DetailField>
                 <DetailField label="Indent">
                   {pr.materialRequest?.indentNumber || '—'}

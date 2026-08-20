@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { requireBiometricConfirm } from '@/lib/biometricGate';
 import type { MaterialRequestDto } from '@afios/shared';
+import { formatProjectLabel } from '@afios/shared';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ListQueryBoundary } from '@/components/ListQueryBoundary';
@@ -130,7 +131,7 @@ export function PmMobileApprovalPage() {
                 <div>
                   <p className="text-lg font-bold text-ink">{request.indentNumber}</p>
                   <p className="text-sm text-ink-secondary">
-                    {request.project?.name || request.project?.code || 'Project'}
+                    {formatProjectLabel(request.project, 'Project')}
                   </p>
                 </div>
                 <StatusBadge status={request.status} />

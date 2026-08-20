@@ -15,6 +15,7 @@ import {
   hideIndentPricingForRole,
   INDENT_REQUEST_TYPE_LABELS,
   canEditIndentOneLevelAhead,
+  formatProjectLabel,
 } from '@afios/shared';
 import type { MaterialRequestDto, UpdateIndentDto } from '@afios/shared';
 import { Card } from '@/components/ui/Card';
@@ -299,6 +300,12 @@ export function RequestDetailPage() {
       {editing ? (
         <Card className="mb-3 space-y-3 p-3">
           <p className="text-sm font-semibold text-ink">Modify indent</p>
+          {(request.project?.name || request.project?.code) && (
+            <div>
+              <label className="text-xs font-semibold text-ink-muted mb-1 block">Project</label>
+              <p className="text-sm font-medium text-ink">{formatProjectLabel(request.project)}</p>
+            </div>
+          )}
           <div>
             <label className="text-xs font-semibold text-ink-muted mb-1 block">Requested by</label>
             <Input
@@ -395,6 +402,11 @@ export function RequestDetailPage() {
       ) : (
       <Card className="mb-3">
         <DetailFieldGrid>
+          {(request.project?.name || request.project?.code) && (
+            <DetailField label="Project" labelClassName="text-gray-500">
+              {formatProjectLabel(request.project)}
+            </DetailField>
+          )}
           {(request.requestedByName || request.requester?.name) && (
             <DetailField label="Requested by" labelClassName="text-gray-500">
               {request.requestedByName || request.requester?.name}
@@ -549,9 +561,16 @@ export function RequestDetailPage() {
         totalEstimatedValue={hidePricing ? undefined : request.estimatedValue}
       />
 
-      {role === UserRole.PROJECT_MANAGER && request.crossProjectStock?.length ? (
+      {role === UserRole.PROJECT_MANAGER &&
+      request.crossProjectStock?.some((row) =>
+        row.projects?.some((p) => p.projectId !== request.projectId)
+      ) ? (
         <>
-          <h2 className="font-semibold text-gray-900 mb-3">Stock across your projects</h2>
+          <h2 className="font-semibold text-gray-900 mb-3">Stock at other projects</h2>
+          <p className="text-xs text-ink-secondary mb-3">
+            Live stock on your other assigned projects and their sites — not this indent&apos;s
+            project.
+          </p>
           <CrossProjectStockPanel
             rows={request.crossProjectStock}
             requestingProjectId={request.projectId}

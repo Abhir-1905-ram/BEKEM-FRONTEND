@@ -10,7 +10,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
 import { ListQueryBoundary } from '@/components/ListQueryBoundary';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { formatCurrency, formatDate } from '@afios/shared';
+import { formatCurrency, formatDate, formatProjectLabel } from '@afios/shared';
 
 function raisedByLabel(rfq: RfqListItemDto) {
   if (!rfq.raisedByName) return '—';
@@ -168,7 +168,7 @@ export function ExecutiveRfqListPage({ browseOnly = false }: ExecutiveRfqListPag
                           <td className="cell-text whitespace-nowrap">
                             {pr.materialRequest?.indentNumber || 'Purchase request'}
                           </td>
-                          <td className="cell-text whitespace-nowrap">{pr.project?.code || '—'}</td>
+                          <td className="cell-text whitespace-nowrap">{formatProjectLabel(pr.project)}</td>
                           <td className="num tabular-nums whitespace-nowrap">
                             {formatCurrency(pr.amountEstimate)}
                           </td>

@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { ChevronRight } from 'lucide-react';
 import type { MaterialRequestDto } from '@afios/shared';
-import { formatDate, formatQuantity, ROLE_LABELS, UserRole } from '@afios/shared';
+import { formatDate, formatQuantity, formatProjectLabel, ROLE_LABELS, UserRole } from '@afios/shared';
 import { StatusBadge, getStatusLabel } from '@/components/ui/StatusBadge';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -59,6 +59,7 @@ export function formatIndentQueueStatus(
 type IndentTableRow = {
   requestId: string;
   indentNumber: string;
+  projectLabel: string;
   submittedAt: string;
   requiredBy: string;
   purpose: string;
@@ -128,6 +129,7 @@ function toIndentRows(
   return requests.map((r) => ({
     requestId: r.id,
     indentNumber: r.indentNumber,
+    projectLabel: formatProjectLabel(r.project),
     submittedAt: formatDate(r.createdAt),
     requiredBy:
       [
@@ -228,6 +230,7 @@ export function MaterialIndentsTable({
         <thead>
           <tr>
             <th>Indent Number</th>
+            <th>Project</th>
             <th>Submitted on</th>
             <th>Required by</th>
             <th>Purpose</th>
@@ -248,6 +251,7 @@ export function MaterialIndentsTable({
               onClick={() => onRowClick(row.requestId)}
             >
               <td className="font-semibold text-ink break-all">{row.indentNumber}</td>
+              <td className="cell-text whitespace-nowrap">{row.projectLabel}</td>
               <td className="whitespace-nowrap">{row.submittedAt}</td>
               <td className="whitespace-nowrap">{row.requiredBy}</td>
               <td className="cell-text max-w-[16rem]">{row.purpose}</td>

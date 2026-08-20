@@ -9,6 +9,11 @@ export interface CrossProjectStockRow {
     projectCode: string;
     projectName: string;
     availableQty: number;
+    sites?: Array<{
+      siteId: string;
+      siteName: string;
+      availableQty: number;
+    }>;
   }>;
 }
 
@@ -23,36 +28,62 @@ export function CrossProjectStockPanel({
   className,
   requestingProjectId,
 }: CrossProjectStockPanelProps) {
-  if (!rows.length) return null;
+  const visibleRows = rows
+    .map((row) => ({
+      ...row,
+      projects: row.projects.filter(
+        (p) => !requestingProjectId || p.projectId !== requestingProjectId
+      ),
+    }))
+    .filter((row) => row.projects.length > 0);
+
+  if (!visibleRows.length) return null;
 
   return (
     <div className={cn('space-y-3', className)}>
-      {rows.map((row) => (
+      {visibleRows.map((row) => (
         <Card key={row.materialId} className="p-4 space-y-3">
           <p className="font-semibold text-ink">{row.materialName || 'Material'}</p>
           <div className="space-y-2">
             {row.projects.map((p) => {
-              const isRequesting = requestingProjectId && p.projectId === requestingProjectId;
-              const hasSurplus = p.availableQty > 0 && !isRequesting;
+              const hasSurplus = p.availableQty > 0;
+              const sites = p.sites?.length ? p.sites : null;
               return (
                 <div
                   key={p.projectId}
                   className={cn(
-                    'flex items-center justify-between rounded-xl border px-3 py-2 text-sm',
-                    isRequesting
-                      ? 'border-bekem-accent/30 bg-bekem-accent/5'
-                      : hasSurplus
-                        ? 'border-emerald-200 bg-emerald-50/50'
-                        : 'border-surface-border'
+                    'rounded-xl border px-3 py-2 text-sm',
+                    hasSurplus
+                      ? 'border-emerald-200 bg-emerald-50/50'
+                      : 'border-surface-border'
                   )}
                 >
-                  <div>
-                    <p className="font-medium text-ink">{p.projectName}</p>
-                    <p className="text-xs text-ink-muted">{p.projectCode}</p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium text-ink">{p.projectName}</p>
+                      <p className="text-xs text-ink-muted">{p.projectCode}</p>
+                    </div>
+                    <p className="tabular-nums font-semibold text-ink shrink-0">
+                      Available: {p.availableQty}
+                    </p>
                   </div>
-                  <p className="tabular-nums font-semibold text-ink">
-                    Available: {p.availableQty}
-                  </p>
+                  {sites ? (
+                    <ul className="mt-2 space-y-1 border-t border-surface-border/70 pt-2">
+                      {sites.map((site) => (
+                        <li
+                          key={site.siteId}
+                          className="flex items-center justify-between gap-3 text-xs"
+                        >
+                          <span className="text-ink-secondary">{site.siteName}</span>
+                          <span className="tabular-nums font-medium text-ink">
+                            {site.availableQty}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-1 text-xs text-ink-muted">No site linked</p>
+                  )}
                 </div>
               );
             })}

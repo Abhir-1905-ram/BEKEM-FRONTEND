@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { forbiddenQueryOptions, isForbiddenError, useRedirectOnForbidden } from '@/lib/forbiddenRedirect';
-import { ROLE_COLORS, UserRole, hideIndentPricingForRole, INDENT_REQUEST_TYPE_LABELS } from '@afios/shared';
+import { ROLE_COLORS, UserRole, hideIndentPricingForRole, INDENT_REQUEST_TYPE_LABELS, formatProjectLabel } from '@afios/shared';
 import type { MaterialRequestDto } from '@afios/shared';
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Input';
@@ -135,7 +135,10 @@ export function AllocateFlowPage() {
         <div>
           <h1 className="font-semibold">{request.indentNumber}</h1>
           <p className="text-xs text-ink-secondary">
-            {items.length} item(s)
+            {formatProjectLabel(request.project)}
+            {request.site?.name ? ` · ${request.site.name}` : ''}
+            {request.site?.chainageLabel ? ` · ${request.site.chainageLabel}` : ''}
+            {` · ${items.length} item(s)`}
             {request.indentRequestType
               ? ` · ${INDENT_REQUEST_TYPE_LABELS[request.indentRequestType]}`
               : ''}{' '}

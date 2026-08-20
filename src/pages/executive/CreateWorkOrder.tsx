@@ -8,6 +8,7 @@ import {
   ROLE_COLORS,
   UserRole,
   formatCurrency,
+  formatProjectLabel,
   type PurchaseOrderDto,
   type WorkOrderDto,
 } from '@afios/shared';
@@ -116,7 +117,7 @@ export function CreateWorkOrderPage() {
                   onClick={() => {
                     setSelectedPo(po);
                     setScope(po.purchaseRequest?.project?.name
-                      ? `Execution — ${po.purchaseRequest.project.name}`
+                      ? `Execution — ${formatProjectLabel(po.purchaseRequest.project)}`
                       : '');
                   }}
                 >
@@ -126,7 +127,7 @@ export function CreateWorkOrderPage() {
                   </p>
                   {po.purchaseRequest?.project && (
                     <p className="text-xs text-ink-muted mt-1">
-                      {po.purchaseRequest.project.code} — {po.purchaseRequest.project.name}
+                      {formatProjectLabel(po.purchaseRequest.project)}
                     </p>
                   )}
                 </Card>
