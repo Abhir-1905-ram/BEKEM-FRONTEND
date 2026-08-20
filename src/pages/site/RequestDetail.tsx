@@ -100,7 +100,7 @@ export function RequestDetailPage() {
       toast.success(
         data.status === 'ALLOCATED'
           ? 'Closed at PM — stock reserved for Store to issue'
-          : 'Approved — Store will purchase and allocate'
+          : 'Approved'
       );
       setPmRemark('');
       queryClient.invalidateQueries({ queryKey: ['material-request', id] });
@@ -152,13 +152,9 @@ export function RequestDetailPage() {
   /** Live stock check only — storeStockVerified alone must not allow a PM close. */
   const stockAvailable = Boolean(request?.canFullyIssue);
   const isBelowCap = request?.indentRequestType === 'BELOW_5000';
-  /** Above ₹5,000 + stock short → HO stock requisition. */
-  const showForwardToHo = Boolean(canPmDecide && !stockAvailable && !isBelowCap);
-  /**
-   * Below ₹5,000: Approve always (close if stock; else Store procurement).
-   * Above ₹5,000: Approve only when stock can be closed at PM.
-   */
-  const showPmApprove = Boolean(canPmDecide && (stockAvailable || isBelowCap));
+  /** Any stock-short indent must go to Head Office. */
+  const showForwardToHo = Boolean(canPmDecide && !stockAvailable);
+  const showPmApprove = Boolean(canPmDecide && stockAvailable);
   const pmApproveClosesAtPm = stockAvailable;
 
   useApprovalShortcuts({
@@ -573,7 +569,7 @@ export function RequestDetailPage() {
                 {isBelowCap
                   ? stockAvailable
                     ? 'Below ₹5,000 and stock is available — Approve to close at PM and reserve stock for Store to issue.'
-                    : 'Below ₹5,000 and stock is short — Approve to continue procurement. Store will purchase with approved funds and allocate.'
+                    : 'Below ₹5,000 and stock is short — Forward to Head Office for procurement.'
                   : stockAvailable
                     ? 'Stock is available at site — Approve to close at PM and reserve allocation so Store can issue.'
                     : 'Stock is short at site. Forward to Head Office for stock requisition / procurement.'}
@@ -610,7 +606,7 @@ export function RequestDetailPage() {
                     pmLocalClose.mutate(pmRemark.trim());
                   }}
                 >
-                  {pmApproveClosesAtPm ? 'Approve & close at PM' : 'Approve — continue procurement'}
+                  {pmApproveClosesAtPm ? 'Approve & close at PM' : 'Approve'}
                 </Button>
               )}
               {showForwardToHo && (
