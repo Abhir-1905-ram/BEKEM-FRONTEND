@@ -25,7 +25,6 @@ export function PmMobileApprovalPage() {
   });
 
   const stockAvailable = Boolean(request?.canFullyIssue);
-  const isBelowCap = request?.indentRequestType === 'BELOW_5000';
   const showForwardToHo =
     request?.status === 'FORWARDED_TO_PM' && !stockAvailable;
   const showApprove =
